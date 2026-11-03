@@ -53,6 +53,26 @@ def _local_version() -> int:
         return 0
 
 
+def _ssl_context():
+    """У «своего» Python от uv может не быть списка сертификатов — берём certifi или системный."""
+    import ssl
+    for path in (_certifi(), "/etc/ssl/cert.pem", "/private/etc/ssl/cert.pem"):
+        if path and os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:
+                pass
+    return ssl.create_default_context()
+
+
+def _certifi():
+    try:
+        import certifi
+        return certifi.where()
+    except Exception:
+        return None
+
+
 def check_update() -> None:
     cfg_file = ROOT / "update.json"
     if not cfg_file.exists() or not (HOME / "bin" / "uv").exists() or os.environ.get("PODRUGA_NO_UPDATE"):
@@ -66,12 +86,16 @@ def check_update() -> None:
         cfg = json.loads(cfg_file.read_text())
         repo, branch = cfg["repo"], cfg.get("branch", "main")
         url = f"https://raw.githubusercontent.com/{repo}/{branch}/VERSION"
-        with urllib.request.urlopen(url, timeout=5) as r:
+        ctx = _ssl_context()
+        req = urllib.request.Request(url + f"?t={int(__import__('time').time())}",   # мимо кэша GitHub
+                                     headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
             remote = int(r.read().decode().strip())
     except Exception as e:
         print(f"[обновление] не проверилось: {e}", flush=True)
         return
     local = _local_version()
+    print(f"[обновление] у меня версия {local}, на GitHub {remote}", flush=True)
     if remote <= local:
         return
     print(f"[обновление] есть новая версия {remote} (у меня {local}), скачиваю…", flush=True)
@@ -80,7 +104,7 @@ def check_update() -> None:
         tmp = Path(tempfile.mkdtemp(prefix="podruga_upd_"))
         zpath = tmp / "code.zip"
         zurl = f"https://codeload.github.com/{repo}/zip/refs/heads/{branch}"
-        with urllib.request.urlopen(zurl, timeout=120) as r, open(zpath, "wb") as f:
+        with urllib.request.urlopen(zurl, timeout=180, context=ctx) as r, open(zpath, "wb") as f:
             shutil.copyfileobj(r, f)
         with zipfile.ZipFile(zpath) as z:
             z.extractall(tmp / "x")
