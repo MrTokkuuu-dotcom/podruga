@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Подруга</title>
+<style>
+  :root {
+    --bg: rgba(28, 22, 44, .92); --card: rgba(255,255,255,.06); --line: rgba(255,255,255,.10);
+    --ink: #f3eefc; --quiet: #b9add6; --accent: #b48cf0; --accent2: #f4a9c2; --me: #3a2f5c; --her: #2c3a4a;
+    --good: #7fe0b4; --warn: #ffd27a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: transparent; color: var(--ink);
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    -webkit-user-select: none; user-select: none; overflow: hidden; }
+  #app { position: absolute; inset: 6px; border-radius: 22px; background: var(--bg);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px var(--line);
+    display: flex; flex-direction: column; overflow: hidden; }
+
+  /* шапка (за неё можно таскать окно) */
+  #bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px 4px 14px; cursor: grab; }
+  #bar .name { font-weight: 650; font-size: 14px; letter-spacing: .2px; }
+  #bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--quiet); }
+  #bar .spacer { flex: 1; }
+  .icon-btn { width: 26px; height: 26px; border-radius: 8px; border: 0; background: transparent;
+    color: var(--quiet); font-size: 14px; cursor: pointer; display: grid; place-items: center; }
+  .icon-btn:hover { background: var(--card); color: var(--ink); }
+
+  /* персонаж */
+  #charWrap { position: relative; height: 236px; flex: none; }
+  #char { position: absolute; left: 0; right: 0; top: 0; bottom: 30px; display: flex; justify-content: center; }
+  #char svg { height: 100%; width: 100%; }
+  body.has3d #char svg { display: none; }
+  #vrmCanvas { width: 100%; height: 100%; display: block; }
+  #status { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%);
+    padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.35); color: var(--ink);
+    font-size: 12px; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--line); }
+  #meter { height: 3px; margin: 4px 16px 0; border-radius: 3px; background: var(--card); overflow: hidden; flex: none; }
+  #meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .12s linear; }
+
+  /* переписка */
+  #log { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+    -webkit-user-select: text; user-select: text; }
+  #log::-webkit-scrollbar { width: 6px; } #log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+  .msg { max-width: 85%; padding: 7px 11px; border-radius: 14px; word-wrap: break-word; }
+  .msg.me { align-self: flex-end; background: var(--me); border-bottom-right-radius: 4px; }
+  .msg.her { align-self: flex-start; background: var(--her); border-bottom-left-radius: 4px; }
+  .msg.sys { align-self: center; background: transparent; color: var(--quiet); font-size: 11.5px; padding: 2px; }
+  .msg .tag { font-size: 11px; color: var(--quiet); margin-right: 4px; }
+  #empty { color: var(--quiet); text-align: center; margin: auto; font-size: 12.5px; padding: 0 20px; }
+
+  /* низ */
+  #bottom { display: flex; gap: 6px; padding: 8px 10px 10px; border-top: 1px solid var(--line); flex: none; }
+  #input { flex: 1; min-width: 0; border: 0; border-radius: 12px; padding: 8px 11px; background: var(--card);
+    color: var(--ink); outline: none; font: inherit; box-shadow: inset 0 0 0 1px var(--line); }
+  #input::placeholder { color: var(--quiet); }
+  .act { height: 34px; min-width: 34px; border-radius: 12px; border: 0; background: var(--card); color: var(--ink);
+    font-size: 15px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }
+  .act:hover { background: rgba(255,255,255,.12); }
+  .act.on { background: var(--accent); color: #1c1530; }
+
+  /* обычный режим: только она, без фона и лишнего; кнопка под ней открывает переписку */
+  #chatBtn { display: none; }
+  body.mini #app { background: transparent; box-shadow: none; inset: 0; border-radius: 0; }
+  body.mini #bar, body.mini #log, body.mini #bottom, body.mini #meter, body.mini #status { display: none; }
+  body.mini #charWrap { flex: 1; height: auto; min-height: 0; cursor: grab; }
+  body.mini #char { bottom: 40px; }
+  body.mini #char svg { filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+  body.mini #chatBtn { display: grid; place-items: center; position: absolute; left: 50%; bottom: 4px;
+    transform: translateX(-50%); width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(28,22,44,.78); color: var(--ink); font-size: 16px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); opacity: .75; transition: opacity .15s, transform .15s; }
+  body.mini #chatBtn:hover { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  #chatBtn .badge { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent2); display: none; }
+  #chatBtn.unread .badge { display: block; }
+
+  /* панели: настройки и ключ */
+  .panel { position: absolute; inset: 0; background: rgba(20,16,32,.97); border-radius: 22px; padding: 16px;
+    display: none; flex-direction: column; gap: 10px; overflow-y: auto; -webkit-user-select: text; user-select: text; }
+  .panel.show { display: flex; }
+  .panel h2 { margin: 2px 0 2px; font-size: 16px; }
+  .panel p { margin: 0; color: var(--quiet); font-size: 12.5px; }
+  .panel label { font-size: 12px; color: var(--quiet); display: flex; flex-direction: column; gap: 4px; }
+  .panel input, .panel select, .panel textarea { border: 0; border-radius: 10px; padding: 8px 10px;
+    background: var(--card); color: var(--ink); font: inherit; outline: none; box-shadow: inset 0 0 0 1px var(--line); }
+  .panel textarea { resize: vertical; min-height: 58px; }
+  .row { display: flex; gap: 8px; }
+  .btn { border: 0; border-radius: 12px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer;
+    background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .btn.primary { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #1c1530; box-shadow: none; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .note { font-size: 12px; min-height: 16px; }
+  .note.ok { color: var(--good); } .note.bad { color: var(--warn); }
+  .steps { margin: 0; padding-left: 18px; color: var(--quiet); font-size: 12.5px; }
+  .traits { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+  .trait { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--quiet); }
+  .trait span:last-child { text-align: right; }
+  .trait input { accent-color: var(--accent); }
+  .panel input[type=range] { background: none; box-shadow: none; padding: 0; }
+  .panel select { min-width: 0; width: 100%; }
+
+  /* ==== персонаж ==== */
+  /* дыхание */
+  #body { transform-origin: 160px 380px; animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.012,1.018); } }
+
+  /* голова чуть покачивается */
+  #head { transform-origin: 160px 250px; animation: sway 7s ease-in-out infinite; }
+  @keyframes sway { 0%,100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+
+  /* глаза: открыты / моргание / закрыты */
+  .eye-open { transform-origin: center; transform-box: fill-box; animation: blink 5s infinite; }
+  @keyframes blink { 0%,95%,100% { transform: scaleY(1); } 97% { transform: scaleY(0.08); } }
+  .eye-closed { display: none; }
+
+  /* рот */
+  .mouth-talk { display: none; }
+  #mouthTalk ellipse { transform-origin: center; transform-box: fill-box; animation: talk .22s ease-in-out infinite alternate; }
+  @keyframes talk { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+
+  #zzz { display: none; }
+  #zzz text { animation: float 3s ease-in infinite; opacity: 0; }
+  #zzz text:nth-child(2) { animation-delay: 1s; }
+  #zzz text:nth-child(3) { animation-delay: 2s; }
+  @keyframes float { 0% { opacity: 0; transform: translate(0,0); } 20% { opacity: .9; }
+                     100% { opacity: 0; transform: translate(18px,-46px); } }
+
+  #dots { display: none; }
+  #dots circle { animation: dot 1.2s infinite; }
+  #dots circle:nth-child(2) { animation-delay: .2s; }
+  #dots circle:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+
+  /* === состояния === */
+  .sleep .eye-open, .sleep .eye-shine { display: none; }
+  .sleep .eye-closed { display: inline; }
+  .sleep #zzz { display: inline; }
+  .sleep #head { animation: nod 4s ease-in-out infinite; }
+  @keyframes nod { 0%,100% { transform: rotate(4deg) translateY(3px); } 50% { transform: rotate(6deg) translateY(5px); } }
+
+  .talk .mouth-idle { display: none; }
+  .talk .mouth-talk { display: inline; }
+
+  .think #dots { display: inline; }
+  .listen #blushL, .listen #blushR, .talk #blushL, .talk #blushR { opacity: .55; }
+
+  /* === эмоции (класс emo-* рядом с состоянием) === */
+  .pupil, #browL, #browR, #blushL, #blushR { transition: transform .35s ease, opacity .35s ease; }
+  #browL, #browR, #blushL, #blushR { transform-box: fill-box; transform-origin: center; }
+  .eye-happy, .mouth-big, .mouth-o, .mouth-sad, .mouth-small, .mouth-hmm,
+  #tear, #sparkle, #heart, #excl, #sweat { display: none; }
+  #sparkle, #heart, #excl, #sweat { animation: pop 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pop { 0%,100% { transform: scale(.9) translateY(0); opacity: .85; } 50% { transform: scale(1.08) translateY(-4px); opacity: 1; } }
+
+  /* радость: широкая улыбка и искорки */
+  .emo-joy .mouth-idle { display: none; } .emo-joy:not(.talk) .mouth-big { display: inline; }
+  .emo-joy #sparkle { display: inline; } .emo-joy #blushL, .emo-joy #blushR { opacity: .7; }
+  /* нежность: глаза-улыбки, сердечко, румянец */
+  .emo-tender .eye-open, .emo-tender .eye-shine { display: none; } .emo-tender .eye-happy { display: inline; }
+  .emo-tender #heart { display: inline; } .emo-tender #blushL, .emo-tender #blushR { opacity: .75; }
+  /* смущение: сильный румянец, взгляд вниз, маленький рот, капелька */
+  .emo-shy #blushL, .emo-shy #blushR { opacity: .95; transform: scale(1.35); }
+  .emo-shy .pupil { transform: translate(-2px, 5px); }
+  .emo-shy .mouth-idle { display: none; } .emo-shy:not(.talk) .mouth-small { display: inline; }
+  .emo-shy #sweat { display: inline; }
+  /* удивление: брови вверх, рот «о», восклицание */
+  .emo-surprise #browL, .emo-surprise #browR { transform: translateY(-8px); }
+  .emo-surprise .mouth-idle { display: none; } .emo-surprise:not(.talk) .mouth-o { display: inline; }
+  .emo-surprise #excl { display: inline; }
+  /* грусть: брови домиком, грустный рот, взгляд вниз, слезинка */
+  .emo-sad #browL { transform: rotate(-14deg) translateY(2px); } .emo-sad #browR { transform: rotate(14deg) translateY(2px); }
+  .emo-sad .pupil { transform: translateY(4px); }
+  .emo-sad .mouth-idle { display: none; } .emo-sad:not(.talk) .mouth-sad { display: inline; }
+  .emo-sad #tear { display: inline; }
+  /* задумчивость: взгляд вверх-вбок, бровь приподнята, «хм» */
+  .emo-think .pupil { transform: translate(-5px, -6px); } .emo-think #browR { transform: translateY(-6px) rotate(-6deg); }
+  .emo-think .mouth-idle { display: none; } .emo-think:not(.talk) .mouth-hmm { display: inline; }
+
+  /* === взгляд за курсором (JS ставит --gx/--gy) === */
+  .gaze { transform: translate(var(--gx, 0px), var(--gy, 0px)); transition: transform .25s ease-out; }
+  .think .eye-open { animation-duration: 2.6s; }   /* думает — моргает чаще */
+
+  /* === рот в такт речи (JS ставит --mouth 0..1) === */
+  .lipsync #mouthTalk ellipse { animation: none; transform: scaleY(calc(.18 + var(--mouth, .4) * .95)); transition: transform .07s linear; }
+
+  /* === одежда: ночью пижама, во сне ночью — колпак === */
+  #pjStars, #nightcap { display: none; }
+  .night #top, .night #arm .sleeve { fill: url(#pajama); }
+  .night #pjStars { display: inline; }
+  .night.sleep #nightcap { display: inline; }
+  .night.sleep path[d^="M214 138"] { display: none; }  /* заколку под колпаком не видно */
+
+  /* === разовые движения: помахать, зевнуть, потянуться, кивнуть === */
+  #arm { display: none; transform-box: view-box; transform-origin: 250px 400px; }
+  .act-wave #arm { display: inline; animation: wave .5s ease-in-out 4 alternate; }
+  @keyframes wave { from { transform: rotate(-8deg); } to { transform: rotate(12deg); } }
+  .act-yawn .eye-open, .act-yawn .eye-shine, .act-yawn .eye-happy { display: none; }
+  .act-yawn .eye-closed { display: inline; }
+  .act-yawn .mouth-idle, .act-yawn .mouth-big, .act-yawn .mouth-small, .act-yawn .mouth-hmm, .act-yawn .mouth-sad { display: none; }
+  .act-yawn .mouth-o { display: inline; transform-box: fill-box; transform-origin: center; animation: yawn 2.2s ease-in-out; }
+  @keyframes yawn { 0% { transform: scale(.6); } 40%,70% { transform: scale(1.7, 2.1); } 100% { transform: scale(.6); } }
+  .act-yawn #head { animation: tiltback 2.2s ease-in-out; }
+  @keyframes tiltback { 40%,70% { transform: rotate(-4deg) translateY(-3px); } }
+  .act-stretch #body { animation: stretch 1.8s ease-in-out; }
+  @keyframes stretch { 0%,100% { transform: scale(1,1); } 45% { transform: scale(.985,1.05) translateY(-6px); } }
+  .act-nod #head { animation: nod2 .7s ease-in-out 2; }
+  @keyframes nod2 { 50% { transform: translateY(5px) rotate(1deg); } }
+
+  /* во сне эмоций нет */
+  .sleep .eye-happy, .sleep #sparkle, .sleep #heart, .sleep #excl, .sleep #sweat, .sleep #tear { display: none !important; }
+
+</style>
+</head>
+<body class="mini">
+<div id="app">
+  <div id="bar" class="pywebview-drag-region">
+    <span class="dot" id="dot"></span><span class="name" id="title">Подруга</span>
+    <span class="spacer"></span>
+    <button class="icon-btn" title="Настройки" onclick="openSettings()">⚙︎</button>
+    <button class="icon-btn" title="Спрятать переписку" onclick="setMini(true)">▾</button>
+    <button class="icon-btn" title="Закрыть" onclick="api('quit')">✕</button>
+  </div>
+
+  <div id="charWrap" class="pywebview-drag-region">
+    <div id="char" class="sleep"><svg viewBox="0 0 320 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b4a8f"/><stop offset="1" stop-color="#4a3270"/>
+    </linearGradient>
+    <linearGradient id="hairHi" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a57fd0" stop-opacity=".9"/><stop offset="1" stop-color="#a57fd0" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="iris" cx=".5" cy=".38" r=".7">
+      <stop offset="0" stop-color="#7fe0d4"/><stop offset=".55" stop-color="#2fa59a"/><stop offset="1" stop-color="#1b5f63"/>
+    </radialGradient>
+    <linearGradient id="hoodie" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd6e3"/><stop offset="1" stop-color="#f4a9c2"/>
+    </linearGradient>
+    <linearGradient id="pajama" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfd6ff"/><stop offset="1" stop-color="#9aa6ec"/>
+    </linearGradient>
+  </defs>
+
+  <g id="body">
+    <!-- задние волосы -->
+    <path d="M78 170 C70 260 80 330 104 352 L216 352 C240 330 250 260 242 170 Z" fill="url(#hair)"/>
+    <!-- худи -->
+    <path id="top" d="M60 400 C62 340 100 312 160 312 C220 312 258 340 260 400 Z" fill="url(#hoodie)"/>
+    <g id="pjStars" fill="#fff8c8">
+      <path d="M96 360 l2 5 5 1 -4 3 1 5 -4 -3 -4 3 1 -5 -4 -3 5 -1 z"/>
+      <path d="M214 352 l2 5 5 1 -4 3 1 5 -4 -3 -4 3 1 -5 -4 -3 5 -1 z"/>
+      <path d="M120 388 l1.5 4 4 .8 -3 2.5 .8 4 -3.3 -2.3 -3.3 2.3 .8 -4 -3 -2.5 4 -.8 z"/>
+      <path d="M196 386 l1.5 4 4 .8 -3 2.5 .8 4 -3.3 -2.3 -3.3 2.3 .8 -4 -3 -2.5 4 -.8 z"/>
+    </g>
+    <path d="M118 318 C130 342 190 342 202 318" fill="none" stroke="#e48aa9" stroke-width="5" stroke-linecap="round"/>
+    <path d="M140 336 L136 372 M180 336 L184 372" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="136" cy="375" r="4" fill="#fff"/><circle cx="184" cy="375" r="4" fill="#fff"/>
+    <!-- рука (машет при приветствии) -->
+    <g id="arm">
+      <path d="M232 400 C236 370 246 338 258 306 L282 316 C272 348 262 378 258 400 Z" fill="url(#hoodie)" class="sleeve"/>
+      <ellipse cx="271" cy="300" rx="15" ry="17" fill="#fde6d8"/>
+      <path d="M260 290 q-4 -14 3 -16 q5 0 5 12 M268 286 q-1 -16 6 -16 q6 1 3 16 M276 289 q4 -13 10 -11 q4 3 -3 14"
+            fill="#fde6d8" stroke="#e8c3b0" stroke-width="1.2"/>
+    </g>
+    <!-- шея -->
+    <path d="M144 282 L144 318 Q160 326 176 318 L176 282 Z" fill="#f6d5c3"/>
+
+    <g id="head">
+      <!-- лицо -->
+      <path d="M92 182 C92 250 118 296 160 296 C202 296 228 250 228 182 C228 132 198 104 160 104 C122 104 92 132 92 182 Z" fill="#fde6d8"/>
+      <!-- уши -->
+      <ellipse cx="92" cy="200" rx="9" ry="15" fill="#f8d9c8"/>
+      <ellipse cx="228" cy="200" rx="9" ry="15" fill="#f8d9c8"/>
+
+      <!-- глаза -->
+      <g class="eye-open">
+        <ellipse cx="126" cy="210" rx="20" ry="25" fill="#fff"/>
+        <g class="gaze"><g class="pupil"><ellipse cx="128" cy="213" rx="16" ry="21" fill="url(#iris)"/>
+        <ellipse cx="129" cy="216" rx="7" ry="10" fill="#123f44"/></g></g>
+        <path d="M104 196 Q126 178 148 194" fill="none" stroke="#2e2140" stroke-width="5" stroke-linecap="round"/>
+        <path d="M104 196 L98 190" stroke="#2e2140" stroke-width="3.5" stroke-linecap="round"/>
+      </g>
+      <g class="eye-open">
+        <ellipse cx="194" cy="210" rx="20" ry="25" fill="#fff"/>
+        <g class="gaze"><g class="pupil"><ellipse cx="192" cy="213" rx="16" ry="21" fill="url(#iris)"/>
+        <ellipse cx="191" cy="216" rx="7" ry="10" fill="#123f44"/></g></g>
+        <path d="M172 194 Q194 178 216 196" fill="none" stroke="#2e2140" stroke-width="5" stroke-linecap="round"/>
+        <path d="M216 196 L222 190" stroke="#2e2140" stroke-width="3.5" stroke-linecap="round"/>
+      </g>
+      <g class="gaze"><g class="eye-shine pupil" fill="#fff">
+        <circle cx="121" cy="203" r="6"/><circle cx="135" cy="224" r="2.6"/>
+        <circle cx="187" cy="203" r="6"/><circle cx="199" cy="224" r="2.6"/>
+      </g></g>
+      <g class="eye-closed" fill="none" stroke="#2e2140" stroke-width="4" stroke-linecap="round">
+        <path d="M106 214 Q126 226 146 214"/><path d="M174 214 Q194 226 214 214"/>
+      </g>
+      <g class="eye-happy" fill="none" stroke="#2e2140" stroke-width="4.5" stroke-linecap="round">
+        <path d="M106 218 Q126 198 146 218"/><path d="M174 218 Q194 198 214 218"/>
+      </g>
+      <!-- румянец -->
+      <ellipse id="blushL" cx="112" cy="246" rx="13" ry="6" fill="#f59ab4" opacity=".35"/>
+      <ellipse id="blushR" cx="208" cy="246" rx="13" ry="6" fill="#f59ab4" opacity=".35"/>
+      <!-- нос -->
+      <path d="M158 240 Q160 244 162 241" fill="none" stroke="#e0a890" stroke-width="2" stroke-linecap="round"/>
+      <!-- рот -->
+      <path class="mouth-idle" d="M150 262 Q160 270 170 262" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <g class="mouth-talk" id="mouthTalk"><ellipse cx="160" cy="265" rx="8" ry="7" fill="#b5546f"/></g>
+      <path class="mouth-big" d="M145 259 Q160 281 175 259 Q160 265 145 259 Z" fill="#b5546f" stroke="#b5546f" stroke-width="2" stroke-linejoin="round"/>
+      <ellipse class="mouth-o" cx="160" cy="266" rx="5.5" ry="7" fill="#b5546f"/>
+      <path class="mouth-sad" d="M150 268 Q160 260 170 268" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <path class="mouth-small" d="M154 264 Q160 268 166 264" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <path class="mouth-hmm" d="M150 265 Q155 261 160 265 Q165 269 170 265" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <path id="tear" d="M218 222 q5 8 0 12 q-5 -4 0 -12 z" fill="#8fd3ff" opacity=".9"/>
+
+      <!-- чёлка и передние пряди -->
+      <path d="M86 196 C80 128 116 92 160 92 C204 92 240 128 234 196
+               C226 170 216 150 204 140 C206 160 200 172 192 178 C190 156 182 142 172 134
+               C172 154 164 166 152 172 C154 152 148 138 140 132 C134 150 124 162 112 166
+               C118 150 116 140 110 136 C100 152 92 172 86 196 Z" fill="url(#hair)"/>
+      <path d="M120 112 C140 100 170 98 196 110 C176 108 150 110 128 124 Z" fill="url(#hairHi)"/>
+      <path d="M86 196 C82 236 88 270 100 292 C96 260 96 230 98 204 Z" fill="url(#hair)"/>
+      <path d="M234 196 C238 236 232 270 220 292 C224 260 224 230 222 204 Z" fill="url(#hair)"/>
+      <!-- брови поверх чёлки (как в аниме), чтобы эмоции было видно -->
+      <path id="browL" d="M110 176 Q124 169 140 174" fill="none" stroke="#3a2558" stroke-width="3.2" stroke-linecap="round" opacity=".9"/>
+      <path id="browR" d="M180 174 Q196 169 210 176" fill="none" stroke="#3a2558" stroke-width="3.2" stroke-linecap="round" opacity=".9"/>
+      <g id="nightcap">
+        <path d="M100 128 C120 70 200 60 236 110 C246 92 262 96 268 112 C250 104 240 116 232 128 C200 110 140 108 100 128 Z" fill="#9aa6ec"/>
+        <path d="M98 130 C140 110 200 110 236 130" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="270" cy="114" r="9" fill="#fff"/>
+      </g>
+      <!-- заколка-звёздочка -->
+      <path d="M214 138 l5 10 11 1 -8 7 3 11 -10 -6 -10 6 3 -11 -8 -7 11 -1 z" fill="#ffd54d" stroke="#e9b52c" stroke-width="1.5" stroke-linejoin="round"/>
+    </g>
+
+    <g id="zzz" fill="#a57fd0" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="700">
+      <text x="236" y="120" font-size="22">z</text>
+      <text x="236" y="120" font-size="28">z</text>
+      <text x="236" y="120" font-size="34">Z</text>
+    </g>
+    <g id="sparkle" fill="#ffd54d">
+      <path d="M244 120 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3 z"/>
+      <path d="M266 150 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2 z"/>
+      <path d="M72 128 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2 z"/>
+    </g>
+    <path id="heart" d="M252 128 c0 -8 12 -10 12 0 c0 -10 12 -8 12 0 c0 8 -12 14 -12 18 c0 -4 -12 -10 -12 -18 z" fill="#f47aa0"/>
+    <text id="excl" x="246" y="140" font-size="34" font-weight="800" fill="#ffd54d" font-family="Arial, sans-serif">!</text>
+    <g id="sweat"><path d="M236 150 q6 9 0 14 q-6 -5 0 -14 z" fill="#8fd3ff"/></g>
+    <g id="dots" fill="#a57fd0">
+      <circle cx="238" cy="112" r="6"/><circle cx="256" cy="112" r="6"/><circle cx="274" cy="112" r="6"/>
+    </g>
+  </g>
+</svg></div>
+    <div id="status">Сплю</div>
+    <button id="chatBtn" title="Открыть переписку" onclick="setMini(false)">💬<span class="badge"></span></button>
+  </div>
+  <div id="meter"><i id="lvl"></i></div>
+
+  <div id="log"><div id="empty">Скажи <b>«привет, подруга»</b> или напиши внизу.<br>
+    «Посмотри» — глянет на экран. «Спокойной ночи» — уснёт.</div></div>
+
+  <div id="bottom">
+    <input id="input" placeholder="Написать…" onkeydown="if(event.key==='Enter')sendText()">
+    <button class="act" title="Посмотреть на экран" onclick="api('look')">👀</button>
+    <button class="act" id="sleepBtn" title="Разбудить / усыпить" onclick="api('toggle_sleep')">☀︎</button>
+    <button class="act" id="pauseBtn" title="Пауза" onclick="api('toggle_pause')">⏸</button>
+  </div>
+
+  <!-- первый запуск: ключ -->
+  <div class="panel" id="keyPanel">
+    <h2>Привет! Давай познакомимся 💜</h2>
+    <p>Чтобы я могла думать и говорить, нужен бесплатный ключ Google Gemini. Это одна минута:</p>
+    <ol class="steps">
+      <li>Нажми «Открыть страницу ключей» и войди в Google.</li>
+      <li>Нажми <b>Create API key</b>, потом на сам ключ и значок копирования.</li>
+      <li>Вставь сюда (Cmd+V) и нажми «Готово».</li>
+    </ol>
+    <button class="btn" onclick="api('open_url','https://aistudio.google.com/apikey')">Открыть страницу ключей</button>
+    <input id="keyInput" placeholder="Ключ: начинается на AQ. или AIza" spellcheck="false">
+    <div class="row"><button class="btn primary" id="keyBtn" onclick="saveKey()">Готово</button></div>
+    <div class="note" id="keyNote"></div>
+  </div>
+
+  <!-- настройки -->
+  <div class="panel" id="setPanel">
+    <h2>Настройки</h2>
+    <label>Как меня зовут<input id="sName"></label>
+    <label>Как мне тебя называть<input id="sUser"></label>
+    <label>Голос
+      <div class="row"><select id="sVoice" style="flex:1"></select>
+      <button class="btn" onclick="api('preview_voice', document.getElementById('sVoice').value, document.getElementById('sPitch').value)">▶︎</button></div>
+    </label>
+    <label>Тон голоса<select id="sPitch"></select></label>
+    <div class="traits">
+      <div class="trait"><span>нежная</span><input type="range" id="tBold" min="0" max="100"><span>дерзкая</span></div>
+      <div class="trait"><span>серьёзная</span><input type="range" id="tPlay" min="0" max="100"><span>игривая</span></div>
+      <div class="trait"><span>краткая</span><input type="range" id="tTalk" min="0" max="100"><span>болтливая</span></div>
+    </div>
+    <label>Манера речи (для облачного голоса)<textarea id="sStyle"></textarea></label>
+    <div class="row">
+      <button class="btn primary" onclick="saveSettings()">Сохранить</button>
+      <button class="btn" onclick="closePanels()">Закрыть</button>
+    </div>
+    <div class="note" id="setNote"></div>
+    <p style="margin-top:8px">Слушать только мой голос: <span id="vpState">—</span></p>
+    <div class="row"><button class="btn" onclick="api('enroll_voice'); closePanels()">Запомнить мой голос</button>
+      <button class="btn" onclick="api('forget_voice'); closePanels()">Забыть</button></div>
+    <p style="margin-top:8px">Telegram: <span id="tgState">—</span></p>
+    <div class="row"><input id="tgToken" placeholder="токен от @BotFather" style="flex:1" autocomplete="off">
+      <button class="btn" onclick="saveTg()">OK</button></div>
+    <div class="note" id="tgNote"></div>
+    <p style="margin-top:8px">Ключ Gemini: <span id="keyState">—</span></p>
+    <div class="row"><button class="btn" onclick="showKey()">Сменить ключ</button>
+      <button class="btn" onclick="api('open_data')">Папка с памятью</button></div>
+  </div>
+</div>
+
+<script src="vrm3d.js"></script>
+<script>
+document.addEventListener("contextmenu", e => { if (e.target.closest("input,textarea,.panel")) return; e.preventDefault(); api("menu"); });
+const $ = id => document.getElementById(id);
+const STATUS = { sleep: 'Сплю · скажи «привет, подруга»', listen: 'Слушаю', think: 'Думаю…',
+                 talk: 'Говорю', pause: 'Пауза', look: 'Смотрю на экран…', setup: 'Знакомимся' };
+const DOT = { sleep: 'var(--quiet)', listen: 'var(--good)', think: 'var(--warn)', talk: 'var(--accent2)',
+              pause: 'var(--quiet)', look: 'var(--warn)', setup: 'var(--accent)' };
+
+function api(name, ...args) {
+  if (window.pywebview && window.pywebview.api && window.pywebview.api[name])
+    return window.pywebview.api[name](...args);
+  return Promise.resolve(null);
+}
+
+// ---- вызывается из Python ----
+const ui = {
+  state(s) {
+    const face = (s === 'look') ? 'think' : (s === 'pause' || s === 'setup') ? 'sleep' : s;
+    ui._face = face; ui._paint();
+    $('status').textContent = STATUS[s] || s;
+    $('dot').style.background = DOT[s] || 'var(--quiet)';
+    $('sleepBtn').textContent = (s === 'sleep') ? '☀︎' : '☾';
+    $('pauseBtn').classList.toggle('on', s === 'pause');
+  },
+  add(role, text, tag) {
+    const e = $('empty'); if (e) e.remove();
+    const d = document.createElement('div'); d.className = 'msg ' + role;
+    if (tag) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = tag; d.appendChild(t); }
+    d.appendChild(document.createTextNode(text));
+    $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
+    if (document.body.classList.contains('mini') && role !== 'me') $('chatBtn').classList.add('unread');
+    while ($('log').children.length > 80) $('log').firstChild.remove();
+  },
+  appendHer(text) {          // её ответ приходит по предложениям — дописываем в последний пузырь
+    const last = $('log').lastElementChild;
+    if (last && last.classList.contains('her') && last.dataset.open === '1') {
+      last.lastChild.textContent += ' ' + text;
+    } else { ui.add('her', text); $('log').lastElementChild.dataset.open = '1'; }
+    $('log').scrollTop = $('log').scrollHeight;
+  },
+  closeHer() { const l = $('log').lastElementChild; if (l) l.dataset.open = '0'; },
+  // эмоция держится, пока она говорит, и ещё пару секунд после
+  _face: 'sleep', _emo: 'calm', _emoTimer: null,
+  _outfit: '', _act: '', _actTimer: null, _lipT: 0,
+  _paint() {
+    $('char').className = [ui._face, (ui._emo !== 'calm' && ui._face !== 'sleep') ? 'emo-' + ui._emo : '',
+      ui._outfit, ui._act, (Date.now() - ui._lipT < 350) ? 'lipsync' : ''].filter(Boolean).join(' ');
+    if (window.VRM3D && VRM3D.ready) VRM3D.state(ui._face, ui._emo, ui._act);
+  },
+  // взгляд: dx, dy от -1 до 1 (куда смотреть относительно её лица)
+  look(dx, dy) {
+    const c = $('char'); c.style.setProperty('--gx', (dx * 6).toFixed(1) + 'px'); c.style.setProperty('--gy', (dy * 5).toFixed(1) + 'px');
+    ui._lookT = Date.now();
+    if (window.VRM3D && VRM3D.ready) VRM3D.look(dx, dy);
+  },
+  _lookT: 0,
+  // рот по громкости речи 0..1
+  mouth(v) {
+    if (window.VRM3D && VRM3D.ready) VRM3D.mouth(v);
+    $('char').style.setProperty('--mouth', Math.max(0, Math.min(1, v)).toFixed(2));
+    const was = Date.now() - ui._lipT < 350; ui._lipT = Date.now(); if (!was) ui._paint();
+    clearTimeout(ui._lipOff); ui._lipOff = setTimeout(() => ui._paint(), 400);
+  },
+  // разовое движение: wave / yawn / stretch / nod
+  act(name, ms) {
+    ui._act = 'act-' + name; ui._paint(); clearTimeout(ui._actTimer);
+    ui._actTimer = setTimeout(() => { ui._act = ''; ui._paint(); }, ms || 2300);
+  },
+  outfit(o) { ui._outfit = o || ''; ui._paint(); },
+  showChat() { if (document.body.classList.contains('mini')) setMini(false); },
+  emotion(e, holdMs) {
+    ui._emo = e || 'calm'; ui._paint(); clearTimeout(ui._emoTimer);
+    if (holdMs) ui._emoTimer = setTimeout(() => { ui._emo = 'calm'; ui._paint(); }, holdMs);
+  },
+  level(v) { $('lvl').style.width = Math.min(100, v / 30) + '%'; },
+  title(name) { $('title').textContent = name; document.title = name; },
+  needKey(msg) { setMini(false); showKey(); if (msg) note('keyNote', msg, false); },
+  keyOk() { closePanels(); },
+};
+
+// ---- действия ----
+function sendText() {
+  const v = $('input').value.trim(); if (!v) return;
+  $('input').value = ''; api('send_text', v);
+}
+function setMini(on) {
+  document.body.classList.toggle('mini', on);
+  if (!on) { $('chatBtn').classList.remove('unread'); $('log').scrollTop = $('log').scrollHeight; }
+  api('compact', on);
+}
+function closePanels() { $('keyPanel').classList.remove('show'); $('setPanel').classList.remove('show'); }
+function showKey() { closePanels(); $('keyPanel').classList.add('show'); setTimeout(() => $('keyInput').focus(), 50); }
+function note(id, text, ok) { const n = $(id); n.textContent = text; n.className = 'note ' + (ok ? 'ok' : 'bad'); }
+async function saveKey() {
+  const k = $('keyInput').value.trim(); if (!k) return;
+  $('keyBtn').disabled = true; note('keyNote', 'Проверяю ключ…', true);
+  const r = await api('set_key', k);
+  $('keyBtn').disabled = false;
+  if (r && r.ok) { note('keyNote', 'Готово! Ключ работает.', true); $('keyInput').value = ''; setTimeout(closePanels, 700); }
+  else note('keyNote', (r && r.msg) || 'Не получилось', false);
+}
+async function openSettings() {
+  setMini(false);
+  const s = await api('get_settings'); if (!s) return;
+  $('sName').value = s.companion_name; $('sUser').value = s.user_name; $('sStyle').value = s.style;
+  $('sVoice').innerHTML = s.voices.map(v => `<option value="${v[0]}" ${v[0] === s.voice ? 'selected' : ''}>${v[1]}</option>`).join('');
+  $('sPitch').innerHTML = s.pitches.map(p => `<option value="${p[0]}" ${p[0] === s.pitch ? 'selected' : ''}>${p[1]}</option>`).join('');
+  $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
+  $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
+  showTg(s.telegram);
+  $('tBold').value = s.traits.trait_bold ?? 20; $('tPlay').value = s.traits.trait_play ?? 55; $('tTalk').value = s.traits.trait_talk ?? 30;
+  closePanels(); $('setPanel').classList.add('show');
+}
+function showTg(t) {
+  if (!t || !t.on) { $('tgState').textContent = 'выключен'; return; }
+  $('tgState').innerHTML = '@' + (t.name || 'бот') + (t.paired ? ' — подключён ✓ <a href="#" onclick="unpairTg();return false">отвязать</a>'
+    : ' — пришли боту код <b>' + t.code + '</b>');
+}
+async function saveTg() {
+  const v = $('tgToken').value.trim();
+  note('tgNote', v ? 'Проверяю токен…' : 'Выключаю…', true);
+  const r = await api('set_telegram', v);
+  $('tgToken').value = '';
+  if (!r) return;
+  if (!r.ok) { note('tgNote', r.msg || 'Не получилось', false); return; }
+  if (r.off) { note('tgNote', 'Telegram выключен', true); showTg(null); return; }
+  showTg({ on: true, name: r.name, paired: r.paired, code: r.code });
+  note('tgNote', r.paired ? 'Готово!' : 'Открой бота в Telegram и пришли ему код ' + r.code, true);
+}
+async function unpairTg() { showTg(await api('telegram_unpair')); }
+async function saveSettings() {
+  const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
+    voice: $('sVoice').value, style: $('sStyle').value.trim(), pitch: $('sPitch').value,
+    trait_bold: $('tBold').value, trait_play: $('tPlay').value, trait_talk: $('tTalk').value });
+  note('setNote', r && r.ok ? 'Сохранено ✓' : 'Не сохранилось', r && r.ok);
+}
+window.addEventListener('pywebviewready', () => api('ui_ready'));
+// если курсор давно не двигался — иногда сама смотрит по сторонам
+setInterval(() => {
+  if (Date.now() - ui._lookT < 6000 || Math.random() > 0.35) return;
+  const dx = (Math.random() * 2 - 1) * 0.8, dy = (Math.random() * 2 - 1) * 0.5;
+  const c = $('char'); c.style.setProperty('--gx', (dx * 6).toFixed(1) + 'px'); c.style.setProperty('--gy', (dy * 5).toFixed(1) + 'px');
+  setTimeout(() => { if (Date.now() - ui._lookT > 6000) { c.style.setProperty('--gx', '0px'); c.style.setProperty('--gy', '0px'); } }, 1400);
+}, 2500);
+
+// 3D-модель: есть, если приложение положило model.vrm рядом (работает только через локальный сервер)
+// Через локальный сервер страница открывается только когда есть 3D-модель — сразу прячем рисованную,
+// чтобы при запуске не мелькала старая. Если 3D не загрузится — вернём рисованную.
+if (location.protocol.startsWith('http') && window.VRM3D) {
+  document.body.classList.add('has3d');
+  const back = () => document.body.classList.remove('has3d');
+  fetch('model.vrm', { method: 'HEAD' }).then(r => {
+    if (r.ok) VRM3D.start('model.vrm').then(ok => { if (ok) ui._paint(); else back(); });
+    else back();
+  }).catch(back);
+}
+</script>
+</body>
+</html>

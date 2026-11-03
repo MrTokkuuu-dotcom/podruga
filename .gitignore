@@ -1,0 +1,8 @@
+__pycache__/
+voices/
+avatar/model.vrm
+models/speaker_campplus.onnx
+.env
+key.txt
+data/
+*.log

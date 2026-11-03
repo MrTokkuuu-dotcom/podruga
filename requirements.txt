@@ -1,0 +1,19 @@
+# Версии закреплены: с ними всё проверено. Все ставятся на macOS 11 и новее.
+psutil==7.2.2
+requests==2.34.2
+pyyaml==6.0.3
+google-genai==2.34.0
+httpx==0.28.1
+sounddevice==0.5.6
+numpy==2.4.6
+webrtcvad-wheels==2.0.14.post1
+piper-tts==1.8.0
+onnxruntime==1.19.2       # ставится на macOS 11+ (и M-чип, и Intel); 1.31 требовал macOS 14
+vosk==0.3.44
+sherpa-onnx==2.0.1        # узнавание твоего голоса
+pywebview==6.2.1
+torch==2.8.0; platform_machine == "arm64" or sys_platform != "darwin"
+pyobjc-core==13.0; sys_platform == "darwin"
+pyobjc-framework-WebKit==13.0; sys_platform == "darwin"
+pynput==1.8.2; sys_platform == "darwin"
+keyboard>=0.13; sys_platform == "win32"

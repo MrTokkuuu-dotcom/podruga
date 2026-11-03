@@ -1,0 +1,86 @@
+# Настройки компаньона. Меняй здесь, код трогать не нужно.
+
+user_name: "Руслан"        # как она к тебе обращается
+companion_name: "Аня"      # имя персонажа — поменяйте на своё
+character_file: "character.md"
+user_city: "Пусан"         # для погоды и новостей
+
+brain:
+  # Простая версия: мозг в облаке, видеокарта не нужна.
+  # Точное имя модели проверить: python list_models.py
+  model: "gemini-3.5-flash-lite"
+  thinking_budget: 0       # 0 = без «раздумий»: быстрее и дешевле
+  history_turns: 10        # сколько последних реплик она держит в голове
+
+voice:
+  engine: "silero"         # silero = бесплатно на Mac (по умолчанию); gemini = облако (лимиты); piper = простой
+  silero_speaker: "xenia"  # xenia (мягкая), kseniya (звонкая), baya (спокойная)
+  silero_pitch: "medium"   # тон: medium / high / x-high
+  silero_rate: "medium"    # темп: slow / medium / fast
+  gemini_model: "gemini-3.8-flash-lite-tts"
+  gemini_voice: "Sulafat"
+  style: "милый, тёплый и живой голос молодой девушки; говорит ласково и немного игриво, с улыбкой, естественно, как с близким другом"
+  # запасной голос:
+  model: "voices/ru_RU-irina-medium.onnx"
+  speed: 1.05
+
+microphone:
+  energy_threshold: 300    # порог громкости; подобрать: python mic_test.py
+  end_silence_ms: 700      # сколько тишины = фраза закончилась
+  min_speech_ms: 500       # короче — не считаем фразой (кашель, щелчок)
+  speech_prob: 0.6         # фильтр голоса 0..1: выше — строже к музыке и шуму (проверка: mic_test)
+  min_density: 0.45        # сколько во фразе должно быть речи; у музыки и видео она рваная
+  device: null             # null = микрофон по умолчанию
+  barge_in: "auto"         # перебивание: auto = только в наушниках; true = всегда; false = никогда
+
+wake:
+  enabled: true            # false = слушает всё подряд, без команд
+  phrases: ["привет подруга", "эй подруга"]          # будят
+  sleep_phrases: ["спокойной ночи", "пока подруга"]  # усыпляют — дальше не слушает
+  goodnight: ["Спокойной ночи!", "Сладких снов!", "Спокойной ночи, отдыхай."]
+  model_dir: "voices/vosk-model-small-ru-0.22"
+
+avatar:
+  enabled: true            # окно приложения с героиней поверх экрана
+
+voiceprint:
+  threshold: 0.32          # насколько строго узнавать твой голос (0.28 мягче, 0.4 строже)
+
+initiative:
+  enabled: true            # сама заговаривает первой
+  idle_minutes: 20         # после стольких минут тишины (когда не спит)
+  min_gap_minutes: 45      # и не чаще, чем раз в столько минут
+  evening: "21:30"         # вечером спросит, как прошёл день
+  quiet_hours: "23:30-09:00"  # в это время сама не заговаривает (напоминания — всё равно)
+
+memory:
+  save_after_idle_s: 180   # через сколько секунд тишины записать факты из разговора
+  save_after_turns: 12     # или после стольких реплик
+
+# Локальный мозг (Ollama) — опция для мощных ПК, этап 5. В простой версии не используется.
+ollama:
+  url: "http://localhost:11434"
+  model: "qwen3:8b"
+
+autopause:
+  # Точные имена процессов игр.
+  # Windows: Диспетчер задач → Подробности (с .exe). Mac: Мониторинг системы → колонка «Имя процесса».
+  games:
+    - "VALORANT-Win64-Shipping.exe"
+    - "VALORANT.exe"
+    - "cs2.exe"
+    - "League of Legends.exe"
+    - "League of Legends"        # Mac
+    - "LeagueClient"             # Mac
+  gpu_threshold: 70        # % загрузки видеокарты другими программами
+  gpu_seconds: 30          # сколько секунд подряд, чтобы встать на паузу
+  resume_delay: 5          # через сколько секунд после закрытия игры вернуться
+  poll_interval: 3         # как часто проверять, сек
+  hotkey: "ctrl+alt+p"     # Windows
+  hotkey_mac: null         # Mac: пауза — кнопкой ⏸ в окне. Клавиша, например "ctrl+cmd+p", требует
+                           # разрешения «Универсальный доступ», поэтому по умолчанию выключена
+
+paths:
+  data_dir: "data"         # журнал, память, резервные копии
+
+backup_keep_days: 30

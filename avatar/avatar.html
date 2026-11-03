@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Подруга</title>
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden;
+               -webkit-user-select: none; user-select: none; cursor: grab; }
+  #stage { width: 100vw; height: 100vh; display: flex; align-items: flex-end; justify-content: center; }
+  svg { width: 100%; height: 100%; }
+
+  /* дыхание */
+  #body { transform-origin: 160px 380px; animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.012,1.018); } }
+
+  /* голова чуть покачивается */
+  #head { transform-origin: 160px 250px; animation: sway 7s ease-in-out infinite; }
+  @keyframes sway { 0%,100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+
+  /* глаза: открыты / моргание / закрыты */
+  .eye-open { transform-origin: center; transform-box: fill-box; animation: blink 5s infinite; }
+  @keyframes blink { 0%,95%,100% { transform: scaleY(1); } 97% { transform: scaleY(0.08); } }
+  .eye-closed { display: none; }
+
+  /* рот */
+  .mouth-talk { display: none; }
+  #mouthTalk ellipse { transform-origin: center; transform-box: fill-box; animation: talk .22s ease-in-out infinite alternate; }
+  @keyframes talk { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+
+  #zzz { display: none; }
+  #zzz text { animation: float 3s ease-in infinite; opacity: 0; }
+  #zzz text:nth-child(2) { animation-delay: 1s; }
+  #zzz text:nth-child(3) { animation-delay: 2s; }
+  @keyframes float { 0% { opacity: 0; transform: translate(0,0); } 20% { opacity: .9; }
+                     100% { opacity: 0; transform: translate(18px,-46px); } }
+
+  #dots { display: none; }
+  #dots circle { animation: dot 1.2s infinite; }
+  #dots circle:nth-child(2) { animation-delay: .2s; }
+  #dots circle:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+
+  /* === состояния === */
+  .sleep .eye-open, .sleep .eye-shine { display: none; }
+  .sleep .eye-closed { display: inline; }
+  .sleep #zzz { display: inline; }
+  .sleep #head { animation: nod 4s ease-in-out infinite; }
+  @keyframes nod { 0%,100% { transform: rotate(4deg) translateY(3px); } 50% { transform: rotate(6deg) translateY(5px); } }
+
+  .talk .mouth-idle { display: none; }
+  .talk .mouth-talk { display: inline; }
+
+  .think #dots { display: inline; }
+  .listen #blushL, .listen #blushR, .talk #blushL, .talk #blushR { opacity: .55; }
+
+  /* === эмоции (класс emo-* рядом с состоянием) === */
+  .pupil, #browL, #browR, #blushL, #blushR { transition: transform .35s ease, opacity .35s ease; }
+  #browL, #browR, #blushL, #blushR { transform-box: fill-box; transform-origin: center; }
+  .eye-happy, .mouth-big, .mouth-o, .mouth-sad, .mouth-small, .mouth-hmm,
+  #tear, #sparkle, #heart, #excl, #sweat { display: none; }
+  #sparkle, #heart, #excl, #sweat { animation: pop 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pop { 0%,100% { transform: scale(.9) translateY(0); opacity: .85; } 50% { transform: scale(1.08) translateY(-4px); opacity: 1; } }
+
+  /* радость: широкая улыбка и искорки */
+  .emo-joy .mouth-idle { display: none; } .emo-joy:not(.talk) .mouth-big { display: inline; }
+  .emo-joy #sparkle { display: inline; } .emo-joy #blushL, .emo-joy #blushR { opacity: .7; }
+  /* нежность: глаза-улыбки, сердечко, румянец */
+  .emo-tender .eye-open, .emo-tender .eye-shine { display: none; } .emo-tender .eye-happy { display: inline; }
+  .emo-tender #heart { display: inline; } .emo-tender #blushL, .emo-tender #blushR { opacity: .75; }
+  /* смущение: сильный румянец, взгляд вниз, маленький рот, капелька */
+  .emo-shy #blushL, .emo-shy #blushR { opacity: .95; transform: scale(1.35); }
+  .emo-shy .pupil { transform: translate(-2px, 5px); }
+  .emo-shy .mouth-idle { display: none; } .emo-shy:not(.talk) .mouth-small { display: inline; }
+  .emo-shy #sweat { display: inline; }
+  /* удивление: брови вверх, рот «о», восклицание */
+  .emo-surprise #browL, .emo-surprise #browR { transform: translateY(-8px); }
+  .emo-surprise .mouth-idle { display: none; } .emo-surprise:not(.talk) .mouth-o { display: inline; }
+  .emo-surprise #excl { display: inline; }
+  /* грусть: брови домиком, грустный рот, взгляд вниз, слезинка */
+  .emo-sad #browL { transform: rotate(-14deg) translateY(2px); } .emo-sad #browR { transform: rotate(14deg) translateY(2px); }
+  .emo-sad .pupil { transform: translateY(4px); }
+  .emo-sad .mouth-idle { display: none; } .emo-sad:not(.talk) .mouth-sad { display: inline; }
+  .emo-sad #tear { display: inline; }
+  /* задумчивость: взгляд вверх-вбок, бровь приподнята, «хм» */
+  .emo-think .pupil { transform: translate(-5px, -6px); } .emo-think #browR { transform: translateY(-6px) rotate(-6deg); }
+  .emo-think .mouth-idle { display: none; } .emo-think:not(.talk) .mouth-hmm { display: inline; }
+
+  /* === взгляд за курсором (JS ставит --gx/--gy) === */
+  .gaze { transform: translate(var(--gx, 0px), var(--gy, 0px)); transition: transform .25s ease-out; }
+  .think .eye-open { animation-duration: 2.6s; }   /* думает — моргает чаще */
+
+  /* === рот в такт речи (JS ставит --mouth 0..1) === */
+  .lipsync #mouthTalk ellipse { animation: none; transform: scaleY(calc(.18 + var(--mouth, .4) * .95)); transition: transform .07s linear; }
+
+  /* === одежда: ночью пижама, во сне ночью — колпак === */
+  #pjStars, #nightcap { display: none; }
+  .night #top, .night #arm .sleeve { fill: url(#pajama); }
+  .night #pjStars { display: inline; }
+  .night.sleep #nightcap { display: inline; }
+  .night.sleep path[d^="M214 138"] { display: none; }  /* заколку под колпаком не видно */
+
+  /* === разовые движения: помахать, зевнуть, потянуться, кивнуть === */
+  #arm { display: none; transform-box: view-box; transform-origin: 250px 400px; }
+  .act-wave #arm { display: inline; animation: wave .5s ease-in-out 4 alternate; }
+  @keyframes wave { from { transform: rotate(-8deg); } to { transform: rotate(12deg); } }
+  .act-yawn .eye-open, .act-yawn .eye-shine, .act-yawn .eye-happy { display: none; }
+  .act-yawn .eye-closed { display: inline; }
+  .act-yawn .mouth-idle, .act-yawn .mouth-big, .act-yawn .mouth-small, .act-yawn .mouth-hmm, .act-yawn .mouth-sad { display: none; }
+  .act-yawn .mouth-o { display: inline; transform-box: fill-box; transform-origin: center; animation: yawn 2.2s ease-in-out; }
+  @keyframes yawn { 0% { transform: scale(.6); } 40%,70% { transform: scale(1.7, 2.1); } 100% { transform: scale(.6); } }
+  .act-yawn #head { animation: tiltback 2.2s ease-in-out; }
+  @keyframes tiltback { 40%,70% { transform: rotate(-4deg) translateY(-3px); } }
+  .act-stretch #body { animation: stretch 1.8s ease-in-out; }
+  @keyframes stretch { 0%,100% { transform: scale(1,1); } 45% { transform: scale(.985,1.05) translateY(-6px); } }
+  .act-nod #head { animation: nod2 .7s ease-in-out 2; }
+  @keyframes nod2 { 50% { transform: translateY(5px) rotate(1deg); } }
+
+  /* во сне эмоций нет */
+  .sleep .eye-happy, .sleep #sparkle, .sleep #heart, .sleep #excl, .sleep #sweat, .sleep #tear { display: none !important; }
+</style>
+</head>
+<body>
+<div id="stage" class="sleep">
+<svg viewBox="0 0 320 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b4a8f"/><stop offset="1" stop-color="#4a3270"/>
+    </linearGradient>
+    <linearGradient id="hairHi" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a57fd0" stop-opacity=".9"/><stop offset="1" stop-color="#a57fd0" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="iris" cx=".5" cy=".38" r=".7">
+      <stop offset="0" stop-color="#7fe0d4"/><stop offset=".55" stop-color="#2fa59a"/><stop offset="1" stop-color="#1b5f63"/>
+    </radialGradient>
+    <linearGradient id="hoodie" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd6e3"/><stop offset="1" stop-color="#f4a9c2"/>
+    </linearGradient>
+    <linearGradient id="pajama" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfd6ff"/><stop offset="1" stop-color="#9aa6ec"/>
+    </linearGradient>
+  </defs>
+
+  <g id="body">
+    <!-- задние волосы -->
+    <path d="M78 170 C70 260 80 330 104 352 L216 352 C240 330 250 260 242 170 Z" fill="url(#hair)"/>
+    <!-- худи -->
+    <path id="top" d="M60 400 C62 340 100 312 160 312 C220 312 258 340 260 400 Z" fill="url(#hoodie)"/>
+    <g id="pjStars" fill="#fff8c8">
+      <path d="M96 360 l2 5 5 1 -4 3 1 5 -4 -3 -4 3 1 -5 -4 -3 5 -1 z"/>
+      <path d="M214 352 l2 5 5 1 -4 3 1 5 -4 -3 -4 3 1 -5 -4 -3 5 -1 z"/>
+      <path d="M120 388 l1.5 4 4 .8 -3 2.5 .8 4 -3.3 -2.3 -3.3 2.3 .8 -4 -3 -2.5 4 -.8 z"/>
+      <path d="M196 386 l1.5 4 4 .8 -3 2.5 .8 4 -3.3 -2.3 -3.3 2.3 .8 -4 -3 -2.5 4 -.8 z"/>
+    </g>
+    <path d="M118 318 C130 342 190 342 202 318" fill="none" stroke="#e48aa9" stroke-width="5" stroke-linecap="round"/>
+    <path d="M140 336 L136 372 M180 336 L184 372" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="136" cy="375" r="4" fill="#fff"/><circle cx="184" cy="375" r="4" fill="#fff"/>
+    <!-- рука (машет при приветствии) -->
+    <g id="arm">
+      <path d="M232 400 C236 370 246 338 258 306 L282 316 C272 348 262 378 258 400 Z" fill="url(#hoodie)" class="sleeve"/>
+      <ellipse cx="271" cy="300" rx="15" ry="17" fill="#fde6d8"/>
+      <path d="M260 290 q-4 -14 3 -16 q5 0 5 12 M268 286 q-1 -16 6 -16 q6 1 3 16 M276 289 q4 -13 10 -11 q4 3 -3 14"
+            fill="#fde6d8" stroke="#e8c3b0" stroke-width="1.2"/>
+    </g>
+    <!-- шея -->
+    <path d="M144 282 L144 318 Q160 326 176 318 L176 282 Z" fill="#f6d5c3"/>
+
+    <g id="head">
+      <!-- лицо -->
+      <path d="M92 182 C92 250 118 296 160 296 C202 296 228 250 228 182 C228 132 198 104 160 104 C122 104 92 132 92 182 Z" fill="#fde6d8"/>
+      <!-- уши -->
+      <ellipse cx="92" cy="200" rx="9" ry="15" fill="#f8d9c8"/>
+      <ellipse cx="228" cy="200" rx="9" ry="15" fill="#f8d9c8"/>
+
+      <!-- глаза -->
+      <g class="eye-open">
+        <ellipse cx="126" cy="210" rx="20" ry="25" fill="#fff"/>
+        <g class="gaze"><g class="pupil"><ellipse cx="128" cy="213" rx="16" ry="21" fill="url(#iris)"/>
+        <ellipse cx="129" cy="216" rx="7" ry="10" fill="#123f44"/></g></g>
+        <path d="M104 196 Q126 178 148 194" fill="none" stroke="#2e2140" stroke-width="5" stroke-linecap="round"/>
+        <path d="M104 196 L98 190" stroke="#2e2140" stroke-width="3.5" stroke-linecap="round"/>
+      </g>
+      <g class="eye-open">
+        <ellipse cx="194" cy="210" rx="20" ry="25" fill="#fff"/>
+        <g class="gaze"><g class="pupil"><ellipse cx="192" cy="213" rx="16" ry="21" fill="url(#iris)"/>
+        <ellipse cx="191" cy="216" rx="7" ry="10" fill="#123f44"/></g></g>
+        <path d="M172 194 Q194 178 216 196" fill="none" stroke="#2e2140" stroke-width="5" stroke-linecap="round"/>
+        <path d="M216 196 L222 190" stroke="#2e2140" stroke-width="3.5" stroke-linecap="round"/>
+      </g>
+      <g class="gaze"><g class="eye-shine pupil" fill="#fff">
+        <circle cx="121" cy="203" r="6"/><circle cx="135" cy="224" r="2.6"/>
+        <circle cx="187" cy="203" r="6"/><circle cx="199" cy="224" r="2.6"/>
+      </g></g>
+      <g class="eye-closed" fill="none" stroke="#2e2140" stroke-width="4" stroke-linecap="round">
+        <path d="M106 214 Q126 226 146 214"/><path d="M174 214 Q194 226 214 214"/>
+      </g>
+      <g class="eye-happy" fill="none" stroke="#2e2140" stroke-width="4.5" stroke-linecap="round">
+        <path d="M106 218 Q126 198 146 218"/><path d="M174 218 Q194 198 214 218"/>
+      </g>
+      <!-- румянец -->
+      <ellipse id="blushL" cx="112" cy="246" rx="13" ry="6" fill="#f59ab4" opacity=".35"/>
+      <ellipse id="blushR" cx="208" cy="246" rx="13" ry="6" fill="#f59ab4" opacity=".35"/>
+      <!-- нос -->
+      <path d="M158 240 Q160 244 162 241" fill="none" stroke="#e0a890" stroke-width="2" stroke-linecap="round"/>
+      <!-- рот -->
+      <path class="mouth-idle" d="M150 262 Q160 270 170 262" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <g class="mouth-talk" id="mouthTalk"><ellipse cx="160" cy="265" rx="8" ry="7" fill="#b5546f"/></g>
+      <path class="mouth-big" d="M145 259 Q160 281 175 259 Q160 265 145 259 Z" fill="#b5546f" stroke="#b5546f" stroke-width="2" stroke-linejoin="round"/>
+      <ellipse class="mouth-o" cx="160" cy="266" rx="5.5" ry="7" fill="#b5546f"/>
+      <path class="mouth-sad" d="M150 268 Q160 260 170 268" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <path class="mouth-small" d="M154 264 Q160 268 166 264" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <path class="mouth-hmm" d="M150 265 Q155 261 160 265 Q165 269 170 265" fill="none" stroke="#b5546f" stroke-width="3" stroke-linecap="round"/>
+      <path id="tear" d="M218 222 q5 8 0 12 q-5 -4 0 -12 z" fill="#8fd3ff" opacity=".9"/>
+
+      <!-- чёлка и передние пряди -->
+      <path d="M86 196 C80 128 116 92 160 92 C204 92 240 128 234 196
+               C226 170 216 150 204 140 C206 160 200 172 192 178 C190 156 182 142 172 134
+               C172 154 164 166 152 172 C154 152 148 138 140 132 C134 150 124 162 112 166
+               C118 150 116 140 110 136 C100 152 92 172 86 196 Z" fill="url(#hair)"/>
+      <path d="M120 112 C140 100 170 98 196 110 C176 108 150 110 128 124 Z" fill="url(#hairHi)"/>
+      <path d="M86 196 C82 236 88 270 100 292 C96 260 96 230 98 204 Z" fill="url(#hair)"/>
+      <path d="M234 196 C238 236 232 270 220 292 C224 260 224 230 222 204 Z" fill="url(#hair)"/>
+      <!-- брови поверх чёлки (как в аниме), чтобы эмоции было видно -->
+      <path id="browL" d="M110 176 Q124 169 140 174" fill="none" stroke="#3a2558" stroke-width="3.2" stroke-linecap="round" opacity=".9"/>
+      <path id="browR" d="M180 174 Q196 169 210 176" fill="none" stroke="#3a2558" stroke-width="3.2" stroke-linecap="round" opacity=".9"/>
+      <g id="nightcap">
+        <path d="M100 128 C120 70 200 60 236 110 C246 92 262 96 268 112 C250 104 240 116 232 128 C200 110 140 108 100 128 Z" fill="#9aa6ec"/>
+        <path d="M98 130 C140 110 200 110 236 130" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="270" cy="114" r="9" fill="#fff"/>
+      </g>
+      <!-- заколка-звёздочка -->
+      <path d="M214 138 l5 10 11 1 -8 7 3 11 -10 -6 -10 6 3 -11 -8 -7 11 -1 z" fill="#ffd54d" stroke="#e9b52c" stroke-width="1.5" stroke-linejoin="round"/>
+    </g>
+
+    <g id="zzz" fill="#a57fd0" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="700">
+      <text x="236" y="120" font-size="22">z</text>
+      <text x="236" y="120" font-size="28">z</text>
+      <text x="236" y="120" font-size="34">Z</text>
+    </g>
+    <g id="sparkle" fill="#ffd54d">
+      <path d="M244 120 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3 z"/>
+      <path d="M266 150 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2 z"/>
+      <path d="M72 128 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2 z"/>
+    </g>
+    <path id="heart" d="M252 128 c0 -8 12 -10 12 0 c0 -10 12 -8 12 0 c0 8 -12 14 -12 18 c0 -4 -12 -10 -12 -18 z" fill="#f47aa0"/>
+    <text id="excl" x="246" y="140" font-size="34" font-weight="800" fill="#ffd54d" font-family="Arial, sans-serif">!</text>
+    <g id="sweat"><path d="M236 150 q6 9 0 14 q-6 -5 0 -14 z" fill="#8fd3ff"/></g>
+    <g id="dots" fill="#a57fd0">
+      <circle cx="238" cy="112" r="6"/><circle cx="256" cy="112" r="6"/><circle cx="274" cy="112" r="6"/>
+    </g>
+  </g>
+</svg>
+</div>
+<script>
+  // Python меняет состояние: setState('sleep' | 'listen' | 'think' | 'talk', 'joy' | ... )
+  function setState(s, emo, extra) { document.getElementById('stage').className = s + (emo && s !== 'sleep' ? ' emo-' + emo : '') + (extra ? ' ' + extra : ''); }
+</script>
+</body>
+</html>
