@@ -204,11 +204,13 @@ class AppUI:
             from config import HOME
             import shutil
             src, dst = Path(HOME) / "avatar.vrm", HTML.parent / "model.vrm"
+            if not src.exists():                    # своей модели нет — общая из обновления
+                src = HTML.parent / "default.vrm"
             if src.exists():
                 if not dst.exists() or dst.stat().st_size != src.stat().st_size \
                         or dst.stat().st_mtime < src.stat().st_mtime:
                     shutil.copy2(src, dst)
-                print("[окно] 3D-модель: avatar.vrm")
+                print(f"[окно] 3D-модель: {src.name}")
                 return str(HTML)
             if dst.exists():
                 dst.unlink()
