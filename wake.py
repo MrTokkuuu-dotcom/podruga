@@ -47,6 +47,19 @@ class WakeWord:
         rec.AcceptWaveform(pcm)
         return _norm(json.loads(rec.FinalResult()).get("text", ""))
 
+    def transcribe(self, wav: bytes) -> tuple[str, float]:
+        """Свободное распознавание (без словаря) — для быстрых готовых ответов.
+        Возвращает текст и среднюю уверенность 0..1."""
+        with wave.open(io.BytesIO(wav)) as w:
+            pcm = w.readframes(w.getnframes())
+        rec = self._Rec(self.model, RATE)
+        rec.SetWords(True)
+        rec.AcceptWaveform(pcm)
+        r = json.loads(rec.FinalResult())
+        words = r.get("result", [])
+        conf = sum(x.get("conf", 0) for x in words) / len(words) if words else 0.0
+        return _norm(r.get("text", "")), conf
+
     def check(self, wav: bytes) -> Heard:
         return classify(self.hear(wav), self.wake, self.sleep, self.look)
 

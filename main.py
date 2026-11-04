@@ -420,6 +420,8 @@ class Companion:
             self.awake = True
         from wake import LOOK_PHRASES, _norm
         look = any(p in _norm(text) for p in LOOK_PHRASES)
+        if not look and self.quick_answer(text=text):
+            return
         self.respond(text=text, image=self.screenshot() if look else None)
         if is_goodbye(text, self.cfg["wake"]["sleep_phrases"]):
             self.go_sleep(say_goodnight=False)
@@ -436,6 +438,8 @@ class Companion:
             return
         since = self.last_awake_at
         away = (now() - since).total_seconds() if since else 0
+        if away < 2 * 3600 and self.quick_say("привет"):     # недавно виделись — сразу, без Google
+            return
         self.greet("wake", away, since)
 
     def go_sleep(self, say_goodnight: bool = True) -> None:
@@ -447,6 +451,64 @@ class Companion:
         self.journal.log("sleep")
         threading.Thread(target=self.save_memory, daemon=True).start()
         print(f"💤 уснула. Разбудить: «{self.cfg['wake']['phrases'][0]}»")
+
+    # --- быстрые готовые ответы (replies.txt) ---
+    def _after_question(self) -> bool:
+        last = next((h["text"] for h in reversed(self.history) if h["role"] == "model"), "")
+        return last.rstrip().endswith("?") and time.monotonic() - self.last_talk < 60
+
+    def quick_reply(self, text: str):
+        """→ (текст ответа, эмоция, команды) или None."""
+        if not getattr(self, "quick", None) or getattr(self.speaker.voice, "lang", "ru") == "en":
+            return None
+        if is_goodbye(text, self.cfg["wake"]["sleep_phrases"]):
+            return None
+        m = self.quick.match(text, self._after_question())
+        if not m:
+            return None
+        parts, emo, cmds = m
+        reply = " ".join(self.quick.fill(t, ctx, self.user, self.cfg["companion_name"]) for t, ctx in parts)
+        return reply, emo, cmds
+
+    def quick_say(self, text: str) -> bool:
+        r = self.quick_reply(text)
+        if not r:
+            return False
+        reply, emo, _ = r
+        self.say(reply, emo)
+        self.history.append({"role": "model", "text": reply})
+        self.last_talk = time.monotonic()
+        return True
+
+    def quick_answer(self, wav: bytes | None = None, text: str | None = None) -> bool:
+        """Простая фраза — отвечаем сами за доли секунды. Сложное — False, пусть думает Gemini."""
+        if not getattr(self, "quick", None):
+            return False
+        t0 = time.monotonic()
+        if wav is not None:
+            if not self.wake:
+                return False
+            heard, conf = self.wake.transcribe(wav)
+            if not heard or conf < 0.7:
+                return False
+        else:
+            heard = text or ""
+        r = self.quick_reply(heard)
+        if not r:
+            return False
+        reply, emo, cmds = r
+        print(f"⚡ быстро ({(time.monotonic() - t0) * 1000:.0f} мс): «{heard}» → {reply}")
+        if wav is not None:
+            self.ui.add("me", heard)
+        self.history.append({"role": "user", "text": heard})
+        self.unsaved.append(f"{self.user}: {heard}")
+        if cmds:
+            self.handle_commands(cmds)
+        self.say(reply, emo)
+        self.history.append({"role": "model", "text": reply})
+        self.unsaved.append(f"Она: {reply}")
+        self.last_talk = time.monotonic()
+        return True
 
     TOUCH_LINES = {
         "head": ["Хи-хи, приятно…", "Ещё погладь, пожалуйста.", "М-м, как хорошо.", "Ты такой заботливый."],
@@ -507,6 +569,18 @@ class Companion:
         """Ответ текстом, без голоса (для Telegram). Память и история — общие."""
         print(f"📱 {text}")
         self.ui.add("me", text, "📱")
+        r = None if image else self.quick_reply(text)
+        if r:                                            # простое — отвечаем сразу, без Google
+            reply, _, cmds = r
+            cmds = [c for c in cmds if c.split(" ")[0].upper() in ("ТАЙМЕР", "НАПОМНИТЬ")]
+            if cmds:
+                self.handle_commands(cmds)
+            for h in ({"role": "user", "text": f"(в Telegram) {text}"}, {"role": "model", "text": reply}):
+                self.history.append(h)
+            self.unsaved += [f"{self.user} (в Telegram): {text}", f"Она: {reply}"]
+            self.ui.add("her", reply, "📱")
+            print(f"⚡ быстро (telegram): «{text}» → {reply}")
+            return reply
         parser = ReplyParser()
         try:
             for chunk in self.brain.stream_reply(self.system() + extra, list(self.history),
@@ -581,6 +655,8 @@ class Companion:
         # Засыпает только если «спокойной ночи» есть в настоящей расшифровке: быстрый
         # распознаватель с короткой грамматикой любую длинную фразу «слышит» как прощание.
         self.ui.act("nod", 1400)          # кивает: услышала
+        if not h.look and self.quick_answer(wav=wav):
+            return
         self.respond(wav=wav, image=self.screenshot() if h.look else None)
         p = self.last_parser
         if p and not p.skip and is_goodbye(p.transcript, self.cfg["wake"]["sleep_phrases"]):
@@ -701,6 +777,12 @@ class Companion:
         if upd.exists():
             self.ui.add("sys", f"✨ Я обновилась до версии {upd.read_text().strip()}")
             upd.unlink()
+        try:
+            from quick import QuickReplies
+            self.quick = QuickReplies(ROOT, self.cfg["_data_dir"])
+        except Exception as e:
+            self.quick = None
+            print(f"[быстро] готовые ответы не загрузились: {e}")
         self.tg = None
         if os.environ.get("TELEGRAM_TOKEN"):
             self.start_telegram(os.environ["TELEGRAM_TOKEN"])
