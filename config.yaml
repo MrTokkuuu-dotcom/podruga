@@ -11,6 +11,7 @@ brain:
   model: "gemini-3.5-flash-lite"
   thinking_budget: 0       # 0 = без «раздумий»: быстрее и дешевле
   history_turns: 10        # сколько последних реплик она держит в голове
+  filler_after: 1.6        # если Google молчит дольше (сек) — она говорит «Хм, сейчас подумаю»
 
 voice:
   engine: "silero"         # silero = бесплатно на Mac (по умолчанию); gemini = облако (лимиты); piper = простой
@@ -84,3 +85,7 @@ paths:
   data_dir: "data"         # журнал, память, резервные копии
 
 backup_keep_days: 30
+
+stt:
+  enabled: true            # распознавать речь прямо на Mac (Whisper), в Google — уже текст
+  model: "small"           # small (~480 МБ) — баланс; base — быстрее и хуже; medium — точнее и медленнее

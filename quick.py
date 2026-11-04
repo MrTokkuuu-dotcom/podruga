@@ -69,6 +69,7 @@ class Section:
         self.replies: list[tuple[str | None, str, str]] = []   # (время суток, эмоция, текст)
         self.always = False
         self.answer = False
+        self.service = False
         self.recent: deque = deque(maxlen=8)
 
 
@@ -93,6 +94,8 @@ def load(paths: list[Path]) -> list[Section]:
                 cur.always = True
             elif line == "@ответ":
                 cur.answer = True
+            elif line == "@служебное":
+                cur.service = True
             elif line.startswith("?"):
                 t = line[1:].replace("{n}", " qqnum ").replace("{что}", " qqrest ").replace("*", "qqstar")
                 t = norm(t).replace("qqnum", "{n}").replace("qqrest", "{что}").replace("qqstar", "*")
@@ -109,7 +112,7 @@ def load(paths: list[Path]) -> list[Section]:
                 if m and m.group(1) in EMO_RU:
                     emo, line = EMO_RU[m.group(1)], line[m.end():]
                 cur.replies.append((part, emo, line))
-    return [s for s in sections if s.triggers and (s.replies or s.commands)]
+    return [s for s in sections if s.service or (s.triggers and (s.replies or s.commands))]
 
 
 def _match_trigger(trig: list[str], ws: list[str], start: int):
@@ -166,6 +169,8 @@ class QuickReplies:
                     best = list(acc)
                 return
             for s in self.sections:
+                if s.service:
+                    continue
                 for trig in s.triggers:
                     r = _match_trigger(trig, ws, i)
                     if r:
@@ -212,6 +217,52 @@ class QuickReplies:
         i = random.choice(fresh)
         s.recent.append(i)
         return s.replies[i][2], s.replies[i][1]
+
+    def service(self, name: str):
+        """Фраза из служебного раздела (например, «думаю» — пока ждём Google)."""
+        s = next((x for x in self.sections if x.service and x.name == name and x.replies), None)
+        return self._pick(s, datetime.now()) if s else None
+
+    # --- самообучение: частые простые фразы, на которые всё равно ходили в Google ---
+    LEARN_BLOCK = ("какой", "какая", "какое", "какие", "сколько", "когда", "где", "почему", "зачем",
+                   "погода", "новости", "курс", "переведи", "найди", "посмотри", "глянь", "напомни",
+                   "таймер", "открой", "включи", "сегодня", "завтра", "вчера")
+
+    def learn(self, path: Path, heard: str, reply: str, emo: str, after_question: bool) -> str | None:
+        """Запомнить пару «фраза → ответ Gemini». Когда фраза встретилась 3 раза с разными ответами —
+        добавляем её в replies_my.txt. Возвращает фразу, если что-то выучили."""
+        import json
+        ws = norm(heard).split()
+        if after_question or not 1 <= len(ws) <= 4 or any(w.isdigit() for w in ws):
+            return None
+        if any(w.startswith(b) for w in ws for b in self.LEARN_BLOCK):
+            return None
+        if not reply or len(reply.split()) > 25 or "<<" in reply:
+            return None
+        if "?" in reply and len(reply.split()) > 6:
+            return None                       # длинный вопрос обычно про что-то конкретное из памяти
+        key = " ".join(ws)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, ValueError):
+            data = {}
+        e = data.setdefault(key, {"count": 0, "replies": []})
+        e["count"] += 1
+        if reply not in [r for _, r in e["replies"]]:
+            e["replies"] = (e["replies"] + [[emo, reply]])[-8:]
+        learned = None
+        if e["count"] >= 3 and len(e["replies"]) >= 3 and not e.get("done"):
+            ru = {v: k for k, v in EMO_RU.items()}
+            block = [f"\n## выучено: {key}", f"? {key}"] + [f"{{{ru.get(em, 'спокойствие')}}} {r}" for em, r in e["replies"]]
+            mine = Path(self.paths[1])
+            mine.parent.mkdir(parents=True, exist_ok=True)
+            with open(mine, "a", encoding="utf-8") as f:
+                f.write("\n".join(block) + "\n")
+            e["done"] = True
+            learned = key
+            self.reload()
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        return learned
 
     @staticmethod
     def fill(text: str, ctx: dict, user: str, name: str) -> str:

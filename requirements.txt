@@ -17,3 +17,6 @@ pyobjc-core==13.0; sys_platform == "darwin"
 pyobjc-framework-WebKit==13.0; sys_platform == "darwin"
 pynput==1.8.2; sys_platform == "darwin"
 keyboard>=0.13; sys_platform == "win32"
+# распознавание речи прямо на Mac (только Apple Silicon)
+faster-whisper==1.2.1 ; sys_platform == "darwin" and platform_machine == "arm64"
+av==13.1.0 ; sys_platform == "darwin" and platform_machine == "arm64"

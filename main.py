@@ -167,16 +167,18 @@ class Companion:
 
     # --- системная подсказка ---
     def system(self, wake: str | None = None) -> str:
+        """Подсказка для Gemini. Сначала то, что почти не меняется (характер, правила, память), потом
+        свежее (время, события). Одинаковое начало Google кэширует — ответ начинается быстрее."""
         from wake_context import WEEKDAYS
         t = now()
         reminders = "; ".join(f"{r['at'][11:16]} — {r['text']}" for r in self.initiative.pending())
         parts = [self.character, "",
+                 "## Твой характер сейчас (настройки " + self.user + ")", traits_text(self.cfg.get("traits", {})),
+                 FORMAT_RULES.format(user=self.user), "",
+                 "## Память о " + self.user, self.memory.read() or "(пока пусто)", "",
                  f"## Сейчас\n{WEEKDAYS[t.weekday()]}, {t.strftime('%d.%m.%Y %H:%M')}"
                  + (f"\nУже стоят напоминания: {reminders}" if reminders else ""), "",
-                 "## Память о " + self.user,
-                 self.memory.read() or "(пока пусто)", "", "## Последние события",
-                 self.journal.render(8) or "(пусто)"]
-        parts += ["", "## Твой характер сейчас (настройки " + self.user + ")", traits_text(self.cfg.get("traits", {}))]
+                 "## Последние события", self.journal.render(5) or "(пусто)"]
         doing = self.activity.describe() if hasattr(self, "activity") else None
         if doing:
             parts += ["", "## Чем он занят", doing + " Можешь иногда к месту это упомянуть, но не каждый раз."]
@@ -187,7 +189,7 @@ class Companion:
                       f"команды оставляй по-русски, как обычно."]
         if wake:
             parts += ["", "## Ты только что вернулась", wake]
-        parts.append(FORMAT_RULES.format(user=self.user))
+        parts += ["", "(Отвечай строго в формате из правил выше.)"]
         return "\n".join(parts)
 
     # --- речь ---
@@ -250,13 +252,24 @@ class Companion:
                            f"отреагируй на возвращение, учитывая подсказку.")
 
     def respond(self, wav: bytes | None = None, text: str | None = None,
-                image: bytes | None = None) -> None:
+                image: bytes | None = None, spoken: bool = False) -> None:
         self._work_t = time.monotonic()
         self._cancel = False
+        after_q = self._after_question()
         with self.busy:
             self._mute()
             self.ui.state("think")
             parser = ReplyParser()
+            started = threading.Event()
+
+            def filler():                              # Google задумался — не молчим
+                if not started.is_set() and not self._cancel and getattr(self, "quick", None):
+                    f = self.quick.service("думаю")
+                    if f:
+                        self.speaker.speak(f[0], f[1])
+            timer = threading.Timer(self.cfg.get("brain", {}).get("filler_after", 1.6), filler)
+            timer.daemon = True
+            timer.start()
             try:
                 shown = False
                 for chunk in self.brain.stream_reply(self.system(), list(self.history),
@@ -264,6 +277,7 @@ class Companion:
                     if self._cancel:
                         break                          # её перебили — дальше не говорим
                     for sentence in parser.feed(chunk):
+                        started.set()
                         if not shown:
                             self.ui.emotion(parser.emotion)
                             shown = True
@@ -276,6 +290,8 @@ class Companion:
             except Exception as e:
                 print(f"[мозг] ошибка: {e}")
                 self.speaker.speak(self._error_line(e), "sad")
+            started.set()
+            timer.cancel()
             self.speaker.wait_done()
             self._unmute()
         self.ui.her_done()
@@ -290,6 +306,15 @@ class Companion:
             print(f"   (не мне: «{parser.transcript}»)")
             return
         heard = parser.transcript or text or ""
+        if heard and parser.reply and not image and not parser.commands and getattr(self, "quick", None):
+            try:
+                learned = self.quick.learn(self.cfg["_data_dir"] / "quick_learn.json", heard,
+                                           parser.reply, parser.emotion, after_q)
+                if learned:
+                    print(f"📚 выучила быстрый ответ на «{learned}»")
+                    self.ui.add("sys", f"📚 Теперь отвечаю на «{learned}» сразу, без Google")
+            except Exception as e:
+                print(f"[быстро] не выучила: {e}")
         if heard:
             print(f"👂 {heard}")
             if wav:                                   # текст из окна уже показан
@@ -480,7 +505,7 @@ class Companion:
         self.last_talk = time.monotonic()
         return True
 
-    def quick_answer(self, wav: bytes | None = None, text: str | None = None) -> bool:
+    def quick_answer(self, wav: bytes | None = None, text: str | None = None, spoken: bool = False) -> bool:
         """Простая фраза — отвечаем сами за доли секунды. Сложное — False, пусть думает Gemini."""
         if not getattr(self, "quick", None):
             return False
@@ -498,7 +523,7 @@ class Companion:
             return False
         reply, emo, cmds = r
         print(f"⚡ быстро ({(time.monotonic() - t0) * 1000:.0f} мс): «{heard}» → {reply}")
-        if wav is not None:
+        if wav is not None or spoken:
             self.ui.add("me", heard)
         self.history.append({"role": "user", "text": heard})
         self.unsaved.append(f"{self.user}: {heard}")
@@ -655,11 +680,23 @@ class Companion:
         # Засыпает только если «спокойной ночи» есть в настоящей расшифровке: быстрый
         # распознаватель с короткой грамматикой любую длинную фразу «слышит» как прощание.
         self.ui.act("nod", 1400)          # кивает: услышала
-        if not h.look and self.quick_answer(wav=wav):
-            return
-        self.respond(wav=wav, image=self.screenshot() if h.look else None)
+        text = None
+        if self.stt and self.stt.active:
+            lang = "en" if getattr(self.speaker.voice, "lang", "ru") == "en" else "ru"
+            text = self.stt.transcribe(wav, lang)
+            print(f"   (Whisper {self.stt.last_secs:.2f} с): {text or '—'}")
+        if text:
+            if not h.look and self.quick_answer(text=text, spoken=True):
+                return
+            self.ui.add("me", text, "📷" if h.look else None)
+            self.respond(text=text, image=self.screenshot() if h.look else None, spoken=True)
+        else:
+            if not h.look and self.quick_answer(wav=wav):
+                return
+            self.respond(wav=wav, image=self.screenshot() if h.look else None)
         p = self.last_parser
-        if p and not p.skip and is_goodbye(p.transcript, self.cfg["wake"]["sleep_phrases"]):
+        heard = (p.transcript if p else "") or text or ""
+        if p and not p.skip and is_goodbye(heard, self.cfg["wake"]["sleep_phrases"]):
             self.go_sleep(say_goodnight=False)
 
     def preview_voice(self, voice_name: str, pitch: str = "medium"):
@@ -777,6 +814,17 @@ class Companion:
         if upd.exists():
             self.ui.add("sys", f"✨ Я обновилась до версии {upd.read_text().strip()}")
             upd.unlink()
+        self.stt = None
+        st = self.cfg.get("stt", {})
+        if not self.text_mode and sys.platform == "darwin" and st.get("enabled", True):
+            import platform
+            if platform.machine() == "arm64":
+                try:
+                    from stt import WhisperSTT
+                    self.stt = WhisperSTT(HOME, st.get("model", "small"),
+                                          notify=lambda m: self.ui.add("sys", m))
+                except Exception as e:
+                    print(f"[уши] Whisper недоступен: {e}")
         try:
             from quick import QuickReplies
             self.quick = QuickReplies(ROOT, self.cfg["_data_dir"])
