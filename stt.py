@@ -36,7 +36,7 @@ class WhisperSTT:
             self.dir.mkdir(parents=True, exist_ok=True)
             t0 = time.monotonic()
             self.model = WhisperModel(self.name, device="cpu", compute_type="int8",
-                                      download_root=str(self.dir), cpu_threads=4)
+                                      download_root=str(self.dir), cpu_threads=0)   # 0 = все ядра
             # прогрев: первая фраза иначе медленная
             self.model.transcribe(np.zeros(16000, dtype=np.float32), language="ru")
             print(f"[уши] Whisper «{self.name}» готов за {time.monotonic() - t0:.1f} с")

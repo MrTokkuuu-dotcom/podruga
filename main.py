@@ -272,7 +272,9 @@ class Companion:
             timer.start()
             try:
                 shown = False
-                for chunk in self.brain.stream_reply(self.system(), list(self.history),
+                extra = ("" if wav else "\nЕго слова уже расшифрованы — [[...]] не пиши. Первое предложение "
+                         "сделай коротким (2–6 слов), чтобы ты начала говорить сразу.")
+                for chunk in self.brain.stream_reply(self.system() + extra, list(self.history),
                                                      wav=wav, text=text, image=image):
                     if self._cancel:
                         break                          # её перебили — дальше не говорим
