@@ -500,6 +500,7 @@ const ui = {
     ui._actTimer = setTimeout(() => { ui._act = ''; ui._paint(); }, ms || 2300);
   },
   outfit(o) { ui._outfit = o || ''; ui._paint(); },
+  idle(name, sec) { if (window.VRM3D && VRM3D.ready && VRM3D.idle) VRM3D.idle(name, sec); },
   showChat() { if (document.body.classList.contains('mini')) setMini(false); },
   emotion(e, holdMs) {
     ui._emo = e || 'calm'; ui._paint(); clearTimeout(ui._emoTimer);

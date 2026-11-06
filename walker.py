@@ -29,6 +29,7 @@ class Walker:
         self._dock = None             # (x_левый, x_правый, верх) в координатах macOS, или None
         self._dock_t = 0.0
         self._restore = None          # размер окна до того, как легла
+        self._dodged = 0.0
 
     # ---------- главный поток macOS ----------
     def _main(self, fn):
@@ -167,6 +168,9 @@ class Walker:
         self._stop.clear()
         self.c.ui.sit(False)
         dirn = 1 if tx > x else -1
+        if abs(tx - x) > 2:                      # сначала спокойно поворачивается, потом трогается
+            self.c.ui.walk(dirn, 0)
+            time.sleep(0.45)
         v, sent, ok = 0.0, -1.0, False
         dt = 1 / FPS
         try:
@@ -244,9 +248,10 @@ class Walker:
         x, y, w, h = g["win"]
         vx, _, vw, _ = g["vis"]
         self._restore = (w, h)
-        nx = min(x + w - LIE[0] + 40, vx + vw - LIE[0])          # прижаться к правому краю
-        gy = self.ground(nx + LIE[0] / 2, g)
-        self._set(nx, gy, LIE[0], LIE[1], force=True)
+        lw, lh = getattr(self.c.ui, "lie_size", None) or LIE
+        nx = min(x + w - lw + 40, vx + vw - lw)                  # прижаться к правому краю
+        gy = self.ground(nx + lw / 2, g)
+        self._set(nx, gy, lw, lh, force=True)
         self.lying = True
         self.c.ui.lie(True)
 
@@ -258,7 +263,7 @@ class Walker:
         try:
             g = self._geo()
             x, y, w, h = g["win"]
-            rw, rh = self._restore or (250, 520)
+            rw, rh = getattr(self.c.ui, "mini_size", None) or self._restore or (250, 520)
             self._set(x + w - rw - 20, y, rw, rh, force=True)
         except Exception as e:
             print(f"[прогулка] встать: {e}")
@@ -268,21 +273,127 @@ class Walker:
         if self.lying:
             self.stand_up()
 
+    # ---------- куда идти ----------
+    @staticmethod
+    def _mouse():
+        from AppKit import NSEvent
+        m = NSEvent.mouseLocation()
+        return m.x, m.y
+
+    def _pick_target(self, g):
+        """Не «туда-сюда по кругу», а в конкретное место: к краю экрана, к краю Dock, в свободный угол.
+        Не встаёт надолго под курсором — там, скорее всего, работают."""
+        vx, vy, vw, vh = g["vis"]
+        x, y, ww, wh = g["win"]
+        lo, hi = vx, vx + vw - ww
+        spots = [lo + random.uniform(0, 80), hi - random.uniform(0, 80),
+                 random.uniform(lo, hi), random.uniform(lo, hi)]
+        d = self._dock_rect(g)
+        if d:
+            spots += [d[0] - ww / 2 + random.uniform(-40, 40), d[1] - ww / 2 + random.uniform(-40, 40)]
+        try:
+            mx, my = self._mouse()
+        except Exception:
+            mx, my = None, None
+        best, best_score = None, -1e9
+        for tx in spots:
+            tx = max(lo, min(hi, tx))
+            dist = abs(tx - x)
+            score = random.uniform(0, 120)
+            if dist < 180:
+                score -= 400                        # слишком близко — нет смысла идти
+            elif dist > vw * 0.7:
+                score -= 120                        # через весь экран — редко
+            if mx is not None and my < vy + vh * 0.55 and abs(tx + ww / 2 - mx) < ww / 2 + 160:
+                score -= 300                        # под курсором внизу экрана — мешала бы
+            if score > best_score:
+                best, best_score = tx, score
+        return best
+
+    def _active_window_center(self):
+        """Центр окна, в котором сейчас работают (координаты macOS, снизу-слева)."""
+        import Quartz
+        from AppKit import NSScreen
+        full_h = NSScreen.screens()[0].frame().size.height
+        for i in Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly
+                                                   | Quartz.kCGWindowListExcludeDesktopElements,
+                                                   Quartz.kCGNullWindowID) or []:
+            if i.get("kCGWindowLayer", 1) != 0:
+                continue
+            if i.get("kCGWindowName") == "Подруга" or i.get("kCGWindowOwnerName") in ("Подруга", "Python"):
+                continue
+            b = i.get("kCGWindowBounds", {})
+            if b.get("Width", 0) < 200 or b.get("Height", 0) < 150:
+                continue
+            return b["X"] + b["Width"] / 2, full_h - (b["Y"] + b["Height"] / 2)
+        return None
+
+    def _glance_at(self, px, py, g):
+        x, y, w, h = g["win"]
+        fx, fy = x + w / 2, y + h * 0.85                  # где её лицо (снизу-слева)
+        dx = max(-1.0, min(1.0, (px - fx) / 450))
+        dy = max(-1.0, min(1.0, (fy - py) / 320))
+        self.c.ui.look(dx, dy)
+
+    def _after_arrival(self):
+        """Пришла — немного побыть там: оглядеться, посмотреть, чем ты занят, потянуться или присесть."""
+        if not self._free():
+            return
+        r = random.random()
+        if r < 0.3:
+            self.c.ui.idle("look", random.uniform(4, 6))         # оглядывается
+        elif r < 0.5:
+            try:
+                p = self._active_window_center()
+                if p:
+                    self._glance_at(p[0], p[1], self._geo())     # смотрит на окно, где ты работаешь
+            except Exception:
+                pass
+        elif r < 0.6:
+            self.c.ui.act("stretch", 2300)
+        elif r < 0.8:
+            time.sleep(random.uniform(2, 5))
+            if self._free():
+                self.sit()
+
+    def _cursor_close(self) -> bool:
+        """Курсор уже несколько секунд крутится рядом (но не на ней) — она отходит в сторону."""
+        ct = getattr(self.c.ui, "clickthrough", None)
+        if not ct or not ct.near_since or not ct.ignoring:
+            return False
+        if time.monotonic() - ct.near_since < 3.5 or time.monotonic() - self._dodged < 25:
+            return False
+        if self.busy or self.sitting or self.lying or not self._free():
+            return False
+        self._dodged = time.monotonic()
+        try:
+            g = self._geo()
+            mx, _ = self._mouse()
+        except Exception:
+            return False
+        x, _, ww, _ = g["win"]
+        away = -1 if mx > x + ww / 2 else 1
+        print("[прогулка] курсор рядом — отхожу")
+        time.sleep(0.6)                                 # сначала просто посмотрела на него
+        self.walk_to(x + away * random.uniform(240, 340))
+        return True
+
     # ---------- сама решает ----------
     def _loop(self):
         while True:
-            time.sleep(1)
+            time.sleep(0.5)
             try:
+                if self._cursor_close():
+                    self._next = max(self._next, time.monotonic() + 20)
+                    continue
                 if self.busy or time.monotonic() < self._next or not self._free():
                     continue
-                r = random.random()
-                if r < 0.8:
-                    self.walk_to()
-                    if random.random() < 0.25 and self._free():
-                        self.sit()
+                if random.random() < 0.85:
+                    if self.walk_to(self._pick_target(self._geo())):
+                        self._after_arrival()
                 else:
                     self.sit()
-                self._next = time.monotonic() + random.uniform(35, 100)
+                self._next = time.monotonic() + random.uniform(40, 110)
             except Exception as e:
                 print(f"[прогулка] {e}")
                 self.busy = False

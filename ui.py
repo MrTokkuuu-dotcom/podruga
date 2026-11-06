@@ -36,6 +36,7 @@ class NullUI:
     def sit(self, on): pass
     def lie(self, on): pass
     def act(self, name, ms=None): pass
+    def idle(self, name, sec=4): pass
     def outfit(self, o): pass
     def show_chat(self): pass
     visible = True
@@ -79,6 +80,28 @@ class Api:
     def touch(self, zone):
         if self._companion and zone in ("head", "face", "body", "dropped"):
             self._bg(self._companion.on_touch, zone)
+
+    def fit(self, w, h, lie_w=None, lie_h=None):
+        """3D-модель сообщила реальные размеры: окно «только она» — по ним (с запасом под руки)."""
+        try:
+            w, h = int(w), int(h)
+            if not (200 <= w <= 900 and 300 <= h <= 1000):
+                return
+            self._ui.mini_size = (w, h)
+            if lie_w and lie_h:
+                self._ui.lie_size = (int(lie_w), int(lie_h))
+            wk = self._companion and getattr(self._companion, "walker", None)
+            if getattr(self._ui, "mini", True) and not (wk and wk.lying):
+                import winctl
+                winctl.resize_keep_bottom_center(w, h)
+            print(f"[окно] размер по модели: {w}×{h}")
+        except Exception as e:
+            print(f"[окно] fit: {e}")
+
+    def hitbox(self, x0, y0, x1, y1):
+        ct = getattr(self._ui, "clickthrough", None)
+        if ct:
+            ct.box = (float(x0), float(y0), float(x1), float(y1))
 
     def toggle_pause(self):
         if self._companion:
@@ -145,7 +168,7 @@ class Api:
     def compact(self, on):
         """Переключение «только она» ↔ «с перепиской». Нижний край окна остаётся на месте,
         чтобы она не прыгала по экрану."""
-        w, h = MINI if on else FULL
+        w, h = (getattr(self._ui, "mini_size", None) or MINI) if on else FULL
         self._ui.mini = bool(on)
         wk = self._companion and getattr(self._companion, "walker", None)
         if wk and wk.lying:                     # открыли переписку, пока лежала — встаёт
@@ -281,6 +304,7 @@ class AppUI:
     def mouth(self, v, shape=None):
         self._fast(f"ui.mouth({v:.2f},'{shape or ''}')")
     def act(self, name, ms=None): self._call("act", name, ms)
+    def idle(self, name, sec=4): self._call("idle", name, sec)
     mini = True
     def walk(self, d, px=0): self._call("walk", int(d), int(px))
     def sit(self, on): self._call("sit", bool(on))

@@ -4,7 +4,7 @@
 //  предплечье: y — сгиб в локте вперёд (левое <0, правое >0)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRMLoaderPlugin, VRMUtils, VRMSpringBoneCollider, VRMSpringBoneColliderShapeCapsule } from '@pixiv/three-vrm';
 
 const S = {
   face: 'sleep', emo: 'calm', act: '', actStart: 0, mouth: 0, lipT: 0,
@@ -89,30 +89,31 @@ const POSES = {
   // ткнули в щёку: отпрянула, дуется
   poke:    { lUpZ: -1.0, rUpZ: 1.15, lUpY: -0.5, lLoY: -2.0, headY: -0.25, headZ: -0.12, spineZ: -0.05 },
   // тащат окно: руки в стороны, «ой-ой»
-  drag:    { lUpZ: -0.45, rUpZ: 0.45, lUpY: -0.2, rUpY: 0.2, lLoY: -0.6, rLoY: 0.6, headX: -0.05 },
+  drag:    { lUpZ: -0.85, rUpZ: 0.85, lUpY: -0.2, rUpY: 0.2, lLoY: -0.6, rLoY: 0.6, headX: -0.05 },
   // спит стоя
   sleep:   { lUpZ: -1.3, rUpZ: 1.3, lUpY: -0.35, rUpY: 0.35, lLoY: -1.0, rLoY: 1.0, lLoZ: -0.3, rLoZ: 0.3,
              headX: 0.38, headZ: 0.15, spineX: 0.06 },
 };
-const IDLE = ['rest', 'rest', 'clasp', 'behind', 'hip', 'hair', 'look', 'sway', 'think'];
+const IDLE = ['rest', 'rest', 'rest', 'clasp', 'behind', 'hip', 'look', 'sway', 'think'];
 
 function bone(name) { return vrm.humanoid.getNormalizedBoneNode(name); }
 
 let VIEW = { w: 200, h: 260 };
 let CAM = { x: 0, y: 1, dist: 3, ty: 1 };
+const PX_PER_M = 286;                              // её размер на экране в режиме «только она» (как раньше)
+let BOUNDS = null;                                 // реальные размеры модели: рост, размах рук, длина лёжа
 let fitCamera = function (w, h) {
   VIEW = { w, h };
   camera.aspect = w / h;
   const head = (sm.headY || 1.6) + 0.16;
   const near = w / h > 1.3 ? 0.85 : 1.05;          // окно с перепиской: от макушки до бёдер
-  const full = head + 0.04;                        // «только она»: во весь рост, ноги у нижнего края
+  const full = h / PX_PER_M;                       // «только она»: постоянный масштаб, ноги у нижнего края
   const fk = sm.fullK || 0, lk = sm.lieK || 0;
   let span = lerp(near, full, fk);
-  let cy = head - span / 2 + 0.05 * (1 - fk);
-  if (lk > 0.001) {                                // лежит: кадр по ширине тела
-    const lieSpan = Math.max(0.55, 2.0 / (w / h));
-    span = lerp(span, lieSpan, lk);
-    cy = lerp(cy, lieSpan / 2 - 0.02, lk);
+  let cy = lerp(head - near / 2 + 0.05, full / 2 - 0.015, fk);
+  if (lk > 0.001) {                                // лежит: тот же масштаб, «пол» внизу
+    span = lerp(span, h / PX_PER_M, lk);
+    cy = lerp(cy, h / PX_PER_M / 2 - 0.015, lk);
   }
   const fov = 22;
   camera.fov = fov;
@@ -150,13 +151,15 @@ function chooseIdle(t) {
 }
 
 function pose(t) {
+  S.t = t;
   const asleep = S.face === 'sleep';
   const talking = Date.now() - S.lipT < 350;
   const now = performance.now();
   let P = { ...REST };
 
   // 1) простой: сама меняет позы, пока ничего не происходит
-  if (!asleep && S.face !== 'think' && !talking) chooseIdle(t);
+  if (S.walkDir || (sm.walkSpeed || 0) > 0.02 || S.sit || S.lie) { S.idle = 'rest'; S.idleUntil = t + 4 + Math.random() * 4; }
+  else if (!asleep && S.face !== 'think' && !talking) chooseIdle(t);
   if (asleep) P = mix(P, POSES.sleep, 1);
   else if (POSES[S.idle]) P = mix(P, POSES[S.idle], 1);
   if (!asleep && S.idle === 'look') { P.headY += Math.sin(t * 0.7) * 0.35; P.headX -= 0.05; }
@@ -164,7 +167,7 @@ function pose(t) {
   if (!asleep && S.idle === 'hair') { const k = bell(t - (S.idleUntil - 3), 3); P = mix(mix({ ...REST }, POSES.clasp, 0), POSES.hair, k); }
 
   // 1б) гуляет по экрану / сидит / лежит
-  const mPerPx = (sm.headY ? (sm.headY + 0.2) : 1.85) / Math.max(200, VIEW.h);
+  const mPerPx = 1 / PX_PER_M;                           // окно едет со скоростью шага: ноги не скользят
   const speed = spring('walkSpeed', S.walkDir ? S.walkPx * mPerPx : 0, 1.2, 1);   // м/с, плавный разгон
   const amp = Math.min(1, speed / 0.35);
   if (amp > 0.02) {
@@ -183,15 +186,23 @@ function pose(t) {
     P.headZ -= sw * 0.03 * amp;                           // голова держит горизонт
   }
   P.hipsY = S.walkDir * 1.05 * (S.lie ? 0 : 1);           // повернулась туда, куда идёт
+  if (!S.walkDir && !S.sit && !S.lie && amp < 0.05) {      // стоит: медленно переносит вес с ноги на ногу
+    const ws = Math.sin(t * 0.21) * Math.sin(t * 0.13 + 1);
+    P.hipsZ += ws * 0.035; P.spineZ = (P.spineZ || 0) - ws * 0.025;
+    P.lKneeX += Math.max(0, -ws) * 0.12; P.rKneeX += Math.max(0, ws) * 0.12;   // расслабленное колено
+    P.lift -= Math.abs(ws) * 0.006;
+  }
   // на ходу иногда поглядывает в экран, а когда говорит — смотрит на тебя
   if (S.walkDir) {
     if (t > S.nextGlance) { S.glanceUntil = t + 1.2 + Math.random() * 1.3; S.nextGlance = t + 4 + Math.random() * 6; }
     if (talking || t < S.glanceUntil) { P.headY -= P.hipsY * 0.75; P.spineY = (P.spineY || 0) - P.hipsY * 0.2; }
   }
-  if (S.sit && !S.walkDir) {
-    P = mix(P, { lLegX: -1.45, rLegX: -1.45, lKneeX: 1.5, rKneeX: 1.5, lFootX: -0.1, rFootX: -0.1,
-                 drop: 0.47, lUpZ: -1.25, rUpZ: 1.25, lUpX: -0.55, rUpX: -0.55, lLoY: -0.5, rLoY: 0.5,
-                 spineX: 0.06 }, 1);
+  if (S.sit && !S.walkDir) {                       // сидит на «полу» (Dock / низ экрана), обняв колени
+    P = mix(P, { lLegX: -1.85, rLegX: -1.75, lKneeX: 2.35, rKneeX: 2.3, lFootX: -0.35, rFootX: -0.35,
+                 drop: (sm.hipsBase || 0.9) - 0.13, spineX: 0.32, chestX: 0.05, headX: -0.25,
+                 lUpZ: -1.15, rUpZ: 1.15, lUpX: -1.05, rUpX: -1.05, lUpY: -0.25, rUpY: 0.25,
+                 lLoY: -1.25, rLoY: 1.25, lLoZ: -0.2, rLoZ: 0.2, lHandZ: 0.3, rHandZ: -0.3 }, 1);
+    if (Math.sin(t * 0.37) > 0.6) P.headY += Math.sin(t * 0.9) * 0.25;   // иногда оглядывается
   }
   if (S.lie) {                                            // спит лёжа, свернувшись калачиком
     P = mix(P, { lLegX: -1.0, rLegX: -0.7, lKneeX: 1.6, rKneeX: 1.3, lFootX: 0.2, rFootX: 0.2,
@@ -272,8 +283,8 @@ function pose(t) {
   // лёжа: поворачиваем всю модель на бок
   const lk = spring('lieK', S.lie ? 1 : 0, 0.6, 1);
   vrm.scene.rotation.set(0, 0, lk * Math.PI / 2);   // на боку, лицом к нам
-  vrm.scene.position.y = lk * 0.32;
-  vrm.scene.position.x = (S.worldX || 0) + lk * 0.85;
+  vrm.scene.position.y = lk * 0.37;
+  vrm.scene.position.x = (S.worldX || 0) + lk * (((sm.headY || 1.6) + 0.05) / 2 + 0.1);
 
   if (vrm.lookAt) {
     lookTarget.position.set((S.worldX || 0) + lx * 1.2, camera.position.y + ly * 0.6, camera.position.z);
@@ -426,11 +437,100 @@ function setupTouch() {
   });
 }
 
+// ---------- физика одежды и тела (spring bones) ----------
+function tunePhysics() {
+  const mgr = vrm.springBoneManager; if (!mgr) return;
+  const raw = (n) => vrm.humanoid.getRawBoneNode(n);
+  // коллайдеры-капсулы на ноги и таз: юбка и пальто не проходят сквозь тело
+  const groups = [];
+  const capsule = (boneName, childName, radius) => {
+    const b = raw(boneName), c = raw(childName); if (!b || !c) return null;
+    const shape = new VRMSpringBoneColliderShapeCapsule({ radius, offset: new THREE.Vector3(0, 0, 0),
+                                                           tail: c.position.clone() });
+    const col = new VRMSpringBoneCollider(shape); b.add(col); return col;
+  };
+  const legs = [capsule('leftUpperLeg', 'leftLowerLeg', 0.085), capsule('rightUpperLeg', 'rightLowerLeg', 0.085),
+                capsule('leftLowerLeg', 'leftFoot', 0.06), capsule('rightLowerLeg', 'rightFoot', 0.06),
+                capsule('hips', 'spine', 0.13)].filter(Boolean);
+  const legGroup = { name: 'podruga-legs', colliders: legs };
+  let n = { bust: 0, skirt: 0, coat: 0 };
+  for (const j of mgr.joints) {
+    const name = (j.bone && j.bone.name) || '';
+    const st = j.settings;
+    if (/Bust/i.test(name)) {
+      // грудь: мягко, но без «желе» — быстро успокаивается
+      st.stiffness = 1.35; st.dragForce = 0.45; st.gravityPower = 0.02; st.gravityDir = new THREE.Vector3(0, -1, 0);
+      n.bust++;
+    } else if (/Skirt/i.test(name) && !/Coat/i.test(name)) {
+      st.stiffness = Math.max(st.stiffness, 0.85); st.dragForce = 0.35; st.gravityPower = 0.08;
+      st.gravityDir = new THREE.Vector3(0, -1, 0);
+      if (!j.colliderGroups.includes(legGroup)) j.colliderGroups.push(legGroup);
+      n.skirt++;
+    } else if (/Coat/i.test(name)) {
+      // полы пальто: держат форму, отстают при ходьбе, не проходят сквозь ноги
+      st.stiffness = Math.max(st.stiffness, 0.9); st.dragForce = 0.3; st.gravityPower = 0.12;
+      st.gravityDir = new THREE.Vector3(0, -1, 0); st.hitRadius = Math.max(st.hitRadius, 0.03);
+      if (!j.colliderGroups.includes(legGroup)) j.colliderGroups.push(legGroup);
+      n.coat++;
+    }
+  }
+  mgr.reset && mgr.reset();
+  console.log('[3D] физика:', JSON.stringify(n), 'коллайдеров ног:', legs.length);
+}
+
+function measureBounds() {
+  // реальные размеры по костям: рост (с поднятыми руками), размах рук, длина лёжа
+  const P = (n) => bone(n).getWorldPosition(new THREE.Vector3());
+  const sh = P('leftUpperArm'), hand = P('leftHand'), lo = P('leftLowerArm');
+  const arm = sh.distanceTo(lo) + lo.distanceTo(hand) + 0.2;            // + кисть с пальцами
+  const reach = Math.abs(sh.x) + arm;                                    // от центра до кончиков пальцев
+  const top = Math.max((sm.headY || 1.6) + 0.12, sh.y + arm * 0.95);     // руки вверх (потягивается)
+  const margin = 0.12;                                                   // волосы, рукава, пружинки
+  const w = Math.ceil((reach * 2 * 0.75 + margin * 2) * PX_PER_M);       // руки в стороны не выше ~40° к горизонту
+  const h = Math.ceil((top + margin) * PX_PER_M);
+  const lieW = Math.ceil(((sm.headY || 1.6) + 0.4 + margin * 2) * PX_PER_M);
+  const lieH = Math.ceil(0.8 * PX_PER_M);
+  console.log('[3D] размеры окна по модели:', w, h, 'лёжа', lieW, lieH);
+  return { w, h, lieW, lieH, reach, top };
+}
+
 // ---------- цикл ----------
 let last = 0;
+let lastBox = '', boxT = 0, FROZEN = false, SIM_T = 0;
+function wantFps() {
+  if (document.hidden) return 0;                          // окно спрятано — не рисуем
+  const nowMs = Date.now();
+  const active = S.walkDir || S.touch || S.dragging || nowMs - S.lipT < 1500 || nowMs - S.lookT < 1500 ||
+                 (sm.walkSpeed || 0) > 0.02 || Math.abs((sm.lieK || 0) - (S.lie ? 1 : 0)) > 0.01;
+  if (S.face === 'sleep' || S.lie) return active ? 30 : 20; // спит — экономим
+  return active ? 60 : 30;                                 // просто стоит — 30 кадров хватает
+}
+function reportBox() {
+  // прямоугольник, где она нарисована (по костям + запас) — Python делает остальное окно «прозрачным для мышки»
+  const r = canvas.getBoundingClientRect();
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const v = new THREE.Vector3();
+  for (const n of ['head', 'neck', 'leftHand', 'rightHand', 'leftLowerArm', 'rightLowerArm', 'leftFoot', 'rightFoot',
+                   'hips', 'leftLowerLeg', 'rightLowerLeg', 'upperChest']) {
+    const b = bone(n); if (!b) continue;
+    b.getWorldPosition(v); v.project(camera);
+    const x = (v.x * 0.5 + 0.5) * r.width, y = (-v.y * 0.5 + 0.5) * r.height;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  const pad = 0.16 * PX_PER_M;                              // голова, волосы, рукава вокруг костей
+  const box = [Math.max(0, x0 - pad), Math.max(0, y0 - pad * 1.2), Math.min(r.width, x1 + pad), Math.min(r.height, y1 + pad * 0.4)]
+    .map(Math.round);
+  const key = box.join(',');
+  if (key !== lastBox && window.pywebview && window.pywebview.api && window.pywebview.api.hitbox) {
+    lastBox = key;
+    window.pywebview.api.hitbox(box[0] + r.left, box[1] + r.top, box[2] + r.left, box[3] + r.top);
+  }
+}
 function loop(now) {
   requestAnimationFrame(loop);
-  if (now - last < 1000 / 62) return;          // до 60 кадров/с
+  if (FROZEN) return;
+  const fps = wantFps();
+  if (!fps || now - last < 1000 / (fps + 2)) return;
   last = now;
   const dt = Math.min(0.1, clock.getDelta()), t = clock.elapsedTime;
   FRAME_DT = dt || 1 / 60;
@@ -445,6 +545,7 @@ function loop(now) {
     const lk = sm.lieK || 0;
     if (lk > 0.001 && lk < 0.999) fitCamera(VIEW.w, VIEW.h); else placeCamera();
     vrm.update(dt);
+    if (now - boxT > 250) { boxT = now; reportBox(); }
   }
   renderer.render(scene, camera);
 }
@@ -475,6 +576,11 @@ async function init(url) {
   try { measureBody(); console.log('[3D] тело измерено:', BODY && BODY.ys.length, 'срезов'); } catch (e) { console.warn('[3D] тело не измерено', e); }
   const head = bone('head'); const p = new THREE.Vector3(); head.getWorldPosition(p);
   sm.headY = p.y + 0.12;
+  try { tunePhysics(); } catch (e) { console.warn('[3D] физика не настроилась', e); }
+  BOUNDS = measureBounds();
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.fit) {
+    window.pywebview.api.fit(BOUNDS.w, BOUNDS.h, BOUNDS.lieW, BOUNDS.lieH);
+  }
 
   host.appendChild(canvas);
   document.body.classList.add('has3d');
@@ -500,9 +606,21 @@ window.VRM3D = {
   walk(dir, px) { S.walkDir = dir; if (px != null) S.walkPx = px; if (dir) { S.sit = false; S.lie = false; } },
   lie(on) { S.lie = !!on; if (on) S.sit = false; },
   sit(on) { S.sit = !!on; },
+  idle(name, sec) { if (POSES[name] || name === 'look' || name === 'sway' || name === 'rest') { S.idle = name; S.idleUntil = (S.t || 0) + (sec || 4); } },
   full(on) { S.full = !!on; },
   _zone(x, y) { return zoneAt(x, y); },
   _body() { return BODY; },
+  // для проверки: остановить живой цикл и прокрутить время вручную (ровными шагами)
+  _freeze(on) { FROZEN = on; },
+  _step(n = 1, dt = 1 / 60) {
+    for (let i = 0; i < n; i++) {
+      SIM_T += dt; FRAME_DT = dt; S.lipT = S.lipT;
+      pose(SIM_T); face(SIM_T);
+      S.worldX = (S.worldX || 0) + (S.walkDir || 0) * (sm.walkSpeed || 0) * dt;
+      placeCamera(); vrm.update(dt);
+    }
+    renderer.render(scene, camera);
+  },
   _dbg() { const r = {}; for (const n of ['hips','leftUpperLeg','leftLowerLeg']) { const b = bone(n); r[n] = b ? [b.rotation.x.toFixed(2), b.rotation.y.toFixed(2), b.rotation.z.toFixed(2)] : null; } r.lie = S.lie; r.lieK = sm.lieK; return r; },
   _portrait(span = 0.42, down = 0.0) {        // крупный план лица (для иконки)
     const top = (sm.headY || 1.6) + 0.14 - down, fov = 22;

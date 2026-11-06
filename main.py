@@ -878,6 +878,12 @@ class Companion:
             from walker import Walker
             self.walker = Walker(self)
             self.walker.start()
+            try:
+                from winctl import ClickThrough
+                self.ui.clickthrough = ClickThrough(self.ui)
+                self.ui.clickthrough.start()
+            except Exception as e:
+                print(f"[окно] клики насквозь недоступны: {e}")
             import menubar
             menubar.start(self)
             self.activity.start()
