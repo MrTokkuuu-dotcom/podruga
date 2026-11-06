@@ -979,8 +979,17 @@ class Companion:
         """Обновление без переустановки: после замены файлов рядом кладётся restart.flag —
         она сама сохраняет память и перезапускается с новым кодом."""
         flag = HOME / "restart.flag"
+        quit_flag = HOME / "quit.flag"                  # закрыть «снаружи» (например, по просьбе из чата с Claude)
         while True:
             time.sleep(2)
+            if quit_flag.exists():
+                try:
+                    quit_flag.unlink()
+                except OSError:
+                    pass
+                print("[система] закрываюсь по quit.flag")
+                self.shutdown(exit_process=False)
+                os._exit(0)
             if not flag.exists():
                 continue
             try:

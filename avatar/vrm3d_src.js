@@ -9,14 +9,31 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 const S = {
   face: 'sleep', emo: 'calm', act: '', actStart: 0, mouth: 0, lipT: 0,
   lookX: 0, lookY: 0, lookT: 0,
-  walkDir: 0, walkPhase: 0, sit: false, full: false, shape: 'aa',
+  walkDir: 0, walkPhase: 0, walkPx: 0, sit: false, lie: false, full: false, shape: 'aa',
+  worldX: 0, glanceUntil: 0, nextGlance: 0,
   idle: 'rest', idleUntil: 0,
   touch: '', touchStart: 0, touchUntil: 0, dragging: false,
 };
 let vrm = null, renderer, scene, camera, clock, lookTarget, host, canvas;
 const sm = {};
+const smv = {};                // скорости для пружин
 const lerp = (a, b, k) => a + (b - a) * k;
 let FRAME_DT = 1 / 30;
+// Пружина вместо простого сглаживания: движение разгоняется, чуть «проскакивает» и успокаивается —
+// как у живого тела. f — частота (Гц, выше = резче), z — затухание (меньше = больше покачивания).
+function spring(key, target, f = 2, z = 0.75) {
+  if (INSTANT) { sm[key] = target; smv[key] = 0; return target; }
+  let x = sm[key] ?? target, v = smv[key] ?? 0;
+  const w = 2 * Math.PI * f;
+  let left = FRAME_DT;
+  while (left > 1e-6) {                          // мелкие шаги — устойчиво при любом FPS
+    const h = Math.min(left, 1 / 120);
+    v += (w * w * (target - x) - 2 * z * w * v) * h;
+    x += v * h;
+    left -= h;
+  }
+  sm[key] = x; smv[key] = v; return x;
+}
 // k — доля пути за 1/30 с; пересчитываем под реальную длину кадра, чтобы плавность не зависела от FPS
 function ease(key, target, k) {
   const kk = k >= 1 ? 1 : 1 - Math.pow(1 - k, FRAME_DT * 30);
@@ -42,7 +59,7 @@ const REST = {
   lUpZ: -1.22, rUpZ: 1.22, lUpY: -0.08, rUpY: 0.08, lUpX: 0, rUpX: 0,
   lLoY: -0.3, rLoY: 0.3, lLoZ: 0, rLoZ: 0, lHandZ: -0.1, rHandZ: 0.1, lHandX: 0, rHandX: 0,
   spineX: 0, spineZ: 0, chestX: 0, headX: 0, headY: 0, headZ: 0, hipsZ: 0, hipsY: 0, lift: 0,
-  lLegX: 0, rLegX: 0, lKneeX: 0, rKneeX: 0, lFootX: 0, rFootX: 0, drop: 0,
+  lLegX: 0, rLegX: 0, lKneeX: 0, rKneeX: 0, lFootX: 0, rFootX: 0, drop: 0, spineY: 0,
 };
 const POSES = {
   // руки сцеплены спереди — скромно, мило
@@ -82,21 +99,32 @@ const IDLE = ['rest', 'rest', 'clasp', 'behind', 'hip', 'hair', 'look', 'sway', 
 function bone(name) { return vrm.humanoid.getNormalizedBoneNode(name); }
 
 let VIEW = { w: 200, h: 260 };
+let CAM = { x: 0, y: 1, dist: 3, ty: 1 };
 let fitCamera = function (w, h) {
   VIEW = { w, h };
   camera.aspect = w / h;
   const head = (sm.headY || 1.6) + 0.16;
-  const near = w / h > 1.3 ? 0.85 : 1.05;          // обычно: от макушки до бёдер
-  const full = head + 0.06;                        // гуляет/сидит: во весь рост, ноги у нижнего края
-  const span = lerp(near, full, sm.fullK || 0);
+  const near = w / h > 1.3 ? 0.85 : 1.05;          // окно с перепиской: от макушки до бёдер
+  const full = head + 0.04;                        // «только она»: во весь рост, ноги у нижнего края
+  const fk = sm.fullK || 0, lk = sm.lieK || 0;
+  let span = lerp(near, full, fk);
+  let cy = head - span / 2 + 0.05 * (1 - fk);
+  if (lk > 0.001) {                                // лежит: кадр по ширине тела
+    const lieSpan = Math.max(0.55, 2.0 / (w / h));
+    span = lerp(span, lieSpan, lk);
+    cy = lerp(cy, lieSpan / 2 - 0.02, lk);
+  }
   const fov = 22;
   camera.fov = fov;
-  const dist = (span / 2) / Math.tan(THREE.MathUtils.degToRad(fov / 2));
-  const cy = head - span / 2;
-  camera.position.set(0, cy + 0.05 * (1 - (sm.fullK || 0)), dist);
-  camera.lookAt(0, cy, 0);
+  CAM = { y: cy, ty: cy, dist: (span / 2) / Math.tan(THREE.MathUtils.degToRad(fov / 2)) };
+  placeCamera();
   camera.updateProjectionMatrix();
 };
+function placeCamera() {
+  const x = S.worldX || 0;
+  camera.position.set(x, CAM.y, CAM.dist);
+  camera.lookAt(x, CAM.ty, 0);
+}
 
 function resize() {
   const w = host.clientWidth || 200, h = host.clientHeight || 260;
@@ -135,22 +163,40 @@ function pose(t) {
   if (!asleep && S.idle === 'sway') { P.hipsZ += Math.sin(t * 2.2) * 0.05; P.headZ += Math.sin(t * 2.2 + 1) * 0.08; }
   if (!asleep && S.idle === 'hair') { const k = bell(t - (S.idleUntil - 3), 3); P = mix(mix({ ...REST }, POSES.clasp, 0), POSES.hair, k); }
 
-  // 1б) гуляет по экрану / сидит
-  if (S.walkDir) {
-    S.walkPhase += FRAME_DT * Math.PI * 2 * 0.95;
-    const ph = S.walkPhase, sw = Math.sin(ph);
-    P = mix(P, { ...REST }, 1);
-    P.lLegX = -sw * 0.42; P.rLegX = sw * 0.42;
-    P.lKneeX = 0.12 + 0.65 * Math.max(0, -Math.cos(ph)); P.rKneeX = 0.12 + 0.65 * Math.max(0, Math.cos(ph));
-    P.lFootX = -P.lLegX * 0.3; P.rFootX = -P.rLegX * 0.3;
-    P.lUpX = sw * 0.32; P.rUpX = -sw * 0.32; P.lLoY = -0.35; P.rLoY = 0.35;
-    P.lift = -Math.abs(Math.sin(ph)) * 0.018; P.hipsZ += Math.sin(ph) * 0.03; P.spineX += 0.04;
+  // 1б) гуляет по экрану / сидит / лежит
+  const mPerPx = (sm.headY ? (sm.headY + 0.2) : 1.85) / Math.max(200, VIEW.h);
+  const speed = spring('walkSpeed', S.walkDir ? S.walkPx * mPerPx : 0, 1.2, 1);   // м/с, плавный разгон
+  const amp = Math.min(1, speed / 0.35);
+  if (amp > 0.02) {
+    S.walkPhase += speed * FRAME_DT / 0.55 * Math.PI;   // шаг ~55 см: ноги не скользят по земле
+    const ph = S.walkPhase, sw = Math.sin(ph), cw = Math.cos(ph);
+    P = mix(P, { ...REST }, amp);
+    P.lLegX = -sw * 0.38 * amp; P.rLegX = sw * 0.38 * amp;
+    P.lKneeX = (0.06 + 0.75 * Math.max(0, cw)) * amp; P.rKneeX = (0.06 + 0.75 * Math.max(0, -cw)) * amp;
+    P.lFootX = (sw * 0.25 - 0.1 * Math.max(0, cw)) * amp; P.rFootX = (-sw * 0.25 - 0.1 * Math.max(0, -cw)) * amp;
+    P.lUpX = sw * 0.38 * amp; P.rUpX = -sw * 0.38 * amp;
+    P.lLoY = -0.25 - Math.max(0, -sw) * 0.45 * amp; P.rLoY = 0.25 + Math.max(0, sw) * 0.45 * amp;
+    P.lift = -Math.abs(sw) * 0.022 * amp;                 // таз ниже, когда ноги расставлены
+    P.hipsZ += sw * 0.045 * amp;                          // покачивание бёдрами
+    P.spineY = -sw * 0.09 * amp;                          // плечи против бёдер
+    P.spineX += 0.05 * amp;                               // чуть вперёд при ходьбе
+    P.headZ -= sw * 0.03 * amp;                           // голова держит горизонт
   }
-  P.hipsY = S.walkDir * 1.05;                       // повернулась туда, куда идёт
+  P.hipsY = S.walkDir * 1.05 * (S.lie ? 0 : 1);           // повернулась туда, куда идёт
+  // на ходу иногда поглядывает в экран, а когда говорит — смотрит на тебя
+  if (S.walkDir) {
+    if (t > S.nextGlance) { S.glanceUntil = t + 1.2 + Math.random() * 1.3; S.nextGlance = t + 4 + Math.random() * 6; }
+    if (talking || t < S.glanceUntil) { P.headY -= P.hipsY * 0.75; P.spineY = (P.spineY || 0) - P.hipsY * 0.2; }
+  }
   if (S.sit && !S.walkDir) {
     P = mix(P, { lLegX: -1.45, rLegX: -1.45, lKneeX: 1.5, rKneeX: 1.5, lFootX: -0.1, rFootX: -0.1,
                  drop: 0.47, lUpZ: -1.25, rUpZ: 1.25, lUpX: -0.55, rUpX: -0.55, lLoY: -0.5, rLoY: 0.5,
                  spineX: 0.06 }, 1);
+  }
+  if (S.lie) {                                            // спит лёжа, свернувшись калачиком
+    P = mix(P, { lLegX: -1.0, rLegX: -0.7, lKneeX: 1.6, rKneeX: 1.3, lFootX: 0.2, rFootX: 0.2,
+                 lUpZ: -0.9, rUpZ: 0.6, lUpX: -0.7, rUpX: -0.9, lLoY: -1.6, rLoY: 1.7,
+                 spineX: 0.25, headX: 0.15, headZ: -0.2 }, 1);
   }
 
   // 2) эмоция в теле (пока говорит и пару секунд после)
@@ -194,38 +240,43 @@ function pose(t) {
 
   // взгляд за курсором
   const looking = Date.now() - S.lookT < 4000 && !asleep && !S.touch;
-  const lx = ease('lx', looking ? S.lookX : 0, INSTANT ? 1 : 0.08), ly = ease('ly', looking ? S.lookY : 0, INSTANT ? 1 : 0.08);
+  const lx = spring('lx', looking ? S.lookX : 0, 1.5, 0.8), ly = spring('ly', looking ? S.lookY : 0, 1.5, 0.8);
   P.headY += lx * 0.35; P.headX += ly * 0.18;
 
-  // применить с плавностью
-  const k = INSTANT ? 1 : 0.12, kh = INSTANT ? 1 : 0.1;
-  const set = (name, axis, v, kk = k) => { const b = bone(name); if (b) b.rotation[axis] = ease(name + axis, v, kk); };
-  set('leftUpperArm', 'z', P.lUpZ); set('rightUpperArm', 'z', P.rUpZ);
-  set('leftUpperArm', 'y', P.lUpY); set('rightUpperArm', 'y', P.rUpY);
-  set('leftUpperArm', 'x', P.lUpX); set('rightUpperArm', 'x', P.rUpX);
-  set('leftLowerArm', 'y', P.lLoY); set('rightLowerArm', 'y', P.rLoY);
-  set('leftLowerArm', 'z', P.lLoZ); set('rightLowerArm', 'z', P.rLoZ);
-  set('leftHand', 'z', P.lHandZ); set('rightHand', 'z', P.rHandZ);
-  set('leftHand', 'x', P.lHandX); set('rightHand', 'x', P.rHandX);
-  set('spine', 'x', P.spineX, kh); set('chest', 'x', P.chestX + P.spineX * 0.6, kh);
-  set('spine', 'z', P.spineZ, kh);
-  set('neck', 'x', P.headX * 0.4, kh); set('head', 'x', P.headX * 0.6, kh);
-  set('neck', 'y', P.headY * 0.4, kh); set('head', 'y', P.headY * 0.6, kh);
-  set('head', 'z', P.headZ, kh);
-  set('hips', 'z', P.hipsZ, 0.05); set('hips', 'y', P.hipsY, INSTANT ? 1 : 0.07);
-  const kl = INSTANT ? 1 : 0.25;
-  set('leftUpperLeg', 'x', P.lLegX, kl); set('rightUpperLeg', 'x', P.rLegX, kl);
-  set('leftLowerLeg', 'x', P.lKneeX, kl); set('rightLowerLeg', 'x', P.rKneeX, kl);
-  set('leftFoot', 'x', P.lFootX, kl); set('rightFoot', 'x', P.rFootX, kl);
+  // применить: пружины — руки свободнее и с инерцией, голова мягче, ноги чётко на ходу
+  const walking = amp > 0.05;
+  const fArm = walking ? 3.2 : 1.5, fLeg = walking ? 7 : 2.5, fHead = 2.0, fBody = 1.6;
+  const set = (name, axis, v, f, z = 0.7) => { const b = bone(name); if (b) b.rotation[axis] = spring(name + axis, v, f, z); };
+  set('leftUpperArm', 'z', P.lUpZ, fArm, 0.6); set('rightUpperArm', 'z', P.rUpZ, fArm, 0.6);
+  set('leftUpperArm', 'y', P.lUpY, fArm, 0.6); set('rightUpperArm', 'y', P.rUpY, fArm, 0.6);
+  set('leftUpperArm', 'x', P.lUpX, fArm, 0.55); set('rightUpperArm', 'x', P.rUpX, fArm, 0.55);
+  set('leftLowerArm', 'y', P.lLoY, fArm * 1.2, 0.55); set('rightLowerArm', 'y', P.rLoY, fArm * 1.2, 0.55);
+  set('leftLowerArm', 'z', P.lLoZ, fArm * 1.2, 0.6); set('rightLowerArm', 'z', P.rLoZ, fArm * 1.2, 0.6);
+  set('leftHand', 'z', P.lHandZ, 2.5, 0.5); set('rightHand', 'z', P.rHandZ, 2.5, 0.5);   // кисти — «с запаздыванием»
+  set('leftHand', 'x', P.lHandX, 2.5, 0.5); set('rightHand', 'x', P.rHandX, 2.5, 0.5);
+  set('spine', 'x', P.spineX, fBody, 0.8); set('chest', 'x', P.chestX + P.spineX * 0.6, fBody, 0.8);
+  set('spine', 'z', P.spineZ, fBody, 0.8); set('spine', 'y', P.spineY || 0, walking ? 4 : fBody, 0.7);
+  set('neck', 'x', P.headX * 0.4, fHead, 0.75); set('head', 'x', P.headX * 0.6, fHead, 0.7);
+  set('neck', 'y', P.headY * 0.4, fHead, 0.75); set('head', 'y', P.headY * 0.6, fHead, 0.7);
+  set('head', 'z', P.headZ, fHead, 0.7);
+  set('hips', 'z', P.hipsZ, walking ? 5 : 1.2, 0.8); set('hips', 'y', P.hipsY, 1.1, 0.85);
+  set('leftUpperLeg', 'x', P.lLegX, fLeg, 0.85); set('rightUpperLeg', 'x', P.rLegX, fLeg, 0.85);
+  set('leftLowerLeg', 'x', P.lKneeX, fLeg, 0.85); set('rightLowerLeg', 'x', P.rKneeX, fLeg, 0.85);
+  set('leftFoot', 'x', P.lFootX, fLeg, 0.85); set('rightFoot', 'x', P.rFootX, fLeg, 0.85);
   avoidBody();
   const hips = bone('hips');
   if (hips) {
     sm.hipsBase ??= hips.position.y;
-    hips.position.y = sm.hipsBase + ease('lift', P.lift, 0.3) - ease('drop', P.drop, INSTANT ? 1 : 0.08);
+    hips.position.y = sm.hipsBase + spring('lift', P.lift, walking ? 6 : 3, 0.7) - spring('drop', P.drop, 1.2, 0.9);
   }
+  // лёжа: поворачиваем всю модель на бок
+  const lk = spring('lieK', S.lie ? 1 : 0, 0.6, 1);
+  vrm.scene.rotation.set(0, 0, lk * Math.PI / 2);   // на боку, лицом к нам
+  vrm.scene.position.y = lk * 0.32;
+  vrm.scene.position.x = (S.worldX || 0) + lk * 0.85;
 
   if (vrm.lookAt) {
-    lookTarget.position.set(lx * 1.2, camera.position.y + ly * 0.6, camera.position.z);
+    lookTarget.position.set((S.worldX || 0) + lx * 1.2, camera.position.y + ly * 0.6, camera.position.z);
     vrm.lookAt.target = asleep ? null : lookTarget;
   }
 }
@@ -384,9 +435,16 @@ function loop(now) {
   const dt = Math.min(0.1, clock.getDelta()), t = clock.elapsedTime;
   FRAME_DT = dt || 1 / 60;
   if (vrm) {
-    const fk = sm.fullK || 0, want = (S.full || S.walkDir || S.sit) ? 1 : 0;
+    const mini = document.body.classList.contains('mini');
+    const fk = sm.fullK || 0, want = (mini || S.full || S.walkDir || S.sit || S.lie) ? 1 : 0;
     if (Math.abs(fk - want) > 0.002) { sm.fullK = lerp(fk, want, 1 - Math.pow(0.04, dt)); fitCamera(VIEW.w, VIEW.h); }
-    pose(t); face(t); vrm.update(dt);
+    pose(t); face(t);
+    // она «по-настоящему» идёт в 3D-мире, а камера едет за ней — волосы и одежда отстают сами
+    S.worldX = (S.worldX || 0) + (S.walkDir || 0) * (sm.walkSpeed || 0) * dt;
+    if (Math.abs(S.worldX) > 50 && !S.walkDir) S.worldX = 0;
+    const lk = sm.lieK || 0;
+    if (lk > 0.001 && lk < 0.999) fitCamera(VIEW.w, VIEW.h); else placeCamera();
+    vrm.update(dt);
   }
   renderer.render(scene, camera);
 }
@@ -439,11 +497,13 @@ window.VRM3D = {
   },
   look(dx, dy) { S.lookX = dx; S.lookY = dy; S.lookT = Date.now(); },
   mouth(v, shape) { S.mouth = v; S.lipT = Date.now(); if (shape) S.shape = shape; },
-  walk(dir) { S.walkDir = dir; if (dir) S.sit = false; },
+  walk(dir, px) { S.walkDir = dir; if (px != null) S.walkPx = px; if (dir) { S.sit = false; S.lie = false; } },
+  lie(on) { S.lie = !!on; if (on) S.sit = false; },
   sit(on) { S.sit = !!on; },
   full(on) { S.full = !!on; },
   _zone(x, y) { return zoneAt(x, y); },
   _body() { return BODY; },
+  _dbg() { const r = {}; for (const n of ['hips','leftUpperLeg','leftLowerLeg']) { const b = bone(n); r[n] = b ? [b.rotation.x.toFixed(2), b.rotation.y.toFixed(2), b.rotation.z.toFixed(2)] : null; } r.lie = S.lie; r.lieK = sm.lieK; return r; },
   _portrait(span = 0.42, down = 0.0) {        // крупный план лица (для иконки)
     const top = (sm.headY || 1.6) + 0.14 - down, fov = 22;
     const dist = (span / 2) / Math.tan(THREE.MathUtils.degToRad(fov / 2));
@@ -457,6 +517,6 @@ window.VRM3D = {
     S.emo = opts.emo || 'calm'; S.act = opts.act || '';
     if (opts.touch) { S.touch = opts.touch; S.touchStart = performance.now() - 1000; S.touchUntil = performance.now() + 1e9; }
     else S.touch = '';
-    S.dragging = !!opts.drag; S.walkDir = opts.walk || 0; S.sit = !!opts.sit; S.full = !!(opts.walk || opts.sit); sm.fullK = S.full ? 1 : 0; if (camera) fitCamera(VIEW.w, VIEW.h);
+    S.dragging = !!opts.drag; S.walkDir = opts.walk || 0; S.walkPx = 110; sm.walkSpeed = opts.walk ? 0.5 : 0; S.sit = !!opts.sit; S.lie = !!opts.lie; sm.lieK = S.lie ? 1 : 0; S.full = true; sm.fullK = 1; if (camera) fitCamera(VIEW.w, VIEW.h);
   },
 };

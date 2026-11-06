@@ -1,33 +1,39 @@
-"""Прогулки по экрану: иногда, когда вы не разговариваете, она спускается к низу экрана (над Dock),
-гуляет туда-сюда, присаживается отдохнуть, а ночью уходит спать в правый угол.
-Окно двигаем средствами macOS из главного потока; если его потащили мышкой — она сразу
-останавливается. Выключить: значок 🌸 → «Гулять по экрану»."""
+"""Прогулки по экрану. Когда вы не заняты разговором, она спускается вниз и гуляет: по Dock —
+прямо по иконкам, а где Dock'а нет — по нижнему краю экрана. Иногда присаживается, а когда засыпает —
+уходит в правый угол и ложится. Говорить с ней можно и на ходу: она поворачивает голову к тебе.
+Если потащить окно мышкой — сразу останавливается. Выключить: 🌸 → «Гулять по экрану»."""
 import random
+import subprocess
 import sys
 import threading
 import time
 
-SPEED = 85            # пикселей в секунду — спокойный шаг
-FPS = 30
+SPEED = 110           # пикселей в секунду — обычный шаг
+ACCEL = 260           # разгон/торможение, пикселей в секунду²
+FPS = 40
+LIE = (560, 260)      # окно, пока лежит
 
 
 class Walker:
     def __init__(self, companion):
         self.c = companion
         self.enabled = bool(companion.cfg.get("walk", {}).get("enabled", True))
-        self.busy = False            # сейчас идёт или сидит
+        self.busy = False
         self.sitting = False
+        self.lying = False
         self._stop = threading.Event()
-        self._next = time.monotonic() + random.uniform(60, 150)
+        self._next = time.monotonic() + random.uniform(25, 50)
         self._win = None
-        self._pos = None             # куда мы сами поставили окно (x, y снизу-слева)
+        self._pos = None
         self._moved_by_user = False
+        self._dock = None             # (x_левый, x_правый, верх) в координатах macOS, или None
+        self._dock_t = 0.0
+        self._restore = None          # размер окна до того, как легла
 
-    # ---------- окно (только в главном потоке) ----------
+    # ---------- главный поток macOS ----------
     def _main(self, fn):
         from PyObjCTools import AppHelper
-        done = threading.Event()
-        box = {}
+        done, box = threading.Event(), {}
 
         def run():
             try:
@@ -50,95 +56,157 @@ class Walker:
                     break
         return self._win
 
-    def _area(self):
-        """(x_min, x_max, y_низ, ширина, высота окна) в координатах macOS (снизу-слева)."""
+    def _geo(self):
+        """Экран, видимая область (без Dock и меню) и рамка окна — координаты macOS (снизу-слева)."""
         def f():
-            w = self._window()
-            fr = w.frame()
             from AppKit import NSScreen
-            vf = (w.screen() or NSScreen.screens()[0]).visibleFrame()
-            return (vf.origin.x, vf.origin.x + vf.size.width - fr.size.width, vf.origin.y,
-                    fr.origin.x, fr.origin.y)
+            w = self._window()
+            sc = w.screen() or NSScreen.screens()[0]
+            fr, vf, full = w.frame(), sc.visibleFrame(), sc.frame()
+            return {"full": (full.origin.x, full.origin.y, full.size.width, full.size.height),
+                    "vis": (vf.origin.x, vf.origin.y, vf.size.width, vf.size.height),
+                    "win": (fr.origin.x, fr.origin.y, fr.size.width, fr.size.height)}
         return self._main(f)
 
-    def _move(self, x, y):
+    def _set(self, x, y, w=None, h=None, force=False):
         def f():
-            w = self._window()
-            o = w.frame().origin
-            if self._pos and (abs(o.x - self._pos[0]) > 4 or abs(o.y - self._pos[1]) > 4):
-                self._moved_by_user = True              # её потащили мышкой
+            win = self._window()
+            fr = win.frame()
+            o = fr.origin
+            if not force and self._pos and (abs(o.x - self._pos[0]) > 4 or abs(o.y - self._pos[1]) > 4):
+                self._moved_by_user = True             # её потащили мышкой
                 return
-            w.setFrameOrigin_((x, y))
+            if w and h:
+                win.setFrame_display_(((x, y), (w, h)), True)
+            else:
+                win.setFrameOrigin_((x, y))
             self._pos = (x, y)
         self._main(f)
 
-    # ---------- можно ли сейчас гулять ----------
+    # ---------- где земля ----------
+    def _dock_rect(self, g):
+        """Где стоит Dock (если он внизу и не прячется): по окнам системы, а если не вышло —
+        прикидываем по числу иконок в настройках Dock."""
+        if time.monotonic() - self._dock_t < 30:
+            return self._dock
+        self._dock_t = time.monotonic()
+        fx, fy, fw, fh = g["full"]
+        vx, vy, vw, vh = g["vis"]
+        dock_h = vy - fy
+        if dock_h < 20:                               # Dock сбоку или прячется
+            self._dock = None
+            return None
+        rect = None
+        try:
+            import Quartz
+            infos = Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly,
+                                                      Quartz.kCGNullWindowID) or []
+            for i in infos:
+                if i.get("kCGWindowOwnerName") != "Dock":
+                    continue
+                b = i.get("kCGWindowBounds", {})
+                w, h = b.get("Width", 0), b.get("Height", 0)
+                if 20 < h <= dock_h + 30 and 100 < w < fw * 0.97:
+                    rect = (b.get("X", 0), b.get("X", 0) + w)
+                    break
+        except Exception:
+            pass
+        if rect is None:
+            try:
+                tile = int(float(subprocess.run(["defaults", "read", "com.apple.dock", "tilesize"],
+                                                capture_output=True, text=True).stdout.strip() or 48))
+                apps = subprocess.run(["defaults", "read", "com.apple.dock", "persistent-apps"],
+                                      capture_output=True, text=True).stdout.count("tile-data")
+                others = subprocess.run(["defaults", "read", "com.apple.dock", "persistent-others"],
+                                        capture_output=True, text=True).stdout.count("tile-data")
+                n = apps + others + 2 + 3                # + Finder, корзина и недавние
+                width = n * (tile + 8) + 40
+                rect = (fx + (fw - width) / 2, fx + (fw + width) / 2)
+            except Exception:
+                rect = None
+        self._dock = (rect[0], rect[1], vy) if rect else None
+        return self._dock
+
+    def ground(self, x_center, g) -> float:
+        """Высота «пола» под ней: верх Dock (по иконкам) или нижний край экрана."""
+        fy = g["full"][1]
+        d = self._dock_rect(g)
+        if d and d[0] - 10 <= x_center <= d[1] + 10:
+            return d[2] - 10                          # ноги чуть ниже верха Dock — стоит на иконках
+        return fy
+
+    # ---------- условия ----------
     def _free(self) -> bool:
         c = self.c
         return (self.enabled and c.awake and not c.pauser.paused and not c.speaking
-                and not c.busy.locked() and getattr(c.ui, "mini", True)
-                and time.monotonic() - c.last_talk > 40)
+                and not c.busy.locked() and getattr(c.ui, "mini", True) and not self.lying
+                and time.monotonic() - c.last_talk > 12)
 
-    def interrupted(self, by_talk: bool = True) -> bool:
+    def interrupted(self) -> bool:
         c = self.c
-        if self._stop.is_set() or self._moved_by_user or not getattr(c.ui, "mini", True) or c.pauser.paused:
-            return True
-        return by_talk and (c.speaking or c.busy.locked())
+        return (self._stop.is_set() or self._moved_by_user or not getattr(c.ui, "mini", True)
+                or c.pauser.paused or not self.enabled)
 
-    # ---------- действия ----------
-    def walk_to(self, tx: float | None = None, by_talk: bool = True) -> bool:
-        """Дойти до точки tx у нижнего края. Возвращает True, если дошла."""
+    # ---------- ходьба ----------
+    def walk_to(self, tx: float | None = None) -> bool:
         try:
-            x0, x1, ybot, x, y = self._area()
+            g = self._geo()
         except Exception as e:
             print(f"[прогулка] не вижу окно: {e}")
             return False
+        vx, _, vw, _ = g["vis"]
+        x, y, ww, wh = g["win"]
+        x0, x1 = vx, vx + vw - ww
         if tx is None:
             for _ in range(10):
                 tx = random.uniform(x0, x1)
-                if abs(tx - x) > 220:
+                if abs(tx - x) > 260:
                     break
         tx = max(x0, min(x1, tx))
         self.busy, self._moved_by_user, self._pos = True, False, (x, y)
         self._stop.clear()
         self.c.ui.sit(False)
         dirn = 1 if tx > x else -1
-        self.c.ui.walk(dirn)
-        ok = False
+        v, sent, ok = 0.0, -1.0, False
+        dt = 1 / FPS
         try:
-            # сначала спускается к низу экрана (плавно), потом идёт
-            while not self.interrupted(by_talk):
-                dx, dy = tx - x, ybot - y
-                if abs(dx) < 2 and abs(dy) < 2:
+            while not self.interrupted():
+                dist = (tx - x) * dirn
+                gy = self.ground(x + ww / 2, g)
+                if dist <= 1 and abs(gy - y) < 1:
                     ok = True
                     break
-                step = SPEED / FPS
-                if abs(dy) > 1:
-                    y += max(-step * 2.5, min(step * 2.5, dy))       # вниз быстрее
-                else:
-                    y = ybot
-                    x += max(-step, min(step, dx))
-                self._move(x, y)
-                time.sleep(1 / FPS)
+                # разгон и плавное торможение у цели
+                v_target = min(SPEED, (2 * ACCEL * max(dist, 0)) ** 0.5)
+                v += max(-ACCEL * dt, min(ACCEL * dt, v_target - v))
+                if dist > 0:
+                    x += dirn * min(v * dt, dist)
+                # на «ступеньку» Dock — плавно вверх/вниз, вниз с края — быстрее (спрыгнула)
+                dy = gy - y
+                y += max(-14, min(6, dy)) if abs(dy) > 0.5 else dy
+                if abs(v - sent) > 8:
+                    self.c.ui.walk(dirn, round(v))
+                    sent = v
+                self._set(x, y)
+                time.sleep(dt)
         finally:
-            self.c.ui.walk(0)
+            self.c.ui.walk(0, 0)
             self.busy = False
         return ok
 
-    def sit(self, minutes: float | None = None, sleepy: bool = False):
+    def sit(self, minutes: float | None = None):
         self.busy, self.sitting = True, True
         self._stop.clear()
         self.c.ui.sit(True)
-        end = time.monotonic() + (minutes or random.uniform(1, 4)) * 60
+        end = time.monotonic() + (minutes or random.uniform(0.7, 2.5)) * 60
         try:
-            while time.monotonic() < end and not self._stop.is_set():
-                if not sleepy and self.interrupted():
+            while time.monotonic() < end and not self.interrupted() and self.c.awake:
+                if self.c.busy.locked():                # заговорили — встаёт
                     break
                 time.sleep(0.5)
         finally:
-            if not sleepy:
-                self.c.ui.sit(False)
-                self.sitting = False
+            self.c.ui.sit(False)
+            self.sitting = False
             self.busy = False
 
     def stop(self):
@@ -147,29 +215,58 @@ class Walker:
             self.c.ui.sit(False)
             self.sitting = False
 
+    # ---------- сон ----------
     def go_corner_and_sleep(self):
-        """Перед сном — в правый нижний угол и присесть."""
         if not self.enabled or sys.platform != "darwin":
             return
 
         def run():
-            try:
-                _, x1, _, _, _ = self._area()
-            except Exception:
-                return
-            for _ in range(20):                       # дождаться, пока договорит «спокойной ночи»
+            for _ in range(20):                       # пусть договорит «спокойной ночи»
                 if not self.c.speaking:
                     break
                 time.sleep(0.25)
-            if self.walk_to(x1, by_talk=False):
-                self.c.ui.sit(True)
-                self.sitting = True
+            try:
+                g = self._geo()
+            except Exception:
+                return
+            vx, _, vw, _ = g["vis"]
+            self._stop.clear()
+            if not self.walk_to(vx + vw - g["win"][2]):
+                return
+            self.lie_down()
         threading.Thread(target=run, daemon=True).start()
 
+    def lie_down(self):
+        try:
+            g = self._geo()
+        except Exception:
+            return
+        x, y, w, h = g["win"]
+        vx, _, vw, _ = g["vis"]
+        self._restore = (w, h)
+        nx = min(x + w - LIE[0] + 40, vx + vw - LIE[0])          # прижаться к правому краю
+        gy = self.ground(nx + LIE[0] / 2, g)
+        self._set(nx, gy, LIE[0], LIE[1], force=True)
+        self.lying = True
+        self.c.ui.lie(True)
+
+    def stand_up(self):
+        if not self.lying:
+            return
+        self.lying = False
+        self.c.ui.lie(False)
+        try:
+            g = self._geo()
+            x, y, w, h = g["win"]
+            rw, rh = self._restore or (250, 520)
+            self._set(x + w - rw - 20, y, rw, rh, force=True)
+        except Exception as e:
+            print(f"[прогулка] встать: {e}")
+
     def wake(self):
-        if self.sitting:
-            self.c.ui.sit(False)
-            self.sitting = False
+        self.stop()
+        if self.lying:
+            self.stand_up()
 
     # ---------- сама решает ----------
     def _loop(self):
@@ -179,36 +276,40 @@ class Walker:
                 if self.busy or time.monotonic() < self._next or not self._free():
                     continue
                 r = random.random()
-                if r < 0.65:
+                if r < 0.8:
                     self.walk_to()
-                    if random.random() < 0.35 and self._free():
+                    if random.random() < 0.25 and self._free():
                         self.sit()
                 else:
                     self.sit()
-                self._next = time.monotonic() + random.uniform(2.5, 7) * 60
+                self._next = time.monotonic() + random.uniform(35, 100)
             except Exception as e:
                 print(f"[прогулка] {e}")
                 self.busy = False
-                self._next = time.monotonic() + 300
+                self._next = time.monotonic() + 180
 
     def command(self, what: str):
-        """Из голосовых команд: погуляй / сядь / стой / иди влево / иди вправо."""
         what = (what or "").lower()
 
         def run():
-            if what.startswith("сес") or what.startswith("сид") or what.startswith("сяд"):
-                self.sit(3, sleepy=True)
-                self.c.ui.sit(False); self.sitting = False
+            if self.lying:
+                self.stand_up()
+            if what.startswith(("сес", "сид", "сяд")):
+                self.sit(3)
             elif what.startswith("стоп"):
                 self.stop()
+            elif what.startswith("леч") or what.startswith("лож"):
+                self.lie_down()
             else:
                 try:
-                    x0, x1, _, x, _ = self._area()
+                    g = self._geo()
                 except Exception:
                     return
-                tx = x0 if "лев" in what else x1 if "прав" in what else None
+                vx, _, vw, _ = g["vis"]
+                tx = vx if "лев" in what else vx + vw - g["win"][2] if "прав" in what else None
                 time.sleep(0.6)
-                self.walk_to(tx, by_talk=False)
+                self._stop.clear()
+                self.walk_to(tx)
         self.stop()
         time.sleep(0.1)
         threading.Thread(target=run, daemon=True).start()

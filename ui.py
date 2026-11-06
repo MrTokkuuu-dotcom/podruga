@@ -11,7 +11,7 @@ from pathlib import Path
 
 HTML = Path(__file__).resolve().parent / "avatar" / "app.html"
 FULL = (360, 600)     # с перепиской
-MINI = (210, 300)     # только она (по умолчанию)
+MINI = (250, 520)     # только она (по умолчанию) — во весь рост
 
 VOICES = [("xenia", "Ксения — мягкая (бесплатно, на Mac)"), ("kseniya", "Ксюша — звонкая (бесплатно)"),
           ("baya", "Бая — спокойная (бесплатно)"),
@@ -32,8 +32,9 @@ class NullUI:
     def look(self, dx, dy): pass
     def mouth(self, v, shape=None): pass
     mini = True
-    def walk(self, d): pass
+    def walk(self, d, px=0): pass
     def sit(self, on): pass
+    def lie(self, on): pass
     def act(self, name, ms=None): pass
     def outfit(self, o): pass
     def show_chat(self): pass
@@ -146,6 +147,10 @@ class Api:
         чтобы она не прыгала по экрану."""
         w, h = MINI if on else FULL
         self._ui.mini = bool(on)
+        wk = self._companion and getattr(self._companion, "walker", None)
+        if wk and wk.lying:                     # открыли переписку, пока лежала — встаёт
+            wk.lying = False
+            self._ui.lie(False)
         win = self._ui.window
         try:
             x, y = win.x, win.y
@@ -277,8 +282,9 @@ class AppUI:
         self._fast(f"ui.mouth({v:.2f},'{shape or ''}')")
     def act(self, name, ms=None): self._call("act", name, ms)
     mini = True
-    def walk(self, d): self._call("walk", int(d))
+    def walk(self, d, px=0): self._call("walk", int(d), int(px))
     def sit(self, on): self._call("sit", bool(on))
+    def lie(self, on): self._call("lie", bool(on))
     def outfit(self, o): self._call("outfit", o)
     def show_chat(self): self._call("showChat")
 

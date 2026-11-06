@@ -65,15 +65,14 @@
   body.mini #app { background: transparent; box-shadow: none; inset: 0; border-radius: 0; }
   body.mini #bar, body.mini #log, body.mini #bottom, body.mini #meter, body.mini #status { display: none; }
   body.mini #charWrap { flex: 1; height: auto; min-height: 0; cursor: grab; }
-  body.mini #char { bottom: 40px; transition: bottom .4s; }
-  body.mini.walking #char { bottom: 0; }
+  body.mini #char { bottom: 0; }
   body.mini.walking #chatBtn { opacity: 0; pointer-events: none; }
   body.mini #char svg { filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
-  body.mini #chatBtn { display: grid; place-items: center; position: absolute; left: 50%; bottom: 4px;
-    transform: translateX(-50%); width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
+  body.mini #chatBtn { display: grid; place-items: center; position: absolute; left: auto; right: 6px; top: 6px; bottom: auto;
+    transform: none; width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
     background: rgba(28,22,44,.78); color: var(--ink); font-size: 16px;
     box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); opacity: .75; transition: opacity .15s, transform .15s; }
-  body.mini #chatBtn:hover { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  body.mini #chatBtn:hover { opacity: 1; transform: scale(1.08); }
   #chatBtn .badge { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent2); display: none; }
   #chatBtn.unread .badge { display: block; }
@@ -248,9 +247,13 @@ const ui = {
     const was = Date.now() - ui._lipT < 350; ui._lipT = Date.now(); if (!was) ui._paint();
     clearTimeout(ui._lipOff); ui._lipOff = setTimeout(() => ui._paint(), 400);
   },
-  walk(d) {
-    ui._walk = d; document.body.classList.toggle('walking', !!(d || ui._sit));
-    if (window.VRM3D && VRM3D.ready) VRM3D.walk(d);
+  walk(d, px) {
+    ui._walk = d; document.body.classList.toggle('walking', !!(d || ui._sit || ui._lie));
+    if (window.VRM3D && VRM3D.ready) VRM3D.walk(d, px);
+  },
+  lie(on) {
+    ui._lie = on; document.body.classList.toggle('walking', !!(on || ui._walk || ui._sit));
+    if (window.VRM3D && VRM3D.ready) VRM3D.lie(on);
   },
   sit(on) {
     ui._sit = on; document.body.classList.toggle('walking', !!(on || ui._walk));
