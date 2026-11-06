@@ -76,6 +76,17 @@ def _target_class():
                 ui.open_settings()
             elif tag == 6:
                 set_autostart(not autostart_enabled())
+            elif tag == 8:
+                bg(lambda: c.set_guests(not c.guests_on()))
+            elif tag == 7 and getattr(c, "walker", None):
+                c.walker.enabled = not c.walker.enabled
+                if not c.walker.enabled:
+                    c.walker.stop()
+                from config import save_user_settings
+                try:
+                    save_user_settings(c.cfg, {"walk": "1" if c.walker.enabled else "0"})
+                except Exception:
+                    pass
             elif tag == 9:
                 ui.close()
 
@@ -85,6 +96,9 @@ def _target_class():
             menu.itemWithTag_(3).setTitle_("Уснуть" if c.awake else "Разбудить")
             menu.itemWithTag_(4).setTitle_("Снять паузу" if c.pauser.paused else "Пауза")
             menu.itemWithTag_(6).setState_(1 if autostart_enabled() else 0)
+            menu.itemWithTag_(8).setState_(1 if c.guests_on() else 0)
+            w = getattr(c, "walker", None)
+            menu.itemWithTag_(7).setState_(1 if (w and w.enabled) else 0)
 
     _Target = PodrugaMenuTarget
     return _Target
@@ -101,7 +115,7 @@ def _build(companion):
     menu = NSMenu.alloc().init()
     menu.setAutoenablesItems_(False)
     for tag, title in [(1, "Спрятать"), (2, "Переписка"), (3, "Уснуть"), (4, "Пауза"),
-                       (5, "Настройки…"), (0, None), (6, "Запускать вместе с Mac"),
+                       (5, "Настройки…"), (0, None), (8, "Гости — отвечать только по имени"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
                        (0, None), (9, "Выйти")]:
         if title is None:
             menu.addItem_(NSMenuItem.separatorItem())

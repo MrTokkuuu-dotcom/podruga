@@ -165,7 +165,7 @@ class Speaker:
 
     def __init__(self, voice, on_talk=None, on_text=None, on_amp=None):
         self.voice = voice
-        self.on_amp = on_amp or (lambda v: None)          # громкость для движения рта
+        self.on_amp = on_amp or (lambda *a: None)          # громкость для движения рта
         self.on_talk = on_talk or (lambda talking: None)  # для анимации рта
         self.on_text = on_text or (lambda text: None)     # для переписки в окне
         self.text_q: queue.Queue[str] = queue.Queue()
@@ -257,7 +257,11 @@ class Speaker:
                             break
                         piece = audio[i:i + chunk]
                         rms = float(np.sqrt(np.mean(piece.astype(np.float32) ** 2))) if len(piece) else 0.0
-                        self.on_amp(min(1.0, rms / 5000.0))
+                        try:
+                            from visemes import shape
+                            self.on_amp(min(1.0, rms / 5000.0), shape(piece, OUT_RATE))
+                        except TypeError:
+                            self.on_amp(min(1.0, rms / 5000.0))
                         stream.write(piece.reshape(-1, 1))
             except Exception as e:
                 print(f"[голос] ошибка воспроизведения: {e}")

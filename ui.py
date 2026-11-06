@@ -30,7 +30,10 @@ class NullUI:
     def her_done(self): pass
     def emotion(self, e, hold=None): pass
     def look(self, dx, dy): pass
-    def mouth(self, v): pass
+    def mouth(self, v, shape=None): pass
+    mini = True
+    def walk(self, d): pass
+    def sit(self, on): pass
     def act(self, name, ms=None): pass
     def outfit(self, o): pass
     def show_chat(self): pass
@@ -142,6 +145,7 @@ class Api:
         """Переключение «только она» ↔ «с перепиской». Нижний край окна остаётся на месте,
         чтобы она не прыгала по экрану."""
         w, h = MINI if on else FULL
+        self._ui.mini = bool(on)
         win = self._ui.window
         try:
             x, y = win.x, win.y
@@ -269,8 +273,12 @@ class AppUI:
 
     def level(self, v): self._fast(f"ui.level({int(v)})")
     def look(self, dx, dy): self._fast(f"ui.look({dx:.2f},{dy:.2f})")
-    def mouth(self, v): self._fast(f"ui.mouth({v:.2f})")
+    def mouth(self, v, shape=None):
+        self._fast(f"ui.mouth({v:.2f},'{shape or ''}')")
     def act(self, name, ms=None): self._call("act", name, ms)
+    mini = True
+    def walk(self, d): self._call("walk", int(d))
+    def sit(self, on): self._call("sit", bool(on))
     def outfit(self, o): self._call("outfit", o)
     def show_chat(self): self._call("showChat")
 

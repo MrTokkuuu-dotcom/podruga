@@ -8,6 +8,7 @@ bootstrap.ensure_deps()   # до тяжёлых импортов: при обн�
 
 import os  # noqa: E402
 import random
+import re
 import signal
 import sys
 import threading
@@ -357,6 +358,8 @@ class Companion:
             elif kind == "ПОКАЗАТЬ":
                 self.ui.add("her", arg.strip(), "📝")
                 self.ui.show_chat()
+            elif kind == "ГУЛЯТЬ" and getattr(self, "walker", None):
+                self.walker.command(arg)
             elif kind == "РЕЖИМ":
                 self.set_lang("en" if "eng" in arg.lower() or "англ" in arg.lower() else "ru")
             else:
@@ -457,6 +460,8 @@ class Companion:
     def wake_up(self, has_request: bool, wav: bytes | None, look: bool = False) -> None:
         print("👋 проснулась")
         self.awake = True
+        if getattr(self, "walker", None):
+            self.walker.wake()
         self.ui.state("listen")
         self.ui.act("wave", 2200)
         self.journal.log("wake")
@@ -477,7 +482,58 @@ class Companion:
         self.ui.state("sleep")
         self.journal.log("sleep")
         threading.Thread(target=self.save_memory, daemon=True).start()
+        if getattr(self, "walker", None):
+            self.walker.stop()
+            self.walker.go_corner_and_sleep()            # уходит спать в уголок
         print(f"💤 уснула. Разбудить: «{self.cfg['wake']['phrases'][0]}»")
+
+    # --- гости: при других людях отвечает только когда зовут по имени ---
+    GUESTS_ON = ("у меня гости", "я не с тобой", "это я не тебе", "это не тебе", "я не тебе",
+                 "помолчи пока", "не вмешивайся", "режим гостей")
+    GUESTS_OFF = ("гости ушли", "все ушли", "можешь говорить", "я снова с тобой", "выключи режим гостей",
+                  "теперь с тобой", "теперь можно")
+    NOT_NAMES = {"слушай", "смотри", "короче", "давай", "ладно", "так", "блин", "ну", "кстати", "знаешь",
+                 "эй", "алло", "привет", "здравствуй", "подруга", "подружка", "солнышко", "милая", "да",
+                 "нет", "ага", "окей", "хорошо", "ясно", "понятно", "ой", "вот", "кароче", "слышь"}
+
+    def guests_on(self) -> bool:
+        return time.monotonic() < getattr(self, "guests_until", 0)
+
+    def set_guests(self, on: bool, minutes: int = 45, auto: bool = False):
+        self.guests_until = time.monotonic() + minutes * 60 if on else 0
+        if on:
+            print(f"👥 режим гостей на {minutes} мин" + (" (слышу другие голоса)" if auto else ""))
+            self.ui.add("sys", "👥 Слышу ещё кого-то — отвечаю, только когда зовёшь меня по имени"
+                        if auto else "👥 Режим гостей: отвечаю, только когда зовёшь по имени")
+            if getattr(self, "walker", None):
+                self.walker.stop()
+        else:
+            print("👥 режим гостей выключен")
+            self.ui.add("sys", "👥 Режим гостей выключен")
+
+    def addressed_to_me(self, text: str) -> bool:
+        """Фраза к ней? False — промолчать (разговор с кем-то другим)."""
+        from wake import _norm
+        low = _norm(text)
+        name = _norm(self.cfg["companion_name"])
+        called = (name and name in low.split()) or "подруг" in low
+        if any(p in low for p in self.GUESTS_OFF):
+            self.set_guests(False)
+            self.say(random.choice(["Ура, можно болтать!", "Хорошо, я снова с тобой!", "Наконец-то!"]), "joy")
+            return False
+        if any(p in low for p in self.GUESTS_ON):
+            self.set_guests(True)
+            self.say(random.choice(["Поняла, тихо сижу. Позови по имени, если что.",
+                                    f"Хорошо, молчу. Скажи «{self.cfg['companion_name']}», и я отвечу."]), "shy")
+            return False
+        m = re.match(r"^\s*([А-ЯЁ][а-яё]{2,})\s*[,!]", text)
+        if m and not called and m.group(1).lower() not in self.NOT_NAMES:
+            print(f"   (обращается к «{m.group(1)}», не ко мне — молчу)")
+            return False
+        if self.guests_on() and not called:
+            print("   (гости: меня не звали — молчу)")
+            return False
+        return True
 
     # --- быстрые готовые ответы (replies.txt) ---
     def _after_question(self) -> bool:
@@ -490,6 +546,9 @@ class Companion:
             return None
         if is_goodbye(text, self.cfg["wake"]["sleep_phrases"]):
             return None
+        name = self.cfg.get("companion_name", "")
+        if name:                                         # «Аня, привет» → «привет»
+            text = re.sub(rf"\b{re.escape(name)}\b", " ", text, flags=re.IGNORECASE)
         m = self.quick.match(text, self._after_question())
         if not m:
             return None
@@ -668,6 +727,11 @@ class Companion:
             ok, sc = self.voiceprint.is_owner(wav)
             if not ok:
                 print(f"   (не твой голос: {sc:.2f} — пропускаю)")
+                if self.awake and sc > 0.12:                  # похоже на живого человека рядом
+                    t = time.monotonic()
+                    self._others = [x for x in getattr(self, "_others", []) if t - x < 180] + [t]
+                    if len(self._others) >= 2 and not self.guests_on():
+                        self.set_guests(True, minutes=20, auto=True)
                 return
             print(f"   (твой голос: {sc:.2f})")
             self.voiceprint.adapt(wav, sc)
@@ -688,6 +752,8 @@ class Companion:
             text = self.stt.transcribe(wav, lang)
             print(f"   (Whisper {self.stt.last_secs:.2f} с): {text or '—'}")
         if text:
+            if not self.addressed_to_me(text):
+                return
             if not h.look and self.quick_answer(text=text, spoken=True):
                 return
             self.ui.add("me", text, "📷" if h.look else None)
@@ -809,6 +875,9 @@ class Companion:
             threading.Thread(target=self.initiative.run, name="initiative", daemon=True).start()
             from life import Life
             Life(self).start()
+            from walker import Walker
+            self.walker = Walker(self)
+            self.walker.start()
             import menubar
             menubar.start(self)
             self.activity.start()

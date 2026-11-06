@@ -9,6 +9,7 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 const S = {
   face: 'sleep', emo: 'calm', act: '', actStart: 0, mouth: 0, lipT: 0,
   lookX: 0, lookY: 0, lookT: 0,
+  walkDir: 0, walkPhase: 0, sit: false, full: false, shape: 'aa',
   idle: 'rest', idleUntil: 0,
   touch: '', touchStart: 0, touchUntil: 0, dragging: false,
 };
@@ -41,6 +42,7 @@ const REST = {
   lUpZ: -1.22, rUpZ: 1.22, lUpY: -0.08, rUpY: 0.08, lUpX: 0, rUpX: 0,
   lLoY: -0.3, rLoY: 0.3, lLoZ: 0, rLoZ: 0, lHandZ: -0.1, rHandZ: 0.1, lHandX: 0, rHandX: 0,
   spineX: 0, spineZ: 0, chestX: 0, headX: 0, headY: 0, headZ: 0, hipsZ: 0, hipsY: 0, lift: 0,
+  lLegX: 0, rLegX: 0, lKneeX: 0, rKneeX: 0, lFootX: 0, rFootX: 0, drop: 0,
 };
 const POSES = {
   // руки сцеплены спереди — скромно, мило
@@ -79,15 +81,19 @@ const IDLE = ['rest', 'rest', 'clasp', 'behind', 'hip', 'hair', 'look', 'sway', 
 
 function bone(name) { return vrm.humanoid.getNormalizedBoneNode(name); }
 
+let VIEW = { w: 200, h: 260 };
 let fitCamera = function (w, h) {
+  VIEW = { w, h };
   camera.aspect = w / h;
-  const top = (sm.headY || 1.6) + 0.16;
-  const span = w / h > 1.3 ? 0.85 : 1.05;
+  const head = (sm.headY || 1.6) + 0.16;
+  const near = w / h > 1.3 ? 0.85 : 1.05;          // обычно: от макушки до бёдер
+  const full = head + 0.06;                        // гуляет/сидит: во весь рост, ноги у нижнего края
+  const span = lerp(near, full, sm.fullK || 0);
   const fov = 22;
   camera.fov = fov;
   const dist = (span / 2) / Math.tan(THREE.MathUtils.degToRad(fov / 2));
-  const cy = top - span / 2;
-  camera.position.set(0, cy + 0.05, dist);
+  const cy = head - span / 2;
+  camera.position.set(0, cy + 0.05 * (1 - (sm.fullK || 0)), dist);
   camera.lookAt(0, cy, 0);
   camera.updateProjectionMatrix();
 };
@@ -128,6 +134,24 @@ function pose(t) {
   if (!asleep && S.idle === 'look') { P.headY += Math.sin(t * 0.7) * 0.35; P.headX -= 0.05; }
   if (!asleep && S.idle === 'sway') { P.hipsZ += Math.sin(t * 2.2) * 0.05; P.headZ += Math.sin(t * 2.2 + 1) * 0.08; }
   if (!asleep && S.idle === 'hair') { const k = bell(t - (S.idleUntil - 3), 3); P = mix(mix({ ...REST }, POSES.clasp, 0), POSES.hair, k); }
+
+  // 1б) гуляет по экрану / сидит
+  if (S.walkDir) {
+    S.walkPhase += FRAME_DT * Math.PI * 2 * 0.95;
+    const ph = S.walkPhase, sw = Math.sin(ph);
+    P = mix(P, { ...REST }, 1);
+    P.lLegX = -sw * 0.42; P.rLegX = sw * 0.42;
+    P.lKneeX = 0.12 + 0.65 * Math.max(0, -Math.cos(ph)); P.rKneeX = 0.12 + 0.65 * Math.max(0, Math.cos(ph));
+    P.lFootX = -P.lLegX * 0.3; P.rFootX = -P.rLegX * 0.3;
+    P.lUpX = sw * 0.32; P.rUpX = -sw * 0.32; P.lLoY = -0.35; P.rLoY = 0.35;
+    P.lift = -Math.abs(Math.sin(ph)) * 0.018; P.hipsZ += Math.sin(ph) * 0.03; P.spineX += 0.04;
+  }
+  P.hipsY = S.walkDir * 1.05;                       // повернулась туда, куда идёт
+  if (S.sit && !S.walkDir) {
+    P = mix(P, { lLegX: -1.45, rLegX: -1.45, lKneeX: 1.5, rKneeX: 1.5, lFootX: -0.1, rFootX: -0.1,
+                 drop: 0.47, lUpZ: -1.25, rUpZ: 1.25, lUpX: -0.55, rUpX: -0.55, lLoY: -0.5, rLoY: 0.5,
+                 spineX: 0.06 }, 1);
+  }
 
   // 2) эмоция в теле (пока говорит и пару секунд после)
   const emoPose = { joy: 'happy', shy: 'shy', sad: 'sad', surprise: 'surprise', think: 'think', tender: 'clasp' }[S.emo];
@@ -188,10 +212,17 @@ function pose(t) {
   set('neck', 'x', P.headX * 0.4, kh); set('head', 'x', P.headX * 0.6, kh);
   set('neck', 'y', P.headY * 0.4, kh); set('head', 'y', P.headY * 0.6, kh);
   set('head', 'z', P.headZ, kh);
-  set('hips', 'z', P.hipsZ, 0.05); set('hips', 'y', P.hipsY, 0.05);
+  set('hips', 'z', P.hipsZ, 0.05); set('hips', 'y', P.hipsY, INSTANT ? 1 : 0.07);
+  const kl = INSTANT ? 1 : 0.25;
+  set('leftUpperLeg', 'x', P.lLegX, kl); set('rightUpperLeg', 'x', P.rLegX, kl);
+  set('leftLowerLeg', 'x', P.lKneeX, kl); set('rightLowerLeg', 'x', P.rKneeX, kl);
+  set('leftFoot', 'x', P.lFootX, kl); set('rightFoot', 'x', P.rFootX, kl);
   avoidBody();
   const hips = bone('hips');
-  if (hips) { sm.hipsBase ??= hips.position.y; hips.position.y = sm.hipsBase + ease('lift', P.lift, 0.3); }
+  if (hips) {
+    sm.hipsBase ??= hips.position.y;
+    hips.position.y = sm.hipsBase + ease('lift', P.lift, 0.3) - ease('drop', P.drop, INSTANT ? 1 : 0.08);
+  }
 
   if (vrm.lookAt) {
     lookTarget.position.set(lx * 1.2, camera.position.y + ly * 0.6, camera.position.z);
@@ -286,8 +317,12 @@ function face(t) {
   const talking = Date.now() - S.lipT < 350;
   const m = talking ? S.mouth : 0;
   const yawn = S.act === 'act-yawn' ? bell((now - S.actStart) / 1000, 2.5) : 0;
-  em.setValue('aa', ease('aa', Math.max(Math.min(1, m * 1.4), yawn * 0.9), 0.5));
-  em.setValue('oh', ease('oh', talking ? Math.max(0, Math.sin(t * 11)) * m * 0.4 : 0, 0.4));
+  const open = Math.min(1, m * 1.4);
+  for (const v of ['aa', 'ih', 'ou', 'ee', 'oh']) {     // форма рта по гласной из звука
+    let w = talking && S.shape === v ? open : 0;
+    if (v === 'aa') w = Math.max(w, yawn * 0.9, talking && !S.shape ? open : 0);
+    em.setValue(v, ease('v_' + v, w, 0.45));
+  }
 }
 
 // ---------- касания ----------
@@ -348,7 +383,11 @@ function loop(now) {
   last = now;
   const dt = Math.min(0.1, clock.getDelta()), t = clock.elapsedTime;
   FRAME_DT = dt || 1 / 60;
-  if (vrm) { pose(t); face(t); vrm.update(dt); }
+  if (vrm) {
+    const fk = sm.fullK || 0, want = (S.full || S.walkDir || S.sit) ? 1 : 0;
+    if (Math.abs(fk - want) > 0.002) { sm.fullK = lerp(fk, want, 1 - Math.pow(0.04, dt)); fitCamera(VIEW.w, VIEW.h); }
+    pose(t); face(t); vrm.update(dt);
+  }
   renderer.render(scene, camera);
 }
 
@@ -399,7 +438,10 @@ window.VRM3D = {
     S.face = face; S.emo = emo || 'calm'; S.act = act || '';
   },
   look(dx, dy) { S.lookX = dx; S.lookY = dy; S.lookT = Date.now(); },
-  mouth(v) { S.mouth = v; S.lipT = Date.now(); },
+  mouth(v, shape) { S.mouth = v; S.lipT = Date.now(); if (shape) S.shape = shape; },
+  walk(dir) { S.walkDir = dir; if (dir) S.sit = false; },
+  sit(on) { S.sit = !!on; },
+  full(on) { S.full = !!on; },
   _zone(x, y) { return zoneAt(x, y); },
   _body() { return BODY; },
   _portrait(span = 0.42, down = 0.0) {        // крупный план лица (для иконки)
@@ -415,6 +457,6 @@ window.VRM3D = {
     S.emo = opts.emo || 'calm'; S.act = opts.act || '';
     if (opts.touch) { S.touch = opts.touch; S.touchStart = performance.now() - 1000; S.touchUntil = performance.now() + 1e9; }
     else S.touch = '';
-    S.dragging = !!opts.drag;
+    S.dragging = !!opts.drag; S.walkDir = opts.walk || 0; S.sit = !!opts.sit; S.full = !!(opts.walk || opts.sit); sm.fullK = S.full ? 1 : 0; if (camera) fitCamera(VIEW.w, VIEW.h);
   },
 };

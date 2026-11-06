@@ -65,7 +65,9 @@
   body.mini #app { background: transparent; box-shadow: none; inset: 0; border-radius: 0; }
   body.mini #bar, body.mini #log, body.mini #bottom, body.mini #meter, body.mini #status { display: none; }
   body.mini #charWrap { flex: 1; height: auto; min-height: 0; cursor: grab; }
-  body.mini #char { bottom: 40px; }
+  body.mini #char { bottom: 40px; transition: bottom .4s; }
+  body.mini.walking #char { bottom: 0; }
+  body.mini.walking #chatBtn { opacity: 0; pointer-events: none; }
   body.mini #char svg { filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
   body.mini #chatBtn { display: grid; place-items: center; position: absolute; left: 50%; bottom: 4px;
     transform: translateX(-50%); width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
@@ -240,11 +242,19 @@ const ui = {
   },
   _lookT: 0,
   // рот по громкости речи 0..1
-  mouth(v) {
-    if (window.VRM3D && VRM3D.ready) VRM3D.mouth(v);
+  mouth(v, shape) {
+    if (window.VRM3D && VRM3D.ready) VRM3D.mouth(v, shape);
     $('char').style.setProperty('--mouth', Math.max(0, Math.min(1, v)).toFixed(2));
     const was = Date.now() - ui._lipT < 350; ui._lipT = Date.now(); if (!was) ui._paint();
     clearTimeout(ui._lipOff); ui._lipOff = setTimeout(() => ui._paint(), 400);
+  },
+  walk(d) {
+    ui._walk = d; document.body.classList.toggle('walking', !!(d || ui._sit));
+    if (window.VRM3D && VRM3D.ready) VRM3D.walk(d);
+  },
+  sit(on) {
+    ui._sit = on; document.body.classList.toggle('walking', !!(on || ui._walk));
+    if (window.VRM3D && VRM3D.ready) VRM3D.sit(on);
   },
   // разовое движение: wave / yawn / stretch / nod
   act(name, ms) {
