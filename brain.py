@@ -63,7 +63,8 @@ class GeminiBrain:
         self.model = model
         # Разные модели Gemini понимают «раздумья» по-разному. Пробуем по очереди
         # и запоминаем первый вариант, который модель приняла.
-        self.modes = ["budget0", "level_minimal", "none"] if thinking_budget == 0 else ["none"]
+        # Первым идёт режим текущей модели: неподходящий тратит лишний запрос и секунды на первый ответ.
+        self.modes = ["level_minimal", "budget0", "none"] if thinking_budget == 0 else ["none"]
 
     def _config(self, system: str | None, temperature: float, max_tokens: int, mode: str):
         t = self.types
