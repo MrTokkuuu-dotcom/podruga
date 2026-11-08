@@ -19,6 +19,8 @@ from pathlib import Path
 FILLER = {"ну", "слушай", "а", "вот", "да", "ага", "угу", "ой", "так", "эй", "это", "же", "ладно", "короче", "кстати",
           "блин", "ой", "о", "подруга", "подружка", "солнышко", "милая", "дорогая", "пожалуйста",
           "ты", "мне", "мол", "типа", "просто", "уже", "вообще", "давай-ка", "ну-ка"}
+FILLER |= {"кстати", "короче", "бля", "блин", "блядь", "сука", "епта", "млин", "слышь", "значит", "получается",
+           "походу", "типо", "сейчас", "щас", "теперь", "тогда", "вобщем", "в общем", "ну-ка", "аня", "анечка", "анют", "анюта", "солнце", "зай", "зая"}
 KEEP_FILLER = {"ты", "мне"}          # убираем, только если без них фраза совпала
 NUM = {"ноль": 0, "один": 1, "одну": 1, "одна": 1, "два": 2, "две": 2, "три": 3, "четыре": 4,
        "пять": 5, "шесть": 6, "семь": 7, "восемь": 8, "девять": 9, "десять": 10,
@@ -148,11 +150,15 @@ def _match_trigger(trig: list[str], ws: list[str], start: int):
 
 class QuickReplies:
     def __init__(self, app_dir: Path, data_dir: Path):
-        self.paths = [Path(app_dir) / "replies.txt", Path(data_dir) / "replies_my.txt"]
+        # replies.txt + replies_*.txt рядом с программой (большие наборы), в конце — свои из data
+        extra = sorted(p for p in Path(app_dir).glob("replies_*.txt"))
+        self.paths = [Path(app_dir) / "replies.txt", *extra, Path(data_dir) / "replies_my.txt"]
         self.reload()
 
     def reload(self):
         self.sections = load(self.paths)
+        self.vocab = sorted({w.rstrip("*") for s in self.sections for t in s.triggers for w in t
+                             if not w.startswith("{") and len(w) >= 4 and w not in FILLER})
         n = sum(len(s.replies) for s in self.sections)
         print(f"[быстро] готовых ответов: {n} в {len(self.sections)} разделах")
 
@@ -183,19 +189,24 @@ class QuickReplies:
         ws = norm(text).split()
         if not ws or len(ws) > 9:
             return None
-        cands = [ws, [w for w in ws if w not in FILLER - KEEP_FILLER], [w for w in ws if w not in FILLER]]
+        base = [ws, [w for w in ws if w not in FILLER - KEEP_FILLER], [w for w in ws if w not in FILLER]]
+        cands = []
+        for c in base + [self._fix(c) for c in base]:   # + Whisper написал слово чуть иначе — подбираем похожее
+            if c and c not in cands:
+                cands.append(c)
         seg = None
-        for c in cands:
-            if c:
-                seg = self._segment(c)
-                if seg:
-                    break
+        for c in cands:                           # первый вариант, который подходит по ходу разговора
+            sg = self._segment(c)
+            if not sg:
+                continue
+            if after_question and len(c) < 2 and not all(s.always or s.answer for s, _ in sg):
+                continue                          # она что-то спросила, а в ответ одно слово не по теме — пусть подумает Gemini
+            if not after_question and any(s.answer and not s.always for s, _ in sg):
+                continue                          # «нормально» без её вопроса — непонятно к чему
+            seg = sg
+            break
         if not seg:
             return None
-        if after_question and not all(s.always or s.answer for s, _ in seg):
-            return None                       # она только что что-то спросила — пусть ответит умно
-        if not after_question and any(s.answer and not s.always for s, _ in seg):
-            return None                       # «нормально» без её вопроса — непонятно к чему, пусть Gemini
         t = datetime.now()
         texts, emo, cmds = [], "calm", []
         for k, (s, caps) in enumerate(seg):
@@ -207,6 +218,16 @@ class QuickReplies:
                 if emo == "calm":
                     emo = e
         return texts, emo, cmds
+
+    def _fix(self, ws: list[str]) -> list[str]:
+        from difflib import get_close_matches
+        out = []
+        for w in ws:
+            if len(w) >= 4 and not w.isdigit() and w not in self.vocab and w not in NUM:
+                m = get_close_matches(w, self.vocab, n=1, cutoff=0.82)
+                w = m[0] if m else w
+            out.append(w)
+        return out
 
     def _pick(self, s: Section, t: datetime, no_question: bool = False):
         dp = daypart(t)

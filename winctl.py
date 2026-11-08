@@ -115,7 +115,7 @@ class ClickThrough:
                 x0, y0, x1, y1 = self.box
                 on_her = x0 <= lx <= x1 and y0 <= ly <= y1
                 if self.btn:                               # кнопка 💬 рядом с её головой
-                    on_btn = self.btn[0] - 4 <= lx <= self.btn[0] + 106 and self.btn[1] - 4 <= ly <= self.btn[1] + 40
+                    on_btn = self.btn[0] - 4 <= lx <= self.btn[0] + 74 and self.btn[1] - 4 <= ly <= self.btn[1] + 40
                 else:
                     on_btn = lx >= fw - 50 and 0 <= ly <= 50   # кнопка 💬 в правом верхнем углу
                 self._set(not (on_her or on_btn))

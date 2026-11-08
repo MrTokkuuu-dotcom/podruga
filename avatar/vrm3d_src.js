@@ -173,8 +173,7 @@ function placeStage(force) {
   }
   const q = document.getElementById('quitBtn');
   if (q) { q.style.setProperty('--qx', (S.btnX + 42) + 'px'); q.style.setProperty('--qy', (S.btnY + 4) + 'px'); }
-  const mb = document.getElementById('menuBtn');
-  if (mb) { mb.style.setProperty('--mx', (S.btnX + 74) + 'px'); mb.style.setProperty('--my', (S.btnY + 4) + 'px'); }
+
 }
 function stageOn(W, H, x, y) {
   S.stage = true; S.W = W; S.H = H; S.x = x; S.y = y; CROP = { w: 0, h: 0 };
@@ -276,7 +275,7 @@ function updatePosture(dt) {
   if (S.sitting) S.downT += dt;
   // лечь — только когда уже сидит; встать — сначала сесть обратно
   const canLie = S.posture === 'lie' && S.sitting && S.downT > 2.0;
-  S.lieRaw = clamp01(S.lieRaw + (canLie ? dt / 2.8 : -dt / 2.6));
+  S.lieRaw = clamp01(S.lieRaw + (canLie ? dt / 3.6 : -dt / 3.0));
   if (S.sitting && !down && S.lieRaw <= 0) { S.sitting = false; S.upT = 0; restart('sitExit'); }
   if (!S.sitting) S.upT += dt;
   sm.sitK = S.sitting ? smooth((S.downT - 0.55) / 1.25) : 1 - smooth(S.upT / 1.25);
@@ -349,14 +348,33 @@ const SIT_POSE = { lLegX: -2.2, rLegX: -2.1, lKneeX: 2.7, rKneeX: 2.6, lFootX: -
                    lUpZ: -1.3, rUpZ: 1.3, lUpX: -0.55, rUpX: -0.55, lUpY: -0.1, rUpY: 0.1,
                    lLoY: -0.55, rLoY: 0.55, lLoZ: 0, rLoZ: 0, lHandZ: 0.2, rHandZ: -0.2 };
 const SEAT_Y = 0.23, LIE_Y = 0.32;                  // высота таза сидя и лёжа: ничего не уходит ниже пола
-const LIE_POSE = { lLegX: -1.25, rLegX: -0.8, lKneeX: 1.9, rKneeX: 1.25, lFootX: 0.25, rFootX: 0.2,
-                   lUpZ: -1.25, lUpX: -0.5, lUpY: -0.15, lLoY: -0.9, lLoZ: 0, lHandZ: 0.2,
-                   rUpZ: 0.25, rUpX: -0.35, rUpY: 0.2, rLoY: 1.75, rLoZ: 0, rHandZ: -0.3,
-                   spineX: 0.22, chestX: 0.04, headX: 0.12, headZ: -0.16 };
-// опирается на руку, пока укладывается (рука в сторону пола)
-const PROP_POSE = { lUpZ: -1.45, lUpX: -0.25, lLoY: -0.25, lHandZ: 0.5, headZ: -0.1, spineZ: 0.12 };
-// плечи — по своей позе, не из анимации: у библиотеки они развёрнуты назад и руки уходят «крыльями»
-// корпус тоже по своей позе: у библиотеки он скручен и наклонён «по-боевому», руки от этого торчат в стороны
+// Как ложится — по ключевым позам (k — доля времени укладывания). roll — насколько завалилась на бок (рад).
+// Заваливается на ПРАВЫЙ бок, поэтому опирается правой рукой: сначала ладонью, потом локтем, потом кладёт на руку голову.
+const LIE_KEYS = [
+  { k: 0.0, roll: 0 },
+  { k: 0.28, roll: 0.32, P: { spineZ: 0.22, headZ: -0.18, rUpZ: 0.6, rUpX: -0.25, rUpY: 0.1, rLoY: 0.25, rHandZ: -0.4,
+                              lLegX: -2.0, rLegX: -1.9, lKneeX: 2.5, rKneeX: 2.4 } },
+  { k: 0.6, roll: 0.95, P: { spineZ: 0.3, headZ: -0.3, rUpZ: 0.3, rUpX: -0.35, rUpY: 0.15, rLoY: 1.15, rHandZ: -0.2,
+                             lUpZ: -1.25, lUpX: -0.6, lUpY: -0.1, lLoY: -1.0, lLegX: -1.6, rLegX: -1.3, lKneeX: 2.1, rKneeX: 1.8,
+                             spineX: 0.2, headX: 0.05 } },
+  { k: 0.86, roll: 1.45, P: { spineZ: 0.1, headZ: -0.1, rUpZ: -0.1, rUpX: -0.3, rUpY: 0.2, rLoY: 1.6, rHandZ: -0.3,
+                              lUpZ: -1.25, lUpX: -0.55, lLoY: -1.05, lLegX: -1.3, rLegX: -0.9, lKneeX: 1.95, rKneeX: 1.35,
+                              spineX: 0.22, headX: 0.1 } },
+  { k: 1.0, roll: Math.PI / 2, P: { spineZ: 0.04, headZ: 0.06, rUpZ: -0.25, rUpX: -0.3, rUpY: 0.2, rLoY: 1.75, rHandZ: -0.3,
+                                    lUpZ: -1.28, lUpX: -0.5, lUpY: -0.1, lLoY: -1.1, lLoZ: 0, lHandZ: 0.2,
+                                    lLegX: -1.25, rLegX: -0.8, lKneeX: 1.9, rKneeX: 1.25, lFootX: 0.25, rFootX: 0.2,
+                                    spineX: 0.22, chestX: 0.04, headX: 0.12 } },
+];
+function lieAt(k, base) {
+  let i = 0; while (i < LIE_KEYS.length - 2 && k > LIE_KEYS[i + 1].k) i++;
+  const a = LIE_KEYS[i], b = LIE_KEYS[i + 1], u = smooth((k - a.k) / (b.k - a.k));
+  const pa = a.P || {}, pb = b.P || {}, out = {};
+  for (const f of new Set([...Object.keys(pa), ...Object.keys(pb)])) {
+    const va = pa[f] ?? base[f] ?? 0;
+    out[f] = lerp(va, pb[f] ?? va, u);
+  }
+  return { roll: lerp(a.roll, b.roll, u), P: out };
+}
 const ADD_BONES = new Set(['neck', 'head']);
 const LEG_BONES = new Set(['hips', 'leftUpperLeg', 'rightUpperLeg', 'leftLowerLeg', 'rightLowerLeg', 'leftFoot', 'rightFoot']);
 const _e = new THREE.Euler(), _q = new THREE.Quaternion(), _hipsWorld = new THREE.Vector3();
@@ -400,9 +418,11 @@ function pose(t) {
     wantArms = sitK > 0.15 ? 1 : wantArms;
     if (!S.seq && lieK < 0.01 && Math.sin(t * 0.37) > 0.6) P.headY += Math.sin(t * 0.9) * 0.25;   // иногда оглядывается
   }
-  if (lieK > 0) {
-    P = mix(P, PROP_POSE, Math.sin(lieK * Math.PI));
-    P = mix(P, LIE_POSE, lieK);
+  let roll = 0;
+  if (S.lieRaw > 0) {
+    const L = lieAt(S.lieRaw, P);
+    P = { ...P, ...L.P };
+    roll = L.roll;
   }
 
   // 2) эмоция в теле (пока говорит и пару секунд после)
@@ -506,13 +526,14 @@ function pose(t) {
     }
   }
   // лёжа: вся модель заваливается на бок вокруг таза, таз остаётся у пола — не «переворачивается вокруг ступней»
-  vrm.scene.rotation.set(0, yaw, lieK * Math.PI / 2);
+  vrm.scene.rotation.set(0, yaw, roll);
+  const rollK = roll / (Math.PI / 2);
   vrm.scene.position.set(S.worldX || 0, 0, 0);
-  if (lieK > 0 && hips) {
+  if (roll > 0 && hips) {
     _hipsWorld.copy(hips.position).applyEuler(vrm.scene.rotation);
     vrm.scene.position.x = (S.worldX || 0) - _hipsWorld.x;
-    vrm.scene.position.y = lerp(hips.position.y, LIE_Y, lieK) - _hipsWorld.y;
-    vrm.scene.position.z = lerp(hips.position.z, 0, lieK) - _hipsWorld.z;
+    vrm.scene.position.y = lerp(hips.position.y, LIE_Y, rollK) - _hipsWorld.y;
+    vrm.scene.position.z = lerp(hips.position.z, 0, rollK) - _hipsWorld.z;
   }
 
   if (vrm.lookAt) {
@@ -630,11 +651,14 @@ function zoneAt(x, y) {
   bone('head').getWorldPosition(p);
   p.project(camera);
   const hx = (p.x * 0.5 + 0.5) * r.width, hy = (-p.y * 0.5 + 0.5) * r.height;
-  const scale = r.height / 1.05 * 0.11;           // примерный «радиус головы» в пикселях
-  const dx = x - r.left - hx, dy = y - r.top - hy;
-  if (Math.abs(dx) < scale * 1.6 && dy < -scale * 0.9 && dy > -scale * 3.0) return 'head';
-  if (Math.abs(dx) < scale * 1.2 && dy >= -scale * 0.9 && dy < scale * 0.55) return 'face';
-  if (dy >= scale * 0.8 && dy < scale * 7 && Math.abs(dx) < scale * 2.5) return 'body';
+  // пикселей в метре — по самой камере, а не по высоте холста (холст обрезается по фигуре)
+  const q = new THREE.Vector3(); bone('head').getWorldPosition(q); q.y += 0.1; q.project(camera);
+  const ppm = Math.max(50, Math.abs((-q.y * 0.5 + 0.5) * r.height - hy) * 10);
+  const dx = (x - r.left - hx) / ppm, dy = -(y - r.top - hy) / ppm;     // метры от кости головы, вверх — плюс
+  // кость головы у VRoid — на уровне шеи: лицо от неё до бровей, выше — волосы и макушка
+  if (Math.abs(dx) < 0.16 && dy > 0.15 && dy < 0.5) return 'head';      // гладим
+  if (Math.abs(dx) < 0.11 && dy >= -0.04 && dy <= 0.15) return 'face';
+  if (dy < -0.12 && dy > -0.95 && Math.abs(dx) < 0.28) return 'body';
   return '';
 }
 
@@ -769,7 +793,7 @@ function reportBox() {
   }
   const pad = 0.16 * PX_PER_M;                              // голова, волосы, рукава вокруг костей
   // с шагом 6 пикселей: дыхание и мелкие движения не гоняют лишние вызовы в Python
-  const box = [Math.max(0, x0 - pad), Math.max(0, y0 - pad * 1.2), Math.min(r.width, x1 + pad), Math.min(r.height, y1 + pad * 0.4)]
+  const box = [Math.max(0, x0 - pad), Math.max(0, y0 - pad * 1.75), Math.min(r.width, x1 + pad), Math.min(r.height, y1 + pad * 0.4)]
     .map((a) => Math.round(a / 6) * 6);
   const key = box.join(',') + (S.stage ? ',' + Math.round(S.x / 6) + ',' + Math.round(S.y / 6) : '');
   if (key !== lastBox && window.pywebview && window.pywebview.api && window.pywebview.api.hitbox) {

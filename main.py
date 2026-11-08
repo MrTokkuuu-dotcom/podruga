@@ -585,6 +585,8 @@ class Companion:
         if not r:
             return False
         reply, emo, _ = r
+        if getattr(self, "_tm", None) is not None:
+            self._tm["path"] = "готовый ответ"
         self.say(reply, emo)
         self.history.append({"role": "model", "text": reply})
         self.last_talk = time.monotonic()
