@@ -32,13 +32,19 @@ class NullUI:
     def look(self, dx, dy): pass
     def mouth(self, v, shape=None): pass
     mini = True
-    def walk(self, d, px=0): pass
+    stage_on = False
+    her = (0, 0)
+    def ground(self, a, b, h): pass
+    def walk_to(self, x): pass
+    def walk_stop(self): pass
     def sit(self, on): pass
     def lie(self, on): pass
+    def sleep_seq(self, kind): pass
     def act(self, name, ms=None): pass
     def idle(self, name, sec=4): pass
     def outfit(self, o): pass
     def show_chat(self): pass
+    def hide_now(self): pass
     visible = True
     def toggle_visible(self): pass
     def ensure_visible(self): pass
@@ -90,18 +96,34 @@ class Api:
             self._ui.mini_size = (w, h)
             if lie_w and lie_h:
                 self._ui.lie_size = (int(lie_w), int(lie_h))
-            wk = self._companion and getattr(self._companion, "walker", None)
-            if getattr(self._ui, "mini", True) and not (wk and wk.lying):
-                import winctl
-                winctl.resize_keep_bottom_center(w, h)
+            import winctl
+            if getattr(self._ui, "mini", True):
+                if sys.platform == "darwin":
+                    self._ui.enter_stage(to_floor=True)
+                else:
+                    winctl.resize_keep_bottom_center(w, h)
             print(f"[окно] размер по модели: {w}×{h}")
         except Exception as e:
             print(f"[окно] fit: {e}")
 
-    def hitbox(self, x0, y0, x1, y1):
+    def hitbox(self, x0, y0, x1, y1, hx=None, hy=None, bx=None, by=None):
         ct = getattr(self._ui, "clickthrough", None)
         if ct:
             ct.box = (float(x0), float(y0), float(x1), float(y1))
+            ct.btn = (float(bx), float(by)) if (hx is not None and bx is not None) else None
+        if hx is not None:
+            self._ui.her = (float(hx), float(hy))
+
+    def walk_done(self, ok=True):
+        wk = self._companion and getattr(self._companion, "walker", None)
+        if wk:
+            wk.arrived()
+
+    def moved(self):
+        """Её потащили мышкой."""
+        wk = self._companion and getattr(self._companion, "walker", None)
+        if wk:
+            wk.user_moved()
 
     def toggle_pause(self):
         if self._companion:
@@ -124,8 +146,7 @@ class Api:
                 "voice": cur, "style": v.get("style", ""), "pitch": v.get("silero_pitch", "medium"),
                 "voices": VOICES, "pitches": PITCHES, "has_key": self._companion.has_key(),
                 "traits": c.get("traits", {}),
-                "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active),
-                "telegram": self._companion.telegram_status()}
+                "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active)}
 
     def save_settings(self, values):
         if not self._companion:
@@ -140,18 +161,6 @@ class Api:
     def enroll_voice(self):
         if self._companion:
             self._bg(self._companion.start_enroll)
-
-    def set_telegram(self, token):
-        if not self._companion:
-            return {"ok": False}
-        return self._companion.setup_telegram(token)
-
-    def telegram_unpair(self):
-        tg = self._companion and getattr(self._companion, "tg", None)
-        if tg:
-            tg.unpair()
-            return self._companion.telegram_status()
-        return {"on": False}
 
     def forget_voice(self):
         if self._companion:
@@ -174,6 +183,12 @@ class Api:
         if wk and wk.lying:                     # открыли переписку, пока лежала — встаёт
             wk.lying = False
             self._ui.lie(False)
+        if sys.platform == "darwin":
+            try:
+                self._ui.leave_stage(w, h) if not on else self._ui.enter_stage()
+                return
+            except Exception as e:
+                print(f"[окно] compact: {e}")
         win = self._ui.window
         try:
             x, y = win.x, win.y
@@ -194,7 +209,11 @@ class Api:
             print(f"[меню] {e}")
 
     def quit(self):
-        self._ui.close()
+        if self._companion:
+            self._bg(self._companion.quit_now)
+        else:
+            import os
+            os._exit(0)
 
 
 class AppUI:
@@ -205,6 +224,8 @@ class AppUI:
         self.webview = webview
         self.api = Api(self)
         self.ready = False
+        self.stage_on = False          # окно на весь экран, она ходит внутри него
+        self.her = (0.0, 0.0)          # где она: x центра и y ног, пиксели окна снизу-слева
         self._queue: list[str] = []
         self._lock = threading.Lock()
         self._outbox: queue.Queue = queue.Queue()
@@ -306,11 +327,66 @@ class AppUI:
     def act(self, name, ms=None): self._call("act", name, ms)
     def idle(self, name, sec=4): self._call("idle", name, sec)
     mini = True
-    def walk(self, d, px=0): self._call("walk", int(d), int(px))
+    def ground(self, a, b, h): self._call("ground", a, b, h)
+    def walk_to(self, x): self._call("walkTo", float(x))
+    def walk_stop(self): self._call("walkStop")
+    def sleep_seq(self, kind): self._call("sleepSeq", kind)
     def sit(self, on): self._call("sit", bool(on))
     def lie(self, on): self._call("lie", bool(on))
     def outfit(self, o): self._call("outfit", o)
     def show_chat(self): self._call("showChat")
+
+    def hide_now(self):
+        """Спрятать окно сразу, не дожидаясь очереди команд (при выходе)."""
+        if sys.platform == "darwin":
+            import winctl
+            winctl.main(lambda: winctl.window().orderOut_(None), timeout=0.3)
+        else:
+            self.window.hide()
+
+    # --- большое окно: накрывает экран, не двигается, клики проходят насквозь мимо неё ---
+    def enter_stage(self, to_floor=False):
+        import winctl
+        x, y, w, h = winctl.frame()
+        full, vis = winctl.screen_frames()
+        hx = x + w / 2 - full[0]
+        hy = max(0.0, y - full[1])
+        if to_floor:                                 # при запуске — на Dock или на нижний край экрана
+            hy = max(0.0, vis[1] - full[1] - 10)
+        hx = max(110.0, min(full[2] - 110.0, hx))
+        fr = winctl.stage_frame()
+        winctl.set_frame(*fr)
+        self.her = (hx, hy)
+        self.stage_on = True
+        self._call("stage", True, fr[2], fr[3], hx, hy)
+
+    def leave_stage(self, w, h):
+        """Открыли переписку: обычное окно там, где она стоит."""
+        import winctl
+        full, vis = winctl.screen_frames()
+        hx, hy = self.her
+        x = max(vis[0], min(vis[0] + vis[2] - w, full[0] + hx - w / 2))
+        y = max(vis[1], min(vis[1] + vis[3] - h, full[1] + hy))
+        self.stage_on = False
+        self._call("stage", False)
+        ct = getattr(self, "clickthrough", None)
+        if ct:
+            ct.btn = None
+            ct._fr = None
+        winctl.set_frame(x, y, w, h)
+
+    def sync_stage(self, fr):
+        """Сменилось разрешение экрана или подключили монитор — снова накрыть весь экран."""
+        if not (self.stage_on and getattr(self, "mini", True)):
+            return
+        import winctl
+        want = winctl.stage_frame()
+        if tuple(fr) != tuple(want):
+            winctl.set_frame(*want)
+            self._call("stage", True, want[2], want[3], min(self.her[0], want[2] - 110.0), self.her[1])
+            ct = getattr(self, "clickthrough", None)
+            if ct:
+                ct._fr = None
 
     def open_settings(self):
         with self._lock:
@@ -336,6 +412,11 @@ class AppUI:
     def geometry(self):
         """(x, y, ширина, высота) окна; координаты сверху-слева экрана."""
         try:
+            if self.stage_on:                         # окно на весь экран — важно, где стоит она сама
+                import winctl
+                full, _ = winctl.screen_frames()
+                mw, mh = getattr(self, "mini_size", MINI)
+                return (full[0] + self.her[0] - mw / 2, full[3] - self.her[1] - mh, mw, mh)
             w = self.window
             return w.x, w.y, w.width, w.height
         except Exception:

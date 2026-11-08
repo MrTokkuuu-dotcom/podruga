@@ -18,6 +18,7 @@ from collections import deque
 import logsetup
 from autopause import AutoPause
 from brain import FORMAT_RULES, GeminiBrain, NullModel
+import intents
 from config import (HOME, ROOT, has_key, load_config, save_key, save_user_settings)
 from journal import Journal, LastSeen, now
 from memory import Memory, extract_facts
@@ -159,6 +160,27 @@ class Companion:
 
     def _on_talk(self, talking: bool) -> None:
         self.ui.state("talk" if talking else self._idle_state())
+        if talking:
+            tm, self._tm = getattr(self, "_tm", None), None
+            if tm:
+                v = time.monotonic()
+                parts = [f"распознавание {tm['text'] - tm['end']:.2f}" if "text" in tm else None,
+                         f"Google {tm['brain'] - tm['text']:.2f}" if "brain" in tm and "text" in tm else None,
+                         f"до голоса {v - tm.get('brain', tm.get('text', tm['end'])):.2f}"]
+                print(f"[время] {tm.get('path', 'Google')}: " + ", ".join(p for p in parts if p)
+                      + f" | всего от конца фразы {v - tm['end']:.2f} с")
+        else:
+            self._spoke_end = time.monotonic()
+
+    def other_audio(self) -> bool:
+        """Mac сам играет звук (музыка, видео) — и это не она говорит."""
+        if self.speaking or time.monotonic() - getattr(self, "_spoke_end", 0) < 1.0:
+            return False
+        try:
+            import sysaudio
+            return sysaudio.output_running()
+        except Exception:
+            return False
 
     def _on_level(self, v: float) -> None:
         t = time.monotonic()
@@ -279,6 +301,9 @@ class Companion:
                                                      wav=wav, text=text, image=image):
                     if self._cancel:
                         break                          # её перебили — дальше не говорим
+                    tm = getattr(self, "_tm", None)
+                    if tm is not None and "brain" not in tm:
+                        tm["brain"] = time.monotonic()
                     for sentence in parser.feed(chunk):
                         started.set()
                         if not shown:
@@ -479,12 +504,15 @@ class Companion:
             self.say(random.choice(self.cfg["wake"]["goodnight"]), "tender")
         self.awake = False
         self.last_awake_at = now()
+        wk = getattr(self, "walker", None)
+        by_steps = bool(wk and wk.begin_sleep())       # сперва сказать окну про порядок, потом «спит»
         self.ui.state("sleep")
         self.journal.log("sleep")
         threading.Thread(target=self.save_memory, daemon=True).start()
-        if getattr(self, "walker", None):
-            self.walker.stop()
-            self.walker.go_corner_and_sleep()            # уходит спать в уголок
+        if wk:
+            wk.stop()
+            if by_steps:
+                wk.go_corner_and_sleep()                 # зевает, уходит в уголок, садится, ложится
         print(f"💤 уснула. Разбудить: «{self.cfg['wake']['phrases'][0]}»")
 
     # --- гости: при других людях отвечает только когда зовут по имени ---
@@ -525,10 +553,6 @@ class Companion:
             self.set_guests(True)
             self.say(random.choice(["Поняла, тихо сижу. Позови по имени, если что.",
                                     f"Хорошо, молчу. Скажи «{self.cfg['companion_name']}», и я отвечу."]), "shy")
-            return False
-        m = re.match(r"^\s*([А-ЯЁ][а-яё]{2,})\s*[,!]", text)
-        if m and not called and m.group(1).lower() not in self.NOT_NAMES:
-            print(f"   (обращается к «{m.group(1)}», не ко мне — молчу)")
             return False
         if self.guests_on() and not called:
             print("   (гости: меня не звали — молчу)")
@@ -584,6 +608,8 @@ class Companion:
             return False
         reply, emo, cmds = r
         print(f"⚡ быстро ({(time.monotonic() - t0) * 1000:.0f} мс): «{heard}» → {reply}")
+        if getattr(self, "_tm", None) is not None:
+            self._tm["path"] = "готовый ответ"
         if wav is not None or spoken:
             self.ui.add("me", heard)
         self.history.append({"role": "user", "text": heard})
@@ -617,90 +643,6 @@ class Companion:
         self.journal.log("touch", what=zone)
         self.say(random.choice(self.TOUCH_LINES[zone]), emo)
 
-    # --- Telegram ---
-    def start_telegram(self, token: str):
-        from telegram_bot import TelegramBot
-        if getattr(self, "tg", None):
-            self.tg.stop()
-        self.tg = TelegramBot(self, token, self.cfg["_data_dir"])
-        self.tg.start()
-        return self.tg
-
-    def setup_telegram(self, token: str) -> dict:
-        """Токен из настроек: проверяем, сохраняем, запускаем."""
-        from config import set_env
-        token = "".join((token or "").split())
-        if not token:
-            if getattr(self, "tg", None):
-                self.tg.stop()
-            self.tg = None
-            set_env("TELEGRAM_TOKEN", None)
-            return {"ok": True, "off": True}
-        from telegram_bot import TelegramBot
-        try:
-            name = TelegramBot(self, token, self.cfg["_data_dir"]).check()
-        except Exception as e:
-            return {"ok": False, "msg": f"Токен не подошёл: {e}"}
-        set_env("TELEGRAM_TOKEN", token)
-        tg = self.start_telegram(token)
-        return {"ok": True, "name": name, "paired": bool(tg.owner), "code": tg.code}
-
-    def telegram_status(self) -> dict:
-        tg = getattr(self, "tg", None)
-        if not tg:
-            return {"on": False}
-        return {"on": True, "name": tg.name, "paired": bool(tg.owner), "code": tg.code}
-
-    def reply_text(self, text: str, image: bytes | None = None, extra: str = "") -> str:
-        """Ответ текстом, без голоса (для Telegram). Память и история — общие."""
-        print(f"📱 {text}")
-        self.ui.add("me", text, "📱")
-        r = None if image else self.quick_reply(text)
-        if r:                                            # простое — отвечаем сразу, без Google
-            reply, _, cmds = r
-            cmds = [c for c in cmds if c.split(" ")[0].upper() in ("ТАЙМЕР", "НАПОМНИТЬ")]
-            if cmds:
-                self.handle_commands(cmds)
-            for h in ({"role": "user", "text": f"(в Telegram) {text}"}, {"role": "model", "text": reply}):
-                self.history.append(h)
-            self.unsaved += [f"{self.user} (в Telegram): {text}", f"Она: {reply}"]
-            self.ui.add("her", reply, "📱")
-            print(f"⚡ быстро (telegram): «{text}» → {reply}")
-            return reply
-        parser = ReplyParser()
-        try:
-            for chunk in self.brain.stream_reply(self.system() + extra, list(self.history),
-                                                 text=text, image=image):
-                parser.feed(chunk)
-            parser.finish()
-        except Exception as e:
-            print(f"[мозг] ошибка (telegram): {e}")
-            return self._error_line(e)
-        reply = parser.reply.strip() or "🙂"
-        allowed = [c for c in parser.commands if c.split(" ")[0].upper() in ("НАПОМНИТЬ", "ТАЙМЕР")]
-        if allowed:
-            self.handle_commands(allowed)
-        query = next((c.partition(" ")[2] for c in parser.commands if c.upper().startswith("ПОИСК")), None)
-        if query:
-            try:
-                facts = self.brain.search(query, f"Пользователь живёт в городе {self.cfg.get('user_city', 'Пусан')}. "
-                                                 f"Сейчас {now().strftime('%d.%m.%Y %H:%M')}.")
-                raw = self.brain.say_once(self.system() + extra,
-                                          f"Ты посмотрела в интернете «{query}». Нашлось: {facts}\n"
-                                          f"Перескажи главное коротко, 1–3 предложения, без ссылок.")
-                p2 = ReplyParser()
-                p2.feed(raw)
-                p2.finish()
-                reply = (reply + "\n\n" if parser.reply.strip() else "") + (p2.reply or raw)
-            except Exception as e:
-                print(f"[поиск] telegram: {e}")
-        self.history.append({"role": "user", "text": f"(в Telegram) {text}" + (" [фото]" if image else "")})
-        self.history.append({"role": "model", "text": reply})
-        self.unsaved.append(f"{self.user} (в Telegram): {text}")
-        self.unsaved.append(f"Она: {reply}")
-        self.ui.add("her", reply, "📱")
-        return reply
-
     def toggle_sleep(self):
         if not self.ready.is_set():
             return
@@ -722,15 +664,25 @@ class Companion:
                 self.say("Запомнила твой голос! Теперь слушаю только тебя.", "joy")
                 self.ui.add("sys", "🎙 Голос запомнен: чужие голоса она будет пропускать")
             return
-        # чужой голос (видео, друзья, Discord) — пропускаем
+        tm = {"end": getattr(self.listener, "phrase_end", None) or time.monotonic()}
+        self._tm = tm
+        other_audio = self.other_audio()
+        # распознавание запускаем сразу, параллельно с проверкой голоса: экономит ~0,2 с
+        whisper = None
+        if self.awake and self.wake and self.stt and self.stt.active:
+            lang = "en" if getattr(self.speaker.voice, "lang", "ru") == "en" else "ru"
+            whisper = _Bg(lambda: self.stt.transcribe(wav, lang))
+        # чужой голос (видео, друзья, Discord) — пропускаем; пока Mac сам играет звук — строже
         if self.voiceprint and self.voiceprint.active:
             ok, sc = self.voiceprint.is_owner(wav)
+            if ok and other_audio and sc < self.voiceprint.threshold + 0.1:
+                ok = False
             if not ok:
                 print(f"   (не твой голос: {sc:.2f} — пропускаю)")
-                if self.awake and sc > 0.12:                  # похоже на живого человека рядом
+                if self.awake and sc > 0.2 and not other_audio:   # похоже на живого человека рядом, а не на видео
                     t = time.monotonic()
                     self._others = [x for x in getattr(self, "_others", []) if t - x < 180] + [t]
-                    if len(self._others) >= 2 and not self.guests_on():
+                    if len(self._others) >= 3 and not self.guests_on():
                         self.set_guests(True, minutes=20, auto=True)
                 return
             print(f"   (твой голос: {sc:.2f})")
@@ -747,12 +699,20 @@ class Companion:
         # распознаватель с короткой грамматикой любую длинную фразу «слышит» как прощание.
         self.ui.act("nod", 1400)          # кивает: услышала
         text = None
-        if self.stt and self.stt.active:
-            lang = "en" if getattr(self.speaker.voice, "lang", "ru") == "en" else "ru"
-            text = self.stt.transcribe(wav, lang)
+        if whisper:
+            text = whisper.result()
             print(f"   (Whisper {self.stt.last_secs:.2f} с): {text or '—'}")
+        tm["text"] = time.monotonic()
         if text:
             if not self.addressed_to_me(text):
+                return
+            if intents.is_sleep(text):                   # «спокойной ночи» — сразу, без Google
+                print(f"⚡ сразу: «{text}» → сон")
+                tm["path"] = "сразу"
+                self.ui.add("me", text)
+                self.history.append({"role": "user", "text": text})
+                self.unsaved.append(f"{self.user}: {text}")
+                self.go_sleep(say_goodnight=True)
                 return
             if not h.look and self.quick_answer(text=text, spoken=True):
                 return
@@ -825,6 +785,16 @@ class Companion:
 
     def _memory_loop(self):
         m = self.cfg["memory"]
+        pending = self.cfg["_data_dir"] / self.PENDING
+        while not self.brain:
+            time.sleep(2)
+        if pending.exists():                     # то, что не успело записаться при прошлом выходе
+            try:
+                self.unsaved = pending.read_text(encoding="utf-8").splitlines() + self.unsaved
+                pending.unlink()
+                self.save_memory()
+            except Exception as e:
+                print(f"[память] отложенное: {e}")
         while True:
             time.sleep(5)
             idle = time.monotonic() - self.last_talk
@@ -850,7 +820,7 @@ class Companion:
     # --- запуск ---
     def run(self) -> None:
         if not self.text_mode:
-            signal.signal(signal.SIGINT, lambda *a: self.ui.close() or sys.exit(0))
+            signal.signal(signal.SIGINT, lambda *a: self.quit_now("Ctrl+C"))
         try:
             self.ui.run(self._loop)
         finally:
@@ -908,10 +878,6 @@ class Companion:
         except Exception as e:
             self.quick = None
             print(f"[быстро] готовые ответы не загрузились: {e}")
-        self.tg = None
-        if os.environ.get("TELEGRAM_TOKEN"):
-            self.start_telegram(os.environ["TELEGRAM_TOKEN"])
-
         # Ключ: если нет — окно само попросит и дождётся
         if not has_key():
             if self.text_mode:
@@ -934,7 +900,7 @@ class Companion:
 
             from audio_in import Listener
             m = self.cfg["microphone"]
-            self.listener = Listener(energy_threshold=m["energy_threshold"],
+            self.listener = Listener(strict=self.other_audio, energy_threshold=m["energy_threshold"],
                                      end_silence_ms=m["end_silence_ms"],
                                      min_speech_ms=m["min_speech_ms"], device=m["device"],
                                      speech_prob=m.get("speech_prob", 0.6),
@@ -994,8 +960,7 @@ class Companion:
                 except OSError:
                     pass
                 print("[система] закрываюсь по quit.flag")
-                self.shutdown(exit_process=False)
-                os._exit(0)
+                self.quit_now("quit.flag")
             if not flag.exists():
                 continue
             try:
@@ -1014,16 +979,78 @@ class Companion:
             os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def shutdown(self, exit_process: bool = True) -> None:
-        if getattr(self, "_closed", False):
+        if self.text_mode:
+            if not getattr(self, "_closed", False):
+                self._closed = True
+                self.save_memory()
             return
+        self.quit_now()
+
+    PENDING = "pending_memory.txt"
+
+    def quit_now(self, why: str = "") -> None:
+        """Выйти за доли секунды: спрятать окно, замолчать, отпустить микрофон, остановить всё.
+        Разговор, который ещё не попал в память, кладём в файл — запишется при следующем запуске
+        (раньше здесь ждали Google, и выход мог тянуться десятки секунд)."""
+        if getattr(self, "_closed", False):
+            os._exit(0)
         self._closed = True
-        self.pauser.stop()
-        self.save_memory()
-        self.last_seen.touch()
-        self.journal.log("app_stop")
-        print("\nПока!")
-        if not self.text_mode and exit_process:
-            os._exit(0)     # фоновые потоки (микрофон) не держат программу после закрытия окна
+        t0 = time.monotonic()
+        steps = [
+            lambda: self.ui.hide_now(),
+            lambda: self.speaker.stop() if getattr(self, "speaker", None) else None,
+            lambda: self.listener.stream.abort(ignore_errors=True) if getattr(self, "listener", None) else None,
+            self._stash_memory,
+            lambda: self.last_seen.touch(),
+            lambda: self.journal.log("app_stop"),
+        ]
+        for step in steps:                       # каждый шаг — не дольше 0,4 с, зависнуть выходу нельзя
+            th = threading.Thread(target=lambda f=step: _quiet(f), daemon=True)
+            th.start()
+            th.join(0.4)
+        try:                                     # дочерние процессы (если запускались) — тоже закрыть
+            import psutil
+            for ch in psutil.Process().children(recursive=True):
+                ch.kill()
+        except Exception:
+            pass
+        print(f"\nПока!{' (' + why + ')' if why else ''} Выход за {time.monotonic() - t0:.2f} с", flush=True)
+        sys.stdout.flush()
+        os._exit(0)
+
+    def _stash_memory(self) -> None:
+        if self.unsaved:
+            with open(self.cfg["_data_dir"] / self.PENDING, "a", encoding="utf-8") as f:
+                f.write("\n".join(self.unsaved) + "\n")
+            self.unsaved = []
+
+
+
+def _quiet(fn):
+    try:
+        fn()
+    except Exception:
+        pass
+
+
+class _Bg:
+    """Запустить в фоне и забрать результат, когда понадобится."""
+    def __init__(self, fn):
+        self._r, self._e = None, None
+        self._t = threading.Thread(target=self._run, args=(fn,), daemon=True)
+        self._t.start()
+
+    def _run(self, fn):
+        try:
+            self._r = fn()
+        except Exception as e:
+            self._e = e
+
+    def result(self):
+        self._t.join()
+        if self._e:
+            print(f"[уши] {self._e}")
+        return self._r
 
 
 def traits_text(t: dict) -> str:

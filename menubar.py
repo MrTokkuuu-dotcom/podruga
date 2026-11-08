@@ -88,7 +88,7 @@ def _target_class():
                 except Exception:
                     pass
             elif tag == 9:
-                ui.close()
+                bg(c.quit_now)
 
         def menuWillOpen_(self, menu):
             c = _companion

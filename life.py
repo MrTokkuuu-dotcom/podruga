@@ -48,7 +48,7 @@ class Life:
                     continue
                 x, y, w, h = self._geom
                 mx, my = _mouse_and_screen()
-                fx, fy = x + w / 2, y + h * 0.42                      # примерно её лицо
+                fx, fy = x + w / 2, y + h * 0.2                      # примерно её лицо
                 dx = max(-1.0, min(1.0, (mx - fx) / 450))
                 dy = max(-1.0, min(1.0, (my - fy) / 320))
                 if abs(dx - self._last[0]) + abs(dy - self._last[1]) > 0.06:

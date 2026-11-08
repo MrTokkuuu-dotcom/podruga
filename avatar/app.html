@@ -67,12 +67,27 @@
   body.mini #charWrap { flex: 1; height: auto; min-height: 0; cursor: grab; }
   body.mini #char { bottom: 0; }
   body.mini.walking #chatBtn { opacity: 0; pointer-events: none; }
+  /* большое окно на весь экран: холст с ней ездит внутри него */
+  body.stage #app { overflow: visible; }
+  body.stage #charWrap { cursor: default; }
+  body.stage #char { position: fixed; left: 0; top: 0; right: auto; bottom: auto; will-change: transform; display: block; }
+  body.stage #vrmCanvas { cursor: grab; }
+  body.mini.stage #chatBtn { position: fixed; left: 0; top: 0; right: auto; bottom: auto;
+    transform: translate3d(var(--bx, 0), var(--by, 0), 0); }
+  body.mini.stage #chatBtn:hover { transform: translate3d(var(--bx, 0), var(--by, 0), 0) scale(1.08); }
   body.mini #char svg { filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
   body.mini #chatBtn { display: grid; place-items: center; position: absolute; left: auto; right: 6px; top: 6px; bottom: auto;
     transform: none; width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
     background: rgba(28,22,44,.78); color: var(--ink); font-size: 16px;
     box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); opacity: .75; transition: opacity .15s, transform .15s; }
   body.mini #chatBtn:hover { opacity: 1; transform: scale(1.08); }
+  /* выход — виден всегда: и пока ходит, и пока спит */
+  #quitBtn { display: none; }
+  body.mini #quitBtn { display: grid; place-items: center; position: absolute; right: 10px; top: 46px; width: 26px; height: 26px;
+    border-radius: 50%; border: 0; cursor: pointer; background: rgba(28,22,44,.72); color: var(--ink); font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); opacity: .6; transition: opacity .15s; z-index: 5; }
+  body.mini #quitBtn:hover { opacity: 1; background: #b5475f; }
+  body.mini.stage #quitBtn { position: fixed; left: 0; top: 0; right: auto; transform: translate3d(var(--qx, 0), var(--qy, 0), 0); }
   #chatBtn .badge { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent2); display: none; }
   #chatBtn.unread .badge { display: block; }
@@ -356,6 +371,7 @@
 </svg></div>
     <div id="status">Сплю</div>
     <button id="chatBtn" title="Открыть переписку" onclick="setMini(false)">💬<span class="badge"></span></button>
+    <button id="quitBtn" title="Выйти из Подруги" onclick="api('quit')">✕</button>
   </div>
   <div id="meter"><i id="lvl"></i></div>
 
@@ -408,10 +424,6 @@
     <p style="margin-top:8px">Слушать только мой голос: <span id="vpState">—</span></p>
     <div class="row"><button class="btn" onclick="api('enroll_voice'); closePanels()">Запомнить мой голос</button>
       <button class="btn" onclick="api('forget_voice'); closePanels()">Забыть</button></div>
-    <p style="margin-top:8px">Telegram: <span id="tgState">—</span></p>
-    <div class="row"><input id="tgToken" placeholder="токен от @BotFather" style="flex:1" autocomplete="off">
-      <button class="btn" onclick="saveTg()">OK</button></div>
-    <div class="note" id="tgNote"></div>
     <p style="margin-top:8px">Ключ Gemini: <span id="keyState">—</span></p>
     <div class="row"><button class="btn" onclick="showKey()">Сменить ключ</button>
       <button class="btn" onclick="api('open_data')">Папка с памятью</button></div>
@@ -482,18 +494,13 @@ const ui = {
     const was = Date.now() - ui._lipT < 350; ui._lipT = Date.now(); if (!was) ui._paint();
     clearTimeout(ui._lipOff); ui._lipOff = setTimeout(() => ui._paint(), 400);
   },
-  walk(d, px) {
-    ui._walk = d; document.body.classList.toggle('walking', !!(d || ui._sit || ui._lie));
-    if (window.VRM3D && VRM3D.ready) VRM3D.walk(d, px);
-  },
-  lie(on) {
-    ui._lie = on; document.body.classList.toggle('walking', !!(on || ui._walk || ui._sit));
-    if (window.VRM3D && VRM3D.ready) VRM3D.lie(on);
-  },
-  sit(on) {
-    ui._sit = on; document.body.classList.toggle('walking', !!(on || ui._walk));
-    if (window.VRM3D && VRM3D.ready) VRM3D.sit(on);
-  },
+  stage(on, W, H, x, y) { if (window.VRM3D) VRM3D.stage(on, W, H, x, y); },
+  ground(a, b, h) { if (window.VRM3D) VRM3D.ground(a, b, h); },
+  walkTo(x) { if (window.VRM3D) VRM3D.walkTo(x); },
+  walkStop() { if (window.VRM3D) VRM3D.walkStop(); },
+  lie(on) { if (window.VRM3D) VRM3D.lie(on); },
+  sit(on) { if (window.VRM3D) VRM3D.sit(on); },
+  sleepSeq(kind) { if (window.VRM3D) VRM3D.sleepSeq(kind); },
   // разовое движение: wave / yawn / stretch / nod
   act(name, ms) {
     ui._act = 'act-' + name; ui._paint(); clearTimeout(ui._actTimer);
@@ -541,27 +548,9 @@ async function openSettings() {
   $('sPitch').innerHTML = s.pitches.map(p => `<option value="${p[0]}" ${p[0] === s.pitch ? 'selected' : ''}>${p[1]}</option>`).join('');
   $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
   $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
-  showTg(s.telegram);
   $('tBold').value = s.traits.trait_bold ?? 20; $('tPlay').value = s.traits.trait_play ?? 55; $('tTalk').value = s.traits.trait_talk ?? 30;
   closePanels(); $('setPanel').classList.add('show');
 }
-function showTg(t) {
-  if (!t || !t.on) { $('tgState').textContent = 'выключен'; return; }
-  $('tgState').innerHTML = '@' + (t.name || 'бот') + (t.paired ? ' — подключён ✓ <a href="#" onclick="unpairTg();return false">отвязать</a>'
-    : ' — пришли боту код <b>' + t.code + '</b>');
-}
-async function saveTg() {
-  const v = $('tgToken').value.trim();
-  note('tgNote', v ? 'Проверяю токен…' : 'Выключаю…', true);
-  const r = await api('set_telegram', v);
-  $('tgToken').value = '';
-  if (!r) return;
-  if (!r.ok) { note('tgNote', r.msg || 'Не получилось', false); return; }
-  if (r.off) { note('tgNote', 'Telegram выключен', true); showTg(null); return; }
-  showTg({ on: true, name: r.name, paired: r.paired, code: r.code });
-  note('tgNote', r.paired ? 'Готово!' : 'Открой бота в Telegram и пришли ему код ' + r.code, true);
-}
-async function unpairTg() { showTg(await api('telegram_unpair')); }
 async function saveSettings() {
   const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
     voice: $('sVoice').value, style: $('sStyle').value.trim(), pitch: $('sPitch').value,

@@ -87,7 +87,7 @@ class Listener:
     def __init__(self, energy_threshold: float = 300, min_speech_ms: int = 500,
                  end_silence_ms: int = 700, max_phrase_s: int = 20, device=None,
                  speech_prob: float = 0.6, min_density: float = 0.45, on_level=None,
-                 on_speech=None, barge_ms: int = 350):
+                 on_speech=None, barge_ms: int = 350, strict=None):
         self.vad = make_vad()
         self.frame = self.vad.FRAME if self.vad else 512
         self.frame_ms = self.frame * 1000 // RATE
@@ -106,6 +106,8 @@ class Listener:
         self.phrase_q: queue.Queue[bytes] = queue.Queue()
         self.muted = False
         self.stream = None
+        self.strict = strict or (lambda: False)   # Mac сам играет звук — начинать фразу строже
+        self.phrase_end = None                    # когда закончилась последняя фраза (для замера скорости)
 
     def _callback(self, indata, frames, time_info, status):
         if not self.muted:
@@ -131,36 +133,49 @@ class Listener:
             self.vad.reset()
         self.muted = False
 
-    def _is_speech(self, frame: bytes) -> bool:
+    def _speech(self, frame: bytes, energy: float, prob: float) -> bool:
         lvl = level(frame)
         self.on_level(lvl)
-        if lvl <= self.energy_threshold:
+        if lvl <= energy:
+            if self.vad:
+                self.vad.prob(frame)                # детектор помнит предыдущие кусочки — кормим всегда
             return False
-        return self.vad is None or self.vad.prob(frame) >= self.speech_prob
+        return self.vad is None or self.vad.prob(frame) >= prob
 
     def phrases(self):
         """Бесконечный генератор фраз (WAV-байты)."""
         while True:
-            yield self.phrase_q.get()
+            wav, self.phrase_end = self.phrase_q.get()
+            yield wav
 
     def _worker(self):
+        import time
         for wav in self._detect():
-            self.phrase_q.put(wav)
+            self.phrase_q.put((wav, time.monotonic()))
 
     def _detect(self):
-        pre = max(1, 300 // self.frame_ms)         # 300 мс до начала речи, чтобы не обрезать слово
+        # Начать фразу — строго (уверенная речь), продолжать — мягко: тихий конец слова («ночи»)
+        # и короткая пауза посреди предложения не обрывают фразу.
+        pre = max(1, 500 // self.frame_ms)         # 0,5 с звука ДО начала речи — первый слог не теряется
         start_need = max(1, 150 // self.frame_ms)  # ~150 мс уверенной речи — начали
         ring = collections.deque(maxlen=pre)
         voiced: list[bytes] = []
         triggered, silence_ms, speech_frames, last_speech_idx = False, 0, 0, 0
+        strict, min_density = False, self.min_density
         while True:
             frame = self.q.get()
             if len(frame) != self.frame * 2:
                 continue
-            speech = self._is_speech(frame)
+            if not triggered:
+                strict = bool(self.strict()) if len(ring) % 8 == 0 else strict
+                speech = self._speech(frame, self.energy_threshold, 0.8 if strict else self.speech_prob)
+            else:
+                speech = self._speech(frame, self.energy_threshold * 0.6, self.speech_prob * 0.55)
             if not triggered:
                 ring.append((frame, speech))
-                if sum(s for _, s in ring) >= start_need:
+                recent = list(ring)[-max(start_need * 2, 1):]
+                if sum(s for _, s in recent) >= start_need:
+                    min_density = 0.6 if strict else self.min_density
                     triggered = True
                     voiced = [f for f, _ in ring]
                     speech_frames = sum(s for _, s in ring)
@@ -182,8 +197,8 @@ class Listener:
                 silence_ms += self.frame_ms
             if silence_ms >= self.end_silence_ms or len(voiced) * self.frame_ms >= self.max_ms:
                 density = speech_frames / max(1, last_speech_idx)
-                if speech_frames * self.frame_ms >= self.min_speech_ms and density >= self.min_density:
-                    yield to_wav(voiced)
+                if speech_frames * self.frame_ms >= self.min_speech_ms and density >= min_density:
+                    yield to_wav(voiced[:last_speech_idx + max(1, 250 // self.frame_ms)])   # хвост тишины не нужен
                 elif speech_frames * self.frame_ms >= self.min_speech_ms:
                     print(f"   (похоже на музыку/шум, пропускаю: речи {density:.0%})")
                 triggered, voiced, speech_frames = False, [], 0

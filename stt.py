@@ -12,7 +12,8 @@ import numpy as np
 
 # Известные «галлюцинации» Whisper на тишине и шуме (особенно по-русски)
 JUNK = ("субтитры", "продолжение следует", "редактор субтитров", "dimatorzok", "спасибо за просмотр",
-        "подписывайтесь", "ставьте лайки", "amara.org", "сделано с любовью", "корректор")
+        "подписывайтесь", "ставьте лайки", "amara.org", "сделано с любовью", "корректор",
+        "благодарю за внимание", "до новых встреч", "всем пока", "music", "музыка")
 
 
 class WhisperSTT:
@@ -71,10 +72,16 @@ class WhisperSTT:
             return None
         if sum(s.no_speech_prob for s in segs) / len(segs) > 0.6:
             return None
-        if sum(s.avg_logprob for s in segs) / len(segs) < -1.2:
+        logp = sum(s.avg_logprob for s in segs) / len(segs)
+        if logp < -1.2:
             return None                                       # совсем не уверен — пусть Google слушает сам
+        if max(s.compression_ratio for s in segs) > 2.4:
+            return None                                       # «бла-бла-бла» по кругу — выдумал из шума
         text = " ".join(s.text.strip() for s in segs).strip()
         low = text.lower()
-        if not text or any(j in low for j in JUNK):
+        letters = sum(ch.isalpha() for ch in text)
+        if not text or letters < 2 or any(j in low for j in JUNK):
             return None
+        if len(low.split()) == 1 and logp < -0.6:
+            return None                                       # одно неуверенное слово из шума («Говорит»)
         return text
