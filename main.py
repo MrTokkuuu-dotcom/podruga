@@ -618,11 +618,68 @@ class Companion:
         self.unsaved.append(f"{self.user}: {heard}")
         if cmds:
             self.handle_commands(cmds)
+        follow = None if cmds else self._followup(heard, reply)    # Google думает, пока она говорит заготовку
         self.say(reply, emo)
         self.history.append({"role": "model", "text": reply})
         self.unsaved.append(f"Она: {reply}")
         self.last_talk = time.monotonic()
+        if follow:
+            threading.Thread(target=self._say_followup, args=(follow,), daemon=True).start()
         return True
+
+    # --- гибрид: заготовка сразу + личное продолжение от Google, если успел ---
+    def _followup(self, heard: str, said: str, force: bool = False):
+        """Попросить Google одно короткое личное продолжение к уже сказанной заготовке. Возвращает задачу или None."""
+        if not self.brain or not self.cfg.get("quick", {}).get("followup", True):
+            return None
+        from quick import FILLER, norm
+        if not force and len([w for w in norm(heard).split() if w not in FILLER]) < 2:
+            return None                                     # «ок», «ладно», «понял» — продолжение не нужно
+        if said.rstrip().endswith("?"):
+            return None                                     # она уже спросила — ждём его ответа, а не говорим дальше
+        job = {"t0": time.monotonic(), "text": None}
+
+        def run():
+            instr = (f"{self.user} только что сказал: «{heard}». Ты уже ответила вслух: «{said}». Добавь ОДНО короткое "
+                     "живое продолжение (до 12 слов), которое прямо продолжает именно твою реплику и его слова — "
+                     "как сказала бы близкая подруга. Можно опереться на то, что точно знаешь о нём из памяти "
+                     "и из последних реплик, но ничего не выдумывай и не переноси старые темы. "
+                     "Не повторяй сказанное, не здоровайся и не прощайся заново. "
+                     "Если естественного продолжения нет — ответь <МОЛЧУ>.")
+            try:
+                job["text"] = self.brain.say_once(self.system(), instr)
+            except Exception as e:
+                print(f"[гибрид] {e}")
+            job["t1"] = time.monotonic()
+        job["thread"] = threading.Thread(target=run, daemon=True)
+        job["thread"].start()
+        return job
+
+    def _say_followup(self, job, wait_after: float = 2.5) -> None:
+        """Сказать продолжение, если Google ответил не позже чем через wait_after с после заготовки
+        и ты за это время не заговорил снова."""
+        said_at = time.monotonic()
+        job["thread"].join(wait_after)
+        if not job.get("text"):
+            print(f"[гибрид] продолжение не успело ({time.monotonic() - job['t0']:.1f} с) — хватит заготовки")
+            return
+        if getattr(self, "_heard_t", 0) > said_at or self.busy.locked():
+            return                                          # ты уже говоришь что-то новое
+        p = ReplyParser()
+        sentences = p.feed(job["text"]) + p.finish()
+        if p.skip or not sentences:
+            return
+        line = " ".join(sentences)
+        if len(line.split()) > 20:
+            return
+        print(f"[гибрид] +{job['t1'] - job['t0']:.1f} с от Google: {line}")
+        self.say(line, p.emotion)
+        self._history_add(line)
+
+    def _history_add(self, line: str) -> None:
+        self.history.append({"role": "model", "text": line})
+        self.unsaved.append(f"Она: {line}")
+        self.last_talk = time.monotonic()
 
     TOUCH_LINES = {
         "head": ["Хи-хи, приятно…", "Ещё погладь, пожалуйста.", "М-м, как хорошо.", "Ты такой заботливый."],
@@ -666,6 +723,7 @@ class Companion:
                 self.say("Запомнила твой голос! Теперь слушаю только тебя.", "joy")
                 self.ui.add("sys", "🎙 Голос запомнен: чужие голоса она будет пропускать")
             return
+        self._heard_t = time.monotonic()
         tm = {"end": getattr(self.listener, "phrase_end", None) or time.monotonic()}
         self._tm = tm
         other_audio = self.other_audio()
@@ -714,7 +772,13 @@ class Companion:
                 self.ui.add("me", text)
                 self.history.append({"role": "user", "text": text})
                 self.unsaved.append(f"{self.user}: {text}")
-                self.go_sleep(say_goodnight=True)
+                night = random.choice(self.cfg["wake"]["goodnight"])
+                follow = self._followup(text, night, force=True)
+                self.say(night, "tender")
+                self._history_add(night)
+                if follow:
+                    self._say_followup(follow, wait_after=2.5)
+                self.go_sleep(say_goodnight=False)
                 return
             if not h.look and self.quick_answer(text=text, spoken=True):
                 return

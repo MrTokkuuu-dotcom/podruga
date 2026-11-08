@@ -1,5 +1,5 @@
 """Перекладывает анимации Quaternius Universal Animation Library (CC0) на кости VRM.
-Запуск: python avatar/tools/retarget_ual.py AnimationLibrary_Godot_Standard.glb avatar/anims.json
+Запуск: python avatar/tools/retarget_ual.py AnimationLibrary_Godot_Standard.glb avatar/anims.json UAL2_Standard.glb
 
 Идея: у нормализованных костей VRM в Т-позе нулевой поворот в мире. Поэтому для каждой кости берём,
 насколько она повёрнута в мире относительно Т-позы источника, и переводим в поворот относительно родителя."""
@@ -25,6 +25,18 @@ for s, side in (("L", "left"), ("R", "right")):
     for src, dst in (("index", "Index"), ("middle", "Middle"), ("ring", "Ring"), ("pinky", "Little")):
         BONES |= {f"DEF-f_{src}.01.{s}": f"{side}{dst}Proximal", f"DEF-f_{src}.02.{s}": f"{side}{dst}Intermediate",
                   f"DEF-f_{src}.03.{s}": f"{side}{dst}Distal"}
+# кости второй библиотеки (названия как в Unreal)
+BONES_UE = {"pelvis": "hips", "spine_01": "spine", "spine_02": "chest", "spine_03": "upperChest",
+            "neck_01": "neck", "Head": "head"}
+for s_, side in (("l", "left"), ("r", "right")):
+    BONES_UE |= {f"clavicle_{s_}": f"{side}Shoulder", f"upperarm_{s_}": f"{side}UpperArm", f"lowerarm_{s_}": f"{side}LowerArm",
+                 f"hand_{s_}": f"{side}Hand", f"thigh_{s_}": f"{side}UpperLeg", f"calf_{s_}": f"{side}LowerLeg",
+                 f"foot_{s_}": f"{side}Foot", f"ball_{s_}": f"{side}Toes", f"thumb_01_{s_}": f"{side}ThumbMetacarpal",
+                 f"thumb_02_{s_}": f"{side}ThumbProximal", f"thumb_03_{s_}": f"{side}ThumbDistal"}
+    for src, dst in (("index", "Index"), ("middle", "Middle"), ("ring", "Ring"), ("pinky", "Little")):
+        BONES_UE |= {f"{src}_01_{s_}": f"{side}{dst}Proximal", f"{src}_02_{s_}": f"{side}{dst}Intermediate",
+                     f"{src}_03_{s_}": f"{side}{dst}Distal"}
+
 # родитель в иерархии VRM (пальцы — от кисти цепочкой)
 VRM_PARENT = {"spine": "hips", "chest": "spine", "upperChest": "chest", "neck": "upperChest", "head": "neck"}
 for side in ("left", "right"):
@@ -131,16 +143,31 @@ class Glb:
         return out
 
 
-def main(src, dst):
+# из второй библиотеки (Universal Animation Library 2, тоже CC0): «лежит → встаёт»; задом наперёд — «ложится»
+CLIPS2 = {"LayToIdle": "layUp"}
+
+
+def main(src, dst, src2=None):
+    out = convert(src, CLIPS, BONES)
+    if src2:
+        out2 = convert(src2, CLIPS2, BONES_UE)
+        out["clips"].update(out2["clips"])
+    with open(dst, "w") as f:
+        json.dump(out, f, separators=(",", ":"))
+    print("записано", dst)
+
+
+def convert(src, clips, bones):
     g = Glb(src)
     idx = {n: i for i, n in enumerate(g.names)}
+    by = {v: k for k, v in bones.items()}                       # кость VRM → имя в источнике
     rest = g.world(g.clip("A_TPose"), 0.0)
-    hip_rest = rest[idx["DEF-hips"]][0][1]
-    v = rest[idx["DEF-hand.L"]][0] - rest[idx["DEF-upper_arm.L"]][0]
+    hip_rest = rest[idx[by["hips"]]][0][1]
+    v = rest[idx[by["leftHand"]]][0] - rest[idx[by["leftUpperArm"]]][0]
     print("Т-поза источника: левая рука", np.round(v, 3), "| высота таза", round(hip_rest, 3))
-    src_to_vrm = {idx[k]: v for k, v in BONES.items()}
-    out = {"fps": FPS, "bones": sorted(set(BONES.values()), key=lambda b: (b != "hips", b)), "clips": {}}
-    for name, key in CLIPS.items():
+    src_to_vrm = {idx[k]: v for k, v in bones.items() if k in idx}
+    out = {"fps": FPS, "bones": sorted(set(src_to_vrm.values()), key=lambda b: (b != "hips", b)), "clips": {}}
+    for name, key in clips.items():
         tr = g.clip(name)
         dur = max(ts[-1] for ts, _ in tr.values())
         n = max(2, int(round(dur * FPS)) + 1)
@@ -162,8 +189,8 @@ def main(src, dst):
                 if frames[bone] and np.dot(frames[bone][-1], q) < 0:      # без рывка на другую сторону сферы
                     q = -q
                 frames[bone].append(q)
-            pos.append(w[idx["DEF-hips"]][0] / hip_rest)
-            feet.append((w[idx["DEF-foot.L"]][0] / hip_rest, w[idx["DEF-foot.R"]][0] / hip_rest))
+            pos.append(w[idx[by["hips"]]][0] / hip_rest)
+            feet.append((w[idx[by["leftFoot"]]][0] / hip_rest, w[idx[by["rightFoot"]]][0] / hip_rest))
         clip = {"dur": round(float(dur), 4), "n": n, "pos": [round(float(x), 4) for p in pos for x in p],
                 "q": {b: [round(float(x), 4) for q in frames[b] for x in q] for b in out["bones"]
                       if max(np.linalg.norm(q[:3]) for q in frames[b]) > 1e-3}}
@@ -180,10 +207,8 @@ def main(src, dst):
             print(key, "скорость ступни на опоре", clip["speed"], "высот таза/с")
         print(f"{key:12s} {dur:.2f} с, кадров {n}, таз {np.round(np.mean(pos, axis=0), 3)}, костей {len(clip['q'])}")
         out["clips"][key] = clip
-    with open(dst, "w") as f:
-        json.dump(out, f, separators=(",", ":"))
-    print("записано", dst)
+    return out
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
