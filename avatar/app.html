@@ -502,6 +502,10 @@ const ui = {
   lie(on) { if (window.VRM3D) VRM3D.lie(on); },
   sit(on) { if (window.VRM3D) VRM3D.sit(on); },
   sleepSeq(kind) { if (window.VRM3D) VRM3D.sleepSeq(kind); },
+  gesture(name, sec) { if (window.VRM3D && VRM3D.ready) VRM3D.gesture(name, sec); },
+  ledges(items) { if (window.VRM3D && VRM3D.ready) VRM3D.ledges(items); },
+  jumpTo(x, y, id) { if (window.VRM3D && VRM3D.ready) VRM3D.jumpTo(x, y, id); },
+  sitEdge(on) { if (window.VRM3D && VRM3D.ready) VRM3D.sitEdge(on); },
   // разовое движение: wave / yawn / stretch / nod
   act(name, ms) {
     ui._act = 'act-' + name; ui._paint(); clearTimeout(ui._actTimer);

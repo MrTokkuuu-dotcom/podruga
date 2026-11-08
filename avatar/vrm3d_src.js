@@ -18,6 +18,7 @@ const S = {
   stage: false, x: 0, y: 0, W: 0, H: 0, goal: null, dir: 0, v: 0, dock: null,
   // поза: stand / sit / lie; sitting — уже идёт посадка или сидит
   posture: 'stand', sitting: false, downT: 0, upT: 9, lieRaw: 0, lay: '', layDoneT: 0,
+  ledges: [], support: null, jump: null, edge: false,   // края окон, на каком стоит, прыжок, сидит на краю
   // сон по порядку: '' → drowsy (идёт, глаза открыты) → closing (лежит, глаза закрываются) → asleep
   seq: '', seqAct: '', seqActStart: 0, seqT: 0, sleepAfterLie: false,
 };
@@ -101,7 +102,9 @@ const POSES = {
   sleep:   { lUpZ: -1.3, rUpZ: 1.3, lUpY: -0.35, rUpY: 0.35, lLoY: -1.0, rLoY: 1.0, lLoZ: -0.3, rLoZ: 0.3,
              headX: 0.38, headZ: 0.15, spineX: 0.06 },
 };
-const IDLE = ['rest', 'rest', 'rest', 'clasp', 'behind', 'hip', 'look', 'sway', 'think'];
+const IDLE = ['rest', 'rest', 'rest', 'clasp', 'behind', 'hip', 'look', 'sway', 'think', 'foldArms', 'foldArms'];
+// жесты из библиотек: только верх тела (руки, корпус, голова), ноги остаются в её ровной стойке
+const GESTURES = { foldArms: 1, yes: 1, no: 1 };
 
 function bone(name) { return vrm.humanoid.getNormalizedBoneNode(name); }
 
@@ -159,16 +162,18 @@ function setCrop(w, h) {
   placeStage(true);
 }
 let placedKey = '';
+const EDGE_DROP = 0.5;                                // на сколько метров ниже края — ноги свисают с окна
 function placeStage(force) {
-  const px = Math.round((S.x - CROP.w / 2) * 2) / 2, py = Math.round((S.H - S.y - CROP.h) * 2) / 2;
+  const drop = (sm.edgeK || 0) * EDGE_DROP * PX_PER_M;
+  const px = Math.round((S.x - CROP.w / 2) * 2) / 2, py = Math.round((S.H - S.y + drop - CROP.h) * 2) / 2;
   const top = lerp(lerp((sm.headY || 1.6), 1.0, sm.sitK || 0), 0.55, sm.lieK || 0) * PX_PER_M;
-  const key = px + ',' + py + ',' + Math.round(top);
+  const key = px + ',' + py + ',' + Math.round(top) + ',' + Math.round(drop);
   if (!force && key === placedKey) return;
   placedKey = key;
   host.style.transform = `translate3d(${px}px,${py}px,0)`;
   const btn = document.getElementById('chatBtn');
   if (btn) {
-    S.btnX = Math.round(S.x + 70); S.btnY = Math.round(S.H - S.y - top - 8);
+    S.btnX = Math.round(S.x + 70); S.btnY = Math.round(S.H - S.y + drop - top - 8);
     btn.style.setProperty('--bx', S.btnX + 'px'); btn.style.setProperty('--by', S.btnY + 'px');
   }
   const q = document.getElementById('quitBtn');
@@ -190,14 +195,55 @@ function stageOff() {
   host.style.width = host.style.height = host.style.transform = '';
   resize();
 }
-function groundAt(x) {
+function floorAt(x) {
   const d = S.dock;
   return d && x >= d[0] - 10 && x <= d[1] + 10 ? d[2] : 0;
+}
+const ledgeById = (id) => S.ledges.find((l) => l[0] === id);
+function groundAt(x) {
+  if (S.support != null) { const l = ledgeById(S.support); if (l) return l[3]; }
+  return floorAt(x);
+}
+// ---------- прыжки: на край окна и вниз ----------
+// Присела (jumpStart) → летит по дуге (jumpAir) → приземлилась (jumpLand). Всё тело — из анимации.
+const JUMP_TAKEOFF = 0.42;                           // с какой секунды клипа отрывается от земли
+function startJump(x1, y1, support) {
+  if (!A.jumpStart || S.jump) return false;
+  S.goal = null; S.v = 0;
+  const dx = x1 - S.x, dy = y1 - S.y;
+  const dur = Math.max(0.5, Math.min(1.15, 0.45 + Math.abs(dy) / 900 + Math.abs(dx) / 1200));
+  S.jump = { x0: S.x, y0: S.y, x1, y1, support, t: 0, dur, arc: Math.max(0, dy) * 0.25 + 70, phase: 'crouch' };
+  S.dir = Math.abs(dx) > 40 ? Math.sign(dx) : 0;
+  restart('jumpStart');
+  return true;
+}
+function jumpStep(dt) {
+  const J = S.jump; if (!J) return;
+  J.t += dt;
+  if (J.phase === 'crouch' && J.t >= JUMP_TAKEOFF) { J.phase = 'air'; J.t0 = J.t; restart('jumpAir'); }
+  if (J.phase === 'air') {
+    const u = clamp01((J.t - J.t0) / J.dur);
+    const nx = lerp(J.x0, J.x1, u);
+    S.worldX += (nx - S.x) / PX_PER_M;
+    S.x = nx; S.y = lerp(J.y0, J.y1, u) + J.arc * 4 * u * (1 - u);
+    if (u >= 1) { J.phase = 'land'; J.t0 = J.t; S.support = J.support; restart('jumpLand'); }
+  }
+  if (J.phase === 'land' && J.t - J.t0 > 0.75) {
+    S.jump = null; S.dir = 0;
+    pyCall('landed', S.support == null ? null : S.support);
+  }
+}
+function fallDown() {                                 // окно закрыли или увели из-под ног — спрыгивает вниз
+  S.support = null; S.edge = false;
+  if (S.posture === 'edge') S.posture = 'stand';
+  if (!startJump(S.x, floorAt(S.x), null)) S.y = floorAt(S.x);
 }
 function pyCall(name, ...args) {
   if (window.pywebview && window.pywebview.api && window.pywebview.api[name]) window.pywebview.api[name](...args);
 }
 function stageMove(dt) {
+  jumpStep(dt);
+  if (S.jump) { placeStage(); return; }
   const g = S.goal;
   const standing = !S.sitting && S.upT > 1.45 && S.lieRaw <= 0 && !S.lay;
   let vt = 0;
@@ -217,7 +263,7 @@ function stageMove(dt) {
     S.x += S.dir * step;
     S.worldX += S.dir * step / PX_PER_M;             // в 3D-мире она тоже идёт: волосы и одежда отстают сами
   }
-  if (S.goal || S.v > 0) {                           // на «ступеньку» Dock — плавно, вниз — быстрее (спрыгнула)
+  if ((S.goal || S.v > 0) && !S.jump) {               // на «ступеньку» Dock — плавно, вниз — быстрее (спрыгнула)
     const dy = groundAt(S.x) - S.y;
     S.y += Math.max(-560 * dt, Math.min(240 * dt, dy));
   }
@@ -226,7 +272,7 @@ function stageMove(dt) {
   const settled = S.lieRaw >= 1;
   // холст по размеру того, что сейчас видно: руки вверх и в стороны — шире, просто стоит — меньше пикселей
   const wide = (sm.armW || 0) > 0.08 || S.dragging;
-  if ((sm.sitK > 0 && sm.sitK < 1) || (sm.lieK > 0 && sm.lieK < 1)) placedKey = '';   // кнопки едут за головой
+  if ((sm.sitK > 0 && sm.sitK < 1) || (sm.lieK > 0 && sm.lieK < 1) || (sm.edgeK > 0 && sm.edgeK < 1)) placedKey = '';   // кнопки едут за головой
   setCrop(lying ? Math.max(BOUNDS.w, BOUNDS.lieW) : wide ? BOUNDS.w : Math.min(BOUNDS.w, 300),
           settled ? BOUNDS.lieH : wide ? BOUNDS.h : Math.min(BOUNDS.h, 530));
   placeStage();
@@ -248,7 +294,7 @@ function buildAnims() {
     }
     tracks.push(new THREE.VectorKeyframeTrack(hipsNode.name + '.position', times, c.pos.map((v) => v * sm.hipsBase)));
     const action = mixer.clipAction(new THREE.AnimationClip(key, c.dur, tracks));
-    const once = key === 'sitEnter' || key === 'sitExit' || key === 'layUp';
+    const once = ['sitEnter', 'sitExit', 'layUp', 'yes', 'no', 'jumpStart', 'jumpLand'].includes(key);
     action.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat);
     action.clampWhenFinished = once;
     if (key === 'sitExit') action.timeScale = 0.72;
@@ -266,6 +312,11 @@ function buildAnims() {
     A.walk.ph0 = best / (c.n - 1);
   }
   for (const k in A) A[k].w = 0;
+}
+function startGesture(name, sec) {
+  if (!A[name]) return;
+  restart(name);
+  S.gesture = { name, until: performance.now() + (sec || A[name].dur) * 1000 };
 }
 function restart(key) { const a = A[key].action; a.reset(); a.play(); }
 const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
@@ -287,10 +338,13 @@ function layStep(dt) {
   if (S.lay === 'done') { S.layDoneT += dt; if (S.layDoneT > 0.6) S.lay = ''; }
   // насколько «лежит» — для холста, кнопок и глаз
   S.lieRaw = S.lay === '' ? 0 : S.lay === 'done' ? 0 : clamp01(1 - a.time / (L.dur * 0.7));
-  sm.layW = lerp(sm.layW || 0, S.lay && S.lay !== 'done' ? 1 : 0, 1 - Math.exp(-dt / (S.lay === 'done' ? 0.25 : 0.12)));
+
   return true;
 }
 function updatePosture(dt) {
+  // тело полностью из анимации: ложится/встаёт или прыгает
+  const whole = (S.lay && S.lay !== 'done') || !!S.jump;
+  sm.layW = lerp(sm.layW || 0, whole ? 1 : 0, 1 - Math.exp(-dt / (whole ? 0.1 : 0.22)));
   if (S.posture === 'lie' || S.lay) {
     if (layStep(dt)) {
       sm.sitK = 0; sm.lieK = smooth(S.lieRaw);
@@ -309,6 +363,11 @@ function updatePosture(dt) {
   if (!S.sitting) S.upT += dt;
   sm.sitK = S.sitting ? smooth((S.downT - 0.55) / 1.25) : 1 - smooth(S.upT / 1.25);
   if (S.sitting && !down) sm.sitK = 1;               // пока встаёт из положения лёжа, остаётся сидя
+  if (S.posture === 'edge' && S.sitting) S.edge = true;
+  if (S.edge) {
+    sm.edgeK = sm.sitK; sm.sitK = 0;                  // без позы «на полу»: ноги из анимации посадки
+    if (!S.sitting && S.upT > 1.45) { S.edge = false; sm.edgeK = 0; }
+  } else sm.edgeK = 0;
   sm.lieK = smooth(S.lieRaw);
   if (S.sleepAfterLie && S.lieRaw >= 1) { S.sleepAfterLie = false; S.seq = 'closing'; S.seqT = 0; }
   if (S.seq === 'closing') { S.seqT += dt; if (S.seqT > 3) S.seq = 'asleep'; }
@@ -335,10 +394,15 @@ function mixerStep(dt) {
   const talking = Date.now() - S.lipT < 350;
   const walkW = clamp01(S.v / 70);
   const t = {};
-  if (S.lay && A.layUp) t.layUp = 1;
+  if (S.jump && A.jumpStart) t[S.jump.phase === 'crouch' ? 'jumpStart' : S.jump.phase === 'air' ? 'jumpAir' : 'jumpLand'] = 1;
+  else if (S.lay && A.layUp) t.layUp = 1;
   else if (S.sitting) { if (S.downT < 1.2) t.sitEnter = 1; else t[talking ? 'sitTalk' : 'sitIdle'] = 1; }
   else if (S.upT < 1.35) t.sitExit = 1;
-  else t.walk = walkW;                               // стоит — без клипа: прямая спина, ноги ровно, по своей позе
+  else {
+    t.walk = walkW;                                  // стоит — без клипа: прямая спина, ноги ровно, по своей позе
+    const g = S.gesture && performance.now() < S.gesture.until ? S.gesture.name : (S.idle === 'foldArms' ? 'foldArms' : '');
+    if (g && A[g] && walkW < 0.05) t[g] = 1;
+  }
   const k = 1 - Math.exp(-dt / 0.16);
   for (const key in A) {
     const a = A[key];
@@ -424,7 +488,7 @@ function pose(t) {
   else if (POSES[S.idle]) P = mix(P, POSES[S.idle], 1);
   if (!asleep && S.idle === 'look') { P.headY += Math.sin(t * 0.7) * 0.35; P.headX -= 0.05; }
   if (!asleep && S.idle === 'sway') { P.spineZ += Math.sin(t * 1.1) * 0.03; P.headZ += Math.sin(t * 1.1 + 1) * 0.06; }
-  let wantArms = !asleep ? (POSES[S.idle] ? 1 : 0) : 1;
+  let wantArms = !asleep ? (POSES[S.idle] || S.idle === 'foldArms' ? 1 : 0) : 1;
   const walkW = A.walk ? A.walk.w : 0;
   if (walkW > 0.01 && !S.dragging) {
     const c = Math.cos(sm.walkPh || 0), a = 0.25 * walkW;
@@ -439,7 +503,7 @@ function pose(t) {
   // 1б) куда смотрит: идёт боком, стоит лицом к нам
   // ложится — разворачивается боком: лежит вдоль экрана, головой к углу, а не ногами к нам
   const layYaw = S.lay && S.lay !== 'done';
-  const yaw = spring('yaw', layYaw ? LAY_YAW : S.dir * YAW, layYaw ? 1.3 : 1.0, 0.95);
+  const yaw = spring('yaw', layYaw ? LAY_YAW : S.dir * YAW, layYaw ? 1.3 : S.jump ? 2.5 : 1.0, 0.95);
   if (moving && !S.seq) {                          // на ходу иногда поглядывает в экран, а когда говорит — смотрит на тебя
     if (t > S.nextGlance) { S.glanceUntil = t + 1.2 + Math.random() * 1.3; S.nextGlance = t + 4 + Math.random() * 6; }
     if (talking || t < S.glanceUntil) { P.headY -= yaw * 0.7; P.spineY = (P.spineY || 0) - yaw * 0.15; }
@@ -516,6 +580,8 @@ function pose(t) {
   const armW = 1;
   const clipLegs = A.walk ? A.walk.w + A.sitEnter.w + A.sitExit.w + A.sitIdle.w + A.sitTalk.w : 0;
   const legW = sitK > 0 ? sitK : clamp01(1 - clipLegs);
+  // сколько верха тела отдаём жесту из библиотеки (руки на груди, кивок, жесты при разговоре)
+  const gW = clamp01(A.foldArms ? A.foldArms.w + A.yes.w + A.no.w : 0);
   const fArm = 2.4, fLeg = 4, fHead = 2.0, fBody = 1.6;
   const proc = {};
   const set = (name, axis, v, f, z = 0.7) => { (proc[name] ||= { x: 0, y: 0, z: 0 })[axis] = spring(name + axis, v, f, z); };
@@ -546,7 +612,7 @@ function pose(t) {
       b.quaternion.multiply(_q);
     } else {
       _q.setFromEuler(_e.set(e.x, e.y, e.z));
-      const w = (LEG_BONES.has(name) ? legW : armW) * keep;
+      const w = (LEG_BONES.has(name) ? legW : armW * (1 - gW)) * keep;
       if (w > 0.001) b.quaternion.slerp(_q, Math.min(1, w));
     }
   }
@@ -565,6 +631,11 @@ function pose(t) {
   if (keep > 0.5) avoidBody();
   const hips = bone('hips');
   if (hips) {
+    if (legW > 0.001 && sitK <= 0) {                 // стоит по своей позе — таз на своей высоте, даже если играет жест
+      hips.position.x = lerp(hips.position.x, 0, legW * keep);
+      hips.position.y = lerp(hips.position.y, sm.hipsBase, legW * keep);
+      hips.position.z = lerp(hips.position.z, 0, legW * keep);
+    }
     hips.position.y += spring('lift', P.lift, 3, 0.7) * keep;
     if (sitK > 0) {                                 // таз опускается на пол
       hips.position.x = lerp(hips.position.x, 0, sitK);
@@ -818,7 +889,7 @@ let lastBox = '', boxT = 0, FROZEN = false, SIM_T = 0;
 function wantFps() {
   if (document.hidden) return 0;                          // окно спрятано — не рисуем
   const nowMs = Date.now();
-  const going = S.goal || S.v > 0 || S.dragging || (sm.sitK > 0 && sm.sitK < 1) || (S.lieRaw > 0 && S.lieRaw < 1) ||
+  const going = S.goal || S.v > 0 || S.dragging || S.jump || (sm.sitK > 0 && sm.sitK < 1) || (sm.edgeK > 0 && sm.edgeK < 1) || (S.lieRaw > 0 && S.lieRaw < 1) ||
                 (S.posture === 'lie' && S.lieRaw < 1) || S.seqAct;
   if (going) return 60;
   if (S.seq === 'closing') return 30;
@@ -938,11 +1009,29 @@ window.VRM3D = {
   mouth(v, shape) { S.mouth = v; S.lipT = Date.now(); if (shape) S.shape = shape; },
   stage(on, W, H, x, y) { if (on) stageOn(W, H, x, y); else stageOff(); },
   ground(a, b, h) { S.dock = a == null ? null : [a, b, h]; },
-  walkTo(x) { if (S.stage) S.goal = { x }; },
+  walkTo(x) {
+    if (!S.stage || S.jump) return;
+    const l = S.support != null ? ledgeById(S.support) : null;
+    if (l) x = Math.max(l[1] + 60, Math.min(l[2] - 60, x));
+    S.goal = { x };
+  },
+  ledges(list) {                                      // [[id, x0, x1, y], …] — верхние края окон, пиксели окна
+    const old = S.support != null ? ledgeById(S.support) : null;
+    S.ledges = list || [];
+    if (S.support == null || S.jump) return;
+    const l = ledgeById(S.support);
+    if (!l) return fallDown();
+    if (old) { const dx = l[1] - old[1]; S.x += dx; S.worldX += dx / PX_PER_M; }   // окно сдвинули — едет вместе с ним
+    S.y = l[3];
+    if (S.x < l[1] - 20 || S.x > l[2] + 20) fallDown();
+  },
+  jumpTo(x, y, id) { if (S.stage && !S.sitting && !S.lay) startJump(x, y, id == null ? null : id); },
+  support() { return S.support; },
   walkStop() {                                     // плавно дойти до ближайшей точки, где успеет остановиться
     if (S.goal) S.goal = { x: S.x + S.dir * (S.v * S.v) / (2 * ACCEL) };
   },
-  sit(on) { if (on) S.posture = 'sit'; else if (S.posture === 'sit') S.posture = 'stand'; },
+  sit(on) { if (on) S.posture = 'sit'; else if (S.posture === 'sit' || S.posture === 'edge') S.posture = 'stand'; },
+  sitEdge(on) { if (on && S.support != null) S.posture = 'edge'; else if (S.posture === 'edge') S.posture = 'stand'; },
   lie(on) { S.posture = on ? 'lie' : (S.posture === 'lie' ? 'stand' : S.posture); },
   // засыпание по шагам: drowsy → yawn → (идёт) → down (садится, ложится, закрывает глаза); cancel — проснулась
   sleepSeq(kind) {
@@ -951,8 +1040,9 @@ window.VRM3D = {
     else if (kind === 'down') { S.seq = 'drowsy'; S.posture = 'lie'; S.sleepAfterLie = true; }
     else if (kind === 'cancel') { S.seq = ''; S.seqAct = ''; S.sleepAfterLie = false; S.posture = 'stand'; }
   },
-  pos() { return { x: S.x, y: S.y, posture: S.posture, seq: S.seq, sitK: sm.sitK, lieK: sm.lieK, v: S.v, goal: S.goal }; },
-  idle(name, sec) { if (POSES[name] || name === 'look' || name === 'sway' || name === 'rest') { S.idle = name; S.idleUntil = (S.t || 0) + (sec || 4); } },
+  pos() { return { x: S.x, y: S.y, posture: S.posture, seq: S.seq, sitK: sm.sitK, lieK: sm.lieK, v: S.v, goal: S.goal, support: S.support, jump: !!S.jump, edgeK: sm.edgeK }; },
+  gesture(name, sec) { startGesture(name, sec); },
+  idle(name, sec) { if (POSES[name] || name === 'look' || name === 'sway' || name === 'rest' || name === 'foldArms') { S.idle = name; S.idleUntil = (S.t || 0) + (sec || 4); } },
   full(on) { S.full = !!on; },
   _zone(x, y) { return zoneAt(x, y); },
   _body() { return BODY; },

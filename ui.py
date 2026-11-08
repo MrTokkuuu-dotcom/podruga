@@ -40,6 +40,10 @@ class NullUI:
     def sit(self, on): pass
     def lie(self, on): pass
     def sleep_seq(self, kind): pass
+    def gesture(self, name, sec=None): pass
+    def ledges(self, items): pass
+    def jump_to(self, x, y, support): pass
+    def sit_edge(self, on): pass
     def act(self, name, ms=None): pass
     def idle(self, name, sec=4): pass
     def outfit(self, o): pass
@@ -118,6 +122,12 @@ class Api:
         wk = self._companion and getattr(self._companion, "walker", None)
         if wk:
             wk.arrived()
+
+    def landed(self, support=None):
+        """Приземлилась после прыжка: support — id края окна или None (пол)."""
+        wk = self._companion and getattr(self._companion, "walker", None)
+        if wk:
+            wk.landed(support)
 
     def moved(self):
         """Её потащили мышкой."""
@@ -331,6 +341,10 @@ class AppUI:
     def walk_to(self, x): self._call("walkTo", float(x))
     def walk_stop(self): self._call("walkStop")
     def sleep_seq(self, kind): self._call("sleepSeq", kind)
+    def gesture(self, name, sec=None): self._call("gesture", name, sec)
+    def ledges(self, items): self._call("ledges", items)
+    def jump_to(self, x, y, support): self._call("jumpTo", float(x), float(y), support)
+    def sit_edge(self, on): self._call("sitEdge", bool(on))
     def sit(self, on): self._call("sit", bool(on))
     def lie(self, on): self._call("lie", bool(on))
     def outfit(self, o): self._call("outfit", o)
@@ -356,6 +370,10 @@ class AppUI:
         hx = max(110.0, min(full[2] - 110.0, hx))
         fr = winctl.stage_frame()
         winctl.set_frame(*fr)
+        try:
+            winctl.make_overlay()
+        except Exception as e:
+            print(f"[окно] поверх полноэкранных: {e}")
         self.her_pos = (hx, hy)
         self.stage_on = True
         self._call("stage", True, fr[2], fr[3], hx, hy)

@@ -75,6 +75,37 @@ class Memory:
                       *recent]
         return "\n".join(parts)
 
+    def to_ask(self) -> tuple[str, str] | None:
+        """О чём стоит самой спросить: свежие планы и самочувствие (вчера–3 дня назад, сегодняшнее —
+        если прошло полдня), о которых она ещё не спрашивала. → (факт, «вчера»/«позавчера»…) или None."""
+        import json
+        asked_file = self.file.parent / "asked.json"
+        try:
+            asked = set(json.loads(asked_file.read_text(encoding="utf-8")))
+        except (FileNotFoundError, ValueError):
+            asked = set()
+        today = date.today()
+        best = None
+        for f in self.facts():
+            if f["cat"] not in ("планы", "самочувствие") or f["text"] in asked:
+                continue
+            days = (today - date.fromisoformat(f["date"])).days
+            if 1 <= days <= 3 and (best is None or days < best[0]):
+                best = (days, f)
+        if not best:
+            return None
+        return best[1]["text"], _ago(date.fromisoformat(best[1]["date"]), today)
+
+    def mark_asked(self, text: str) -> None:
+        import json
+        asked_file = self.file.parent / "asked.json"
+        try:
+            asked = json.loads(asked_file.read_text(encoding="utf-8"))
+        except (FileNotFoundError, ValueError):
+            asked = []
+        asked = (asked + [text])[-200:]
+        asked_file.write_text(json.dumps(asked, ensure_ascii=False), encoding="utf-8")
+
     def add_facts(self, facts: list[str]) -> None:
         if not facts:
             return

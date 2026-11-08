@@ -132,8 +132,15 @@ class Initiative:
         idle = time.monotonic() - c.last_talk
         since_last = time.monotonic() - self.last_initiative
         if idle > self.idle_min * 60 and since_last > self.gap_min * 60:
-            self._start("Вы давно молчите. Сама начни коротенький разговор: спроси что-то простое "
-                        "про его дела или скажи что-то тёплое. Не повторяй то, что уже говорила.")
+            ask = c.memory.to_ask()
+            if ask:                                       # вспоминает его дела сама
+                c.memory.mark_asked(ask[0])
+                self._start(f"Вы давно молчите. Сама вспомни и тепло спроси, как прошло вот это — он сказал это "
+                            f"{ask[1]}: «{ask[0]}» (сказанное вчера «завтра» — это уже сегодня). "
+                            f"Одним коротким вопросом, своими словами.")
+            else:
+                self._start("Вы давно молчите. Сама начни коротенький разговор: спроси что-то простое "
+                            "про его дела или скажи что-то тёплое. Не повторяй то, что уже говорила.")
 
     def _start(self, instruction: str) -> None:
         self.last_initiative = time.monotonic()

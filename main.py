@@ -147,7 +147,7 @@ class Companion:
         if not self.text_mode:
             from tts import Speaker, make_voice
             self.speaker = Speaker(make_voice(self.cfg, ROOT, HOME), on_talk=self._on_talk,
-                                   on_text=self.ui.her, on_amp=self.ui.mouth)
+                                   on_text=self._her_line, on_amp=self.ui.mouth)
             if hasattr(self.speaker.voice, "notify"):
                 self.speaker.voice.notify = lambda m: (print(m), self.ui.add("sys", m))
         self.ready.set()
@@ -171,6 +171,22 @@ class Companion:
                       + f" | всего от конца фразы {v - tm['end']:.2f} с")
         else:
             self._spoke_end = time.monotonic()
+
+    YES_START = ("да", "конечно", "ага", "угу", "точно", "согласна", "ещё бы", "еще бы", "обязательно", "с удовольствием")
+    NO_START = ("нет", "не-а", "неа", "ни за что", "вряд ли")
+
+    def _her_line(self, text: str) -> None:
+        """Её реплика: в переписку, а в начале ответа «да»/«нет» — жестом (палец вверх / качает головой)."""
+        self.ui.her(text)
+        t = time.monotonic()
+        if t - getattr(self, "_line_t", 0) > 3:
+            low = text.lower().lstrip("«\"' ")
+            first = re.split(r"[ ,.!?…]", low, maxsplit=1)[0]
+            if first in self.YES_START or any(low.startswith(w + " ") or low.startswith(w + ",") for w in self.YES_START if " " in w):
+                self.ui.gesture("yes", 2.0)
+            elif first in self.NO_START or low.startswith("ни за что"):
+                self.ui.gesture("no", 2.2)
+        self._line_t = t
 
     def other_audio(self) -> bool:
         """Mac сам играет звук (музыка, видео) — и это не она говорит."""
@@ -251,8 +267,9 @@ class Companion:
         self.ui.state(self._idle_state())
         self.ui.emotion(emotion, 4000)
 
-    def say_generated(self, system: str, instruction: str, fallback: str = "Я тут!") -> None:
-        """Одна фраза, которую она придумывает сама (приветствие, вопрос, напоминание)."""
+    def say_generated(self, system: str, instruction: str, fallback: str | None = "Я тут!") -> None:
+        """Одна фраза, которую она придумывает сама (приветствие, вопрос, напоминание).
+        fallback=None — если Google не ответил, просто промолчать."""
         self._work_t = time.monotonic()
         self.ui.state("think")
         try:
@@ -261,18 +278,42 @@ class Companion:
         except Exception as e:
             print(f"[мозг] {e}")
             raw = fallback
+        if not raw:
+            self._work_t = None
+            self.ui.state(self._idle_state())
+            return
         p = ReplyParser()
-        p.feed(raw or fallback)
+        p.feed(raw)
         text = " ".join(p.finish()) or p.reply or fallback
+        if not text or p.skip:
+            self._work_t = None
+            self.ui.state(self._idle_state())
+            return
         self.say(text, p.emotion)
         self.history.append({"role": "model", "text": text})
         self._work_t = None
 
     def greet(self, reason: str, away_sec: float, since) -> None:
         wake = build_wake_context(self.journal, reason, away_sec, since, limit=5)
-        self.say_generated(self.system(wake),
-                           f"Скажи {self.user} одну-две живые фразы: поздоровайся или "
-                           f"отреагируй на возвращение, учитывая подсказку.")
+        # гибрид: «привет» — сразу, без Google; личное (как прошло то, о чём он говорил) — когда Google ответит
+        hello = self.quick_reply("привет") if getattr(self, "quick", None) else None
+        if hello:
+            self.say(hello[0], hello[1])
+            self._history_add(hello[0])
+        ask = self.memory.to_ask() if away_sec > 3600 else None
+        if ask:                                          # сама вспоминает его дела: «как прошла встреча?»
+            self.memory.mark_asked(ask[0])
+            print(f"[память] спрошу сама: {ask[0]} ({ask[1]})")
+            instr = (f"Ты уже поздоровалась. Теперь сама вспомни и тепло спроси {self.user}, как прошло вот это — "
+                     f"он сказал это {ask[1]}: «{ask[0]}». Слова «завтра»/«сегодня» в его фразе — относительно того дня, "
+                     f"когда он это говорил (сказанное вчера «завтра» — это уже сегодня). Одним коротким вопросом.")
+        elif hello:
+            instr = (f"Ты уже поздоровалась: «{hello[0]}». Добавь одну короткую живую фразу про его возвращение, "
+                     f"учитывая подсказку, без нового приветствия. Если нечего добавить — <МОЛЧУ>.")
+        else:
+            instr = (f"Скажи {self.user} одну-две живые фразы: поздоровайся или отреагируй на возвращение, "
+                     f"учитывая подсказку.")
+        self.say_generated(self.system(wake), instr, fallback=None if hello else "Привет!")
 
     def respond(self, wav: bytes | None = None, text: str | None = None,
                 image: bytes | None = None, spoken: bool = False) -> None:
@@ -876,9 +917,15 @@ class Companion:
             self.say(PAUSE_LINES.get(reason, "Пауза."))
         self._mute()
         self.ui.state("pause")
+        if reason == "game":                            # в игре на весь экран она не загораживает картинку
+            self.ui.toggle_visible() if self.ui.visible else None
+            self._hid_for_game = True
 
     def _on_resume(self, reason, detail, away, since):
         self._unmute()
+        if getattr(self, "_hid_for_game", False):
+            self._hid_for_game = False
+            self.ui.ensure_visible()
         self.ui.state(self._idle_state())
         if self.awake and self.ready.is_set():
             threading.Thread(target=self.greet, args=(reason, away, since), daemon=True).start()
@@ -923,6 +970,9 @@ class Companion:
             import menubar
             menubar.start(self)
             self.activity.start()
+            from reactions import Reactions
+            self.reactions = Reactions(self)
+            self.reactions.start()
         upd = HOME / "updated_to.txt"
         if upd.exists():
             self.ui.add("sys", f"✨ Я обновилась до версии {upd.read_text().strip()}")

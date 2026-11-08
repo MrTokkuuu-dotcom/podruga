@@ -60,6 +60,16 @@ def screen_frames():
     return main(f)
 
 
+def make_overlay():
+    """Видна на всех рабочих столах и поверх полноэкранных программ (видео, браузер на весь экран)."""
+    def f():
+        win = window()
+        # canJoinAllSpaces | stationary | fullScreenAuxiliary
+        win.setCollectionBehavior_((1 << 0) | (1 << 4) | (1 << 8))
+        win.setLevel_(25)                        # NSStatusWindowLevel: выше Dock и полноэкранных окон
+    main(f)
+
+
 def stage_frame():
     """Рамка большого окна: весь экран до строки меню. Выше macOS окно всё равно не пускает: сдвигает вниз."""
     full, vis = screen_frames()

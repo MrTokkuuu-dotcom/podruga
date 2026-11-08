@@ -144,7 +144,8 @@ class Glb:
 
 
 # из второй библиотеки (Universal Animation Library 2, тоже CC0): «лежит → встаёт»; задом наперёд — «ложится»
-CLIPS2 = {"LayToIdle": "layUp"}
+CLIPS2 = {"LayToIdle": "layUp", "Idle_FoldArms_Loop": "foldArms", "Yes": "yes", "Idle_No_Loop": "no",
+          "NinjaJump_Start": "jumpStart", "NinjaJump_Idle_Loop": "jumpAir", "NinjaJump_Land": "jumpLand"}
 
 
 def main(src, dst, src2=None):
