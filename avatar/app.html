@@ -88,6 +88,13 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); opacity: .6; transition: opacity .15s; z-index: 5; }
   body.mini #quitBtn:hover { opacity: 1; background: #b5475f; }
   body.mini.stage #quitBtn { position: fixed; left: 0; top: 0; right: auto; transform: translate3d(var(--qx, 0), var(--qy, 0), 0); }
+  /* меню 🌸 — то же, что в строке меню (там значок может спрятаться за «чёлкой» экрана) */
+  #menuBtn { display: none; }
+  body.mini #menuBtn { display: grid; place-items: center; position: absolute; right: 10px; top: 78px; width: 26px; height: 26px;
+    border-radius: 50%; border: 0; cursor: pointer; background: rgba(28,22,44,.72); font-size: 13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); opacity: .7; transition: opacity .15s; z-index: 5; }
+  body.mini #menuBtn:hover { opacity: 1; }
+  body.mini.stage #menuBtn { position: fixed; left: 0; top: 0; right: auto; transform: translate3d(var(--mx, 0), var(--my, 0), 0); }
   #chatBtn .badge { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent2); display: none; }
   #chatBtn.unread .badge { display: block; }
@@ -235,6 +242,7 @@
   <div id="bar" class="pywebview-drag-region">
     <span class="dot" id="dot"></span><span class="name" id="title">Подруга</span>
     <span class="spacer"></span>
+    <button class="icon-btn" title="Меню" onclick="api('menu')">🌸</button>
     <button class="icon-btn" title="Настройки" onclick="openSettings()">⚙︎</button>
     <button class="icon-btn" title="Спрятать переписку" onclick="setMini(true)">▾</button>
     <button class="icon-btn" title="Закрыть" onclick="api('quit')">✕</button>
@@ -372,6 +380,7 @@
     <div id="status">Сплю</div>
     <button id="chatBtn" title="Открыть переписку" onclick="setMini(false)">💬<span class="badge"></span></button>
     <button id="quitBtn" title="Выйти из Подруги" onclick="api('quit')">✕</button>
+    <button id="menuBtn" title="Меню" onclick="api('menu')">🌸</button>
   </div>
   <div id="meter"><i id="lvl"></i></div>
 

@@ -173,6 +173,8 @@ function placeStage(force) {
   }
   const q = document.getElementById('quitBtn');
   if (q) { q.style.setProperty('--qx', (S.btnX + 42) + 'px'); q.style.setProperty('--qy', (S.btnY + 4) + 'px'); }
+  const mb = document.getElementById('menuBtn');
+  if (mb) { mb.style.setProperty('--mx', (S.btnX + 74) + 'px'); mb.style.setProperty('--my', (S.btnY + 4) + 'px'); }
 }
 function stageOn(W, H, x, y) {
   S.stage = true; S.W = W; S.H = H; S.x = x; S.y = y; CROP = { w: 0, h: 0 };

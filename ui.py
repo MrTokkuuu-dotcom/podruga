@@ -33,7 +33,7 @@ class NullUI:
     def mouth(self, v, shape=None): pass
     mini = True
     stage_on = False
-    her = (0, 0)
+    her_pos = (0, 0)
     def ground(self, a, b, h): pass
     def walk_to(self, x): pass
     def walk_stop(self): pass
@@ -112,7 +112,7 @@ class Api:
             ct.box = (float(x0), float(y0), float(x1), float(y1))
             ct.btn = (float(bx), float(by)) if (hx is not None and bx is not None) else None
         if hx is not None:
-            self._ui.her = (float(hx), float(hy))
+            self._ui.her_pos = (float(hx), float(hy))
 
     def walk_done(self, ok=True):
         wk = self._companion and getattr(self._companion, "walker", None)
@@ -225,7 +225,7 @@ class AppUI:
         self.api = Api(self)
         self.ready = False
         self.stage_on = False          # окно на весь экран, она ходит внутри него
-        self.her = (0.0, 0.0)          # где она: x центра и y ног, пиксели окна снизу-слева
+        self.her_pos = (0.0, 0.0)          # где она: x центра и y ног, пиксели окна снизу-слева
         self._queue: list[str] = []
         self._lock = threading.Lock()
         self._outbox: queue.Queue = queue.Queue()
@@ -356,7 +356,7 @@ class AppUI:
         hx = max(110.0, min(full[2] - 110.0, hx))
         fr = winctl.stage_frame()
         winctl.set_frame(*fr)
-        self.her = (hx, hy)
+        self.her_pos = (hx, hy)
         self.stage_on = True
         self._call("stage", True, fr[2], fr[3], hx, hy)
 
@@ -364,7 +364,7 @@ class AppUI:
         """Открыли переписку: обычное окно там, где она стоит."""
         import winctl
         full, vis = winctl.screen_frames()
-        hx, hy = self.her
+        hx, hy = self.her_pos
         x = max(vis[0], min(vis[0] + vis[2] - w, full[0] + hx - w / 2))
         y = max(vis[1], min(vis[1] + vis[3] - h, full[1] + hy))
         self.stage_on = False
@@ -383,7 +383,7 @@ class AppUI:
         want = winctl.stage_frame()
         if tuple(fr) != tuple(want):
             winctl.set_frame(*want)
-            self._call("stage", True, want[2], want[3], min(self.her[0], want[2] - 110.0), self.her[1])
+            self._call("stage", True, want[2], want[3], min(self.her_pos[0], want[2] - 110.0), self.her_pos[1])
             ct = getattr(self, "clickthrough", None)
             if ct:
                 ct._fr = None
@@ -416,7 +416,7 @@ class AppUI:
                 import winctl
                 full, _ = winctl.screen_frames()
                 mw, mh = getattr(self, "mini_size", MINI)
-                return (full[0] + self.her[0] - mw / 2, full[3] - self.her[1] - mh, mw, mh)
+                return (full[0] + self.her_pos[0] - mw / 2, full[3] - self.her_pos[1] - mh, mw, mh)
             w = self.window
             return w.x, w.y, w.width, w.height
         except Exception:

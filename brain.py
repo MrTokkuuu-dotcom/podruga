@@ -97,7 +97,7 @@ class GeminiBrain:
                     continue
                 raise
 
-    HEDGE_S = 4.5
+    HEDGE_S = 3.0
 
     def _call_hedged(self, contents, system, temperature, max_tokens):
         """Бесплатный Gemini иногда держит запрос в очереди 10–20 с. Если ответ не начался за

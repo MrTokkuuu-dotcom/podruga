@@ -36,7 +36,7 @@ class Walker:
         Окно одно на весь экран и не двигается, поэтому win — воображаемая рамка вокруг неё."""
         import winctl
         full, vis = winctl.screen_frames()
-        hx, hy = self.c.ui.her
+        hx, hy = self.c.ui.her_pos
         h = getattr(self.c.ui, "mini_size", (0, 520))[1]
         return {"full": full, "vis": vis, "win": (full[0] + hx - BODY_W / 2, full[1] + hy, BODY_W, h)}
 

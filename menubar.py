@@ -111,6 +111,11 @@ def _build(companion):
     target = _target_class().alloc().init()
     item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
     item.button().setTitle_("🌸")
+    try:
+        item.setAutosaveName_("podruga")          # ⌘ + перетащить значок — macOS запомнит место
+        item.setVisible_(True)
+    except Exception:
+        pass
     item.button().setToolTip_(companion.cfg.get("companion_name", "Подруга"))
     menu = NSMenu.alloc().init()
     menu.setAutoenablesItems_(False)
