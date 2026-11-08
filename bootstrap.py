@@ -20,6 +20,8 @@ def _notify(text: str) -> None:
 def ensure_deps() -> None:
     req = ROOT / "requirements.txt"
     uv = HOME / "bin" / "uv"
+    if os.environ.get("PODRUGA_BUNDLED"):
+        return                      # подписанное приложение: библиотеки внутри него, менять их нельзя
     if not req.exists() or not uv.exists():
         return                      # запуск из папки разработки — ничего не делаем
     stamp = HOME / ".deps_stamp"
@@ -75,7 +77,8 @@ def _certifi():
 
 def check_update() -> None:
     cfg_file = ROOT / "update.json"
-    if not cfg_file.exists() or not (HOME / "bin" / "uv").exists() or os.environ.get("PODRUGA_NO_UPDATE"):
+    if not cfg_file.exists() or os.environ.get("PODRUGA_NO_UPDATE") or not (
+            (HOME / "bin" / "uv").exists() or os.environ.get("PODRUGA_BUNDLED")):
         return
     import json
     import shutil
