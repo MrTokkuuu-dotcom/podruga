@@ -1,0 +1,24 @@
+{
+  "_о_файле": "Девочки и их наряды. Модели лежат в ~/Podruga/avatars/<девочка>/<наряд>.vrm; если файла нет — скачивается из ветки avatars на GitHub.",
+  "girls": [
+    {"id": "anya", "name": "Аня", "voice": "xenia", "about": "Синие волосы, спокойная и нежная",
+     "outfits": [
+       {"id": "default", "name": "Пальто и корсет"},
+       {"id": "street", "name": "Уличный"},
+       {"id": "formal", "name": "Официальный"},
+       {"id": "casual", "name": "Повседневный"}
+     ]},
+    {"id": "alisa", "name": "Алиса", "voice": "kseniya", "about": "Светлые волосы, бойкая и весёлая, стройная",
+     "outfits": [
+       {"id": "street", "name": "Уличный"},
+       {"id": "formal", "name": "Официальный"},
+       {"id": "casual", "name": "Повседневный"}
+     ]},
+    {"id": "tanya", "name": "Таня", "voice": "baya", "about": "Тёмные волосы, мягкая и заботливая, пышнее",
+     "outfits": [
+       {"id": "street", "name": "Уличный"},
+       {"id": "formal", "name": "Официальный"},
+       {"id": "casual", "name": "Повседневный"}
+     ]}
+  ]
+}

@@ -182,6 +182,12 @@
       <div class="trait"><span>краткая</span><input type="range" id="tTalk" min="0" max="100"><span>болтливая</span></div>
     </div>
     <label>Манера речи (для облачного голоса)<textarea id="sStyle"></textarea></label>
+    <h3 style="margin:10px 0 2px">Кастомизация</h3>
+    <label>Девочка<select id="sGirl" onchange="fillOutfits()"></select></label>
+    <div class="note" id="girlAbout" style="display:block;color:var(--quiet)"></div>
+    <label>Наряд<select id="sOutfit"></select></label>
+    <div class="row"><button class="btn primary" onclick="applyAvatar()">Переодеть</button></div>
+    <div class="note" id="avNote"></div>
     <div class="row">
       <button class="btn primary" onclick="saveSettings()">Сохранить</button>
       <button class="btn" onclick="closePanels()">Закрыть</button>
@@ -318,8 +324,27 @@ async function openSettings() {
   $('sPitch').innerHTML = s.pitches.map(p => `<option value="${p[0]}" ${p[0] === s.pitch ? 'selected' : ''}>${p[1]}</option>`).join('');
   $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
   $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
+  fillAvatars(s.avatars);
   $('tBold').value = s.traits.trait_bold ?? 20; $('tPlay').value = s.traits.trait_play ?? 55; $('tTalk').value = s.traits.trait_talk ?? 30;
   closePanels(); $('setPanel').classList.add('show');
+}
+let AVATARS = null;
+function fillAvatars(a) {
+  AVATARS = a; if (!a) return;
+  const [g, o] = (a.current || 'anya/default').split('/');
+  $('sGirl').innerHTML = a.girls.map(x => `<option value="${x.id}" ${x.id === g ? 'selected' : ''}>${x.name}</option>`).join('');
+  fillOutfits(o);
+}
+function fillOutfits(sel) {
+  if (!AVATARS) return;
+  const g = AVATARS.girls.find(x => x.id === $('sGirl').value); if (!g) return;
+  $('girlAbout').textContent = g.about || '';
+  $('sOutfit').innerHTML = g.outfits.map(o => `<option value="${o.id}" ${o.id === sel ? 'selected' : ''}>${o.name}${o.have ? '' : ' (скачается)'}</option>`).join('');
+}
+async function applyAvatar() {
+  note('avNote', 'Переодеваюсь…', true);
+  const r = await api('set_avatar', $('sGirl').value, $('sOutfit').value);
+  note('avNote', r && r.ok ? 'Готово ✓' : (r && r.msg) || 'Не получилось', r && r.ok);
 }
 async function saveSettings() {
   const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
@@ -343,7 +368,7 @@ if (location.protocol.startsWith('http') && window.VRM3D) {
   document.body.classList.add('has3d');
   const back = () => document.body.classList.remove('has3d');
   fetch('model.vrm', { method: 'HEAD' }).then(r => {
-    if (r.ok) VRM3D.start('model.vrm').then(ok => { if (ok) ui._paint(); else back(); });
+    if (r.ok) VRM3D.start('model.vrm?v=' + Date.now()).then(ok => { if (ok) ui._paint(); else back(); });
     else back();
   }).catch(back);
 }

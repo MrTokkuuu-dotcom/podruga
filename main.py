@@ -970,6 +970,11 @@ class Companion:
             import menubar
             menubar.start(self)
             self.activity.start()
+            try:
+                from avatars import Avatars
+                self.avatars = Avatars(HOME)
+            except Exception as e:
+                print(f"[образы] {e}")
             from reactions import Reactions
             self.reactions = Reactions(self)
             self.reactions.start()

@@ -49,7 +49,8 @@ function ease(key, target, k) {
 }
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const bell = (t, len) => Math.sin(clamp01(t / len) * Math.PI);      // 0 → 1 → 0 за len секунд
-let INSTANT = false;                                                // для проверки поз
+let INSTANT = false;
+let NO_AVOID = false;                                               // для проверки: выключить защиту рук                                                // для проверки поз
 
 const EMO = {
   calm:     {},
@@ -78,8 +79,8 @@ const POSES = {
   // рука на поясе
   hip:     { rUpZ: 0.75, rUpY: -0.1, rLoY: 0.35, rLoZ: 1.5, rHandZ: 0.5, hipsZ: 0.04, headZ: -0.06 },
   // задумалась: рука у подбородка
-  think:   { rUpZ: 1.0, rUpY: 0.45, rLoY: 2.5, rLoZ: 0.2, rHandX: 0.2,
-             lUpZ: -1.25, lUpY: -0.45, lLoY: -1.2, lLoZ: -0.3, headZ: -0.12, headX: -0.06 },
+  think:   { rUpZ: 1.0, rUpY: 0.45, rUpX: -0.15, rLoY: 2.5, rLoZ: 0.2, rHandX: 0.2,
+             lUpZ: -1.22, lUpY: -0.5, lUpX: -0.35, lLoY: -1.25, lLoZ: -0.3, headZ: -0.12, headX: -0.06 },
   // поправляет волосы
   hair:    { rUpZ: -0.15, rUpY: 0.35, rLoY: 2.4, rLoZ: 0.4, headZ: -0.1 },
   // смущение: руки к груди, голова вниз и вбок
@@ -628,7 +629,7 @@ function pose(t) {
   if (keep < 0.5) {                                   // лёжа во сне всё равно дышит — грудью
     const ch = bone('chest'); if (ch) { _q.setFromEuler(_e.set(0.03 * breath * (1 - keep), 0, 0)); ch.quaternion.multiply(_q); }
   }
-  if (keep > 0.5) avoidBody();
+  if (keep > 0.5 && !NO_AVOID) avoidBody();
   const hips = bone('hips');
   if (hips) {
     if (legW > 0.001 && sitK <= 0) {                 // стоит по своей позе — таз на своей высоте, даже если играет жест
@@ -666,24 +667,28 @@ function pose(t) {
 // При загрузке «ощупываем» модель лучами: где перед и бока туловища на разной высоте.
 let BODY = null;
 function measureBody() {
-  // Только туловище (от таза до плеч): ширина — по костям, глубина груди/живота — лучами по центру.
+  // Туловище от бёдер до плеч: срезы относительно кости позвоночника (а не мира) — тогда проверка работает,
+  // когда она идёт по экрану, поворачивается, наклоняется, сидит и лежит.
   vrm.scene.updateMatrixWorld(true);
   const meshes = []; vrm.scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
   const rc = new THREE.Raycaster();
+  const spine = bone('spine');
   const P = (n) => bone(n).getWorldPosition(new THREE.Vector3());
-  const hipsY = P('hips').y, shY = P('leftUpperArm').y;
-  const hipHalf = Math.abs(P('leftUpperLeg').x) + 0.06, chestHalf = Math.abs(P('leftUpperArm').x) - 0.03;
+  const hipsY = P('hips').y - 0.12, shY = P('leftUpperArm').y;
+  const hipHalf = Math.abs(P('leftUpperLeg').x) + 0.07, chestHalf = Math.abs(P('leftUpperArm').x) - 0.03;
   const ys = [], front = [], back = [], half = [];
   const hit = (o, d) => { rc.set(o, d); rc.far = 4; const h = rc.intersectObjects(meshes, false); return h.length ? h[0].point : null; };
-  for (let y = hipsY; y <= shY - 0.04; y += 0.035) {
+  const toLocal = (v) => spine.worldToLocal(v.clone());
+  for (let y = hipsY; y <= shY - 0.03; y += 0.03) {
     let f = -1, b = 1;
-    for (const x of [-0.08, 0, 0.08]) {
+    for (const x of [-0.09, -0.04, 0, 0.04, 0.09]) {
       const pf = hit(new THREE.Vector3(x, y, 2), new THREE.Vector3(0, 0, -1)); if (pf) f = Math.max(f, pf.z);
       const pb = hit(new THREE.Vector3(x, y, -2), new THREE.Vector3(0, 0, 1)); if (pb) b = Math.min(b, pb.z);
     }
     if (f < -0.9) continue;
-    const u = (y - hipsY) / (shY - hipsY);
-    ys.push(y); front.push(Math.min(f, 0.25)); back.push(Math.max(b, -0.25)); half.push(lerp(hipHalf, chestHalf, u));
+    const u = clamp01((y - hipsY) / (shY - hipsY));
+    const l = toLocal(new THREE.Vector3(0, y, 0));
+    ys.push(l.y); front.push(Math.min(f, 0.28) - l.z); back.push(Math.max(b, -0.28) - l.z); half.push(lerp(hipHalf, chestHalf, u));
   }
   BODY = ys.length > 1 ? { ys, front, back, half } : null;
 }
@@ -693,34 +698,46 @@ function bodyAt(y) {
   const u = (y - B.ys[i]) / (B.ys[i + 1] - B.ys[i] || 1);
   return { f: lerp(B.front[i], B.front[i + 1], u), b: lerp(B.back[i], B.back[i + 1], u), h: lerp(B.half[i], B.half[i + 1], u) };
 }
-function inBody(p, margin) {
-  const b = bodyAt(p.y); if (!b) return false;
-  return Math.abs(p.x) < b.h + margin && p.z < b.f + margin && p.z > b.b - margin;
+// насколько точка (в координатах позвоночника) залезла в тело: 0 — снаружи; и где — спереди или сбоку
+function intoBody(p, margin) {
+  const b = bodyAt(p.y); if (!b) return null;
+  const ox = b.h + margin - Math.abs(p.x), of = b.f + margin - p.z, ob = p.z - (b.b - margin);
+  if (ox <= 0 || of <= 0 || ob <= 0) return null;
+  return { depth: Math.min(ox, of, ob), side: ox < of };          // side — ближе выйти вбок, иначе — вперёд
 }
-const _v = new THREE.Vector3(), _w = new THREE.Vector3();
+const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _m = new THREE.Vector3();
 function avoidBody() {
   if (!BODY) return;
+  const spine = bone('spine'); if (!spine) return;
+  spine.updateWorldMatrix(true, false);
   for (const side of ['left', 'right']) {
     const up = bone(side + 'UpperArm'), lo = bone(side + 'LowerArm'), hand = bone(side + 'Hand');
     if (!up || !lo || !hand) continue;
-    const key = 'push_' + side;
-    // вывести руку вперёд = поворот плеча вокруг X (он применяется последним, поэтому работает при любой позе)
-    up.rotation.x -= (sm[key] || 0);
+    const kF = 'pushF_' + side, kS = 'pushS_' + side, out = side === 'left' ? 1 : -1;
+    // вперёд — поворот плеча вокруг X, в сторону — вокруг Z (от тела); применяются последними
+    up.rotation.x -= (sm[kF] || 0);
+    up.rotation.z += out * (sm[kS] || 0);
     hand.updateWorldMatrix(true, false);
-    const pts = [hand.getWorldPosition(_v).clone(), lo.getWorldPosition(_w).clone()];
-    pts.push(pts[0].clone().add(pts[1]).multiplyScalar(0.5));
-    const inside = pts.some((p) => inBody(p, 0.015)), near = pts.some((p) => inBody(p, 0.045));
-    let push = sm[key] || 0;
-    if (inside) push = Math.min(0.7, push + 2.0 * FRAME_DT);        // выводим руку вперёд
-    else if (!near) push = Math.max(0, push - 0.6 * FRAME_DT);       // свободно — медленно возвращаем
-    if (INSTANT && inside) {                                          // для проверки — сразу до упора
-      for (let i = 0; i < 14 && pts.some((p) => inBody(p, 0.015)); i++) {
-        push += 0.05; up.rotation.x -= 0.05; hand.updateWorldMatrix(true, false);
-        pts[0] = hand.getWorldPosition(_v).clone(); pts[1] = lo.getWorldPosition(_w).clone();
-        pts[2] = pts[0].clone().add(pts[1]).multiplyScalar(0.5);
-      }
+    const pts = [hand.getWorldPosition(_v), lo.getWorldPosition(_w)];
+    pts.push(_m.copy(pts[0]).add(pts[1]).multiplyScalar(0.5));
+    let hitF = 0, hitS = 0, near = false;
+    for (const pw of pts) {
+      const pl = spine.worldToLocal(pw.clone());
+      const r = intoBody(pl, 0.02);
+      if (r) { if (r.side) hitS = Math.max(hitS, r.depth); else hitF = Math.max(hitF, r.depth); }
+      else if (intoBody(pl, 0.05)) near = true;
     }
-    sm[key] = push;
+    let f = sm[kF] || 0, sd = sm[kS] || 0;
+    const up_ = (d) => Math.min(0.8, d * 6 + 2.4 * FRAME_DT);
+    if (hitF) f = Math.min(0.8, f + up_(hitF) * FRAME_DT * 10);
+    if (hitS) sd = Math.min(0.6, sd + up_(hitS) * FRAME_DT * 10);
+    if (!hitF && !near) f = Math.max(0, f - 0.7 * FRAME_DT);        // свободно — медленно возвращаем
+    if (!hitS && !near) sd = Math.max(0, sd - 0.7 * FRAME_DT);
+    if (INSTANT && (hitF || hitS)) { f = Math.min(0.8, f + 0.3); sd = Math.min(0.6, sd + 0.2); }
+    // сразу применяем новое значение в этом же кадре — рука не успевает «мелькнуть» внутри
+    up.rotation.x -= f - (sm[kF] || 0);
+    up.rotation.z += out * (sd - (sm[kS] || 0));
+    sm[kF] = f; sm[kS] = sd;
   }
 }
 
@@ -1048,6 +1065,17 @@ window.VRM3D = {
   _body() { return BODY; },
   // для проверки: остановить живой цикл и прокрутить время вручную (ровными шагами)
   _freeze(on) { FROZEN = on; },
+  _noAvoid(on) { NO_AVOID = !!on; },
+  // сколько точек рук (кисть, локоть, середина предплечья) сейчас внутри тела — для проверки
+  _armHits() {
+    const spine = bone('spine'); if (!spine || !BODY) return -1; spine.updateWorldMatrix(true, false);
+    let n = 0;
+    for (const sd of ['left', 'right']) {
+      const h = bone(sd + 'Hand').getWorldPosition(new THREE.Vector3()), l = bone(sd + 'LowerArm').getWorldPosition(new THREE.Vector3());
+      for (const p of [h, l, h.clone().add(l).multiplyScalar(0.5)]) if (intoBody(spine.worldToLocal(p.clone()), 0)) n++;
+    }
+    return n;
+  },
   _step(n = 1, dt = 1 / 60) {
     for (let i = 0; i < n; i++) { SIM_T += dt; tick(dt, SIM_T); }
     renderer.render(scene, camera);

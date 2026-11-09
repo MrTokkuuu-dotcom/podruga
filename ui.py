@@ -48,6 +48,7 @@ class NullUI:
     def idle(self, name, sec=4): pass
     def outfit(self, o): pass
     def show_chat(self): pass
+    def reload_model(self): pass
     def hide_now(self): pass
     visible = True
     def toggle_visible(self): pass
@@ -156,13 +157,35 @@ class Api:
                 "voice": cur, "style": v.get("style", ""), "pitch": v.get("silero_pitch", "medium"),
                 "voices": VOICES, "pitches": PITCHES, "has_key": self._companion.has_key(),
                 "traits": c.get("traits", {}),
-                "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active)}
+                "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active),
+                "avatars": self._companion.avatars.listing(c.get("avatar_choice", "")) if getattr(self._companion, "avatars", None) else None}
 
     def save_settings(self, values):
         if not self._companion:
             return {"ok": False}
         self._companion.update_settings(values)
         return {"ok": True}
+
+    def set_avatar(self, girl, outfit):
+        """Кастомизация: выбрать девочку и наряд. Имя и голос — её, модель меняется сразу."""
+        c = self._companion
+        if not c or not getattr(c, "avatars", None):
+            return {"ok": False, "msg": "Ещё загружаюсь"}
+        g = c.avatars.girl(girl)
+        if not g:
+            return {"ok": False, "msg": "Нет такой девочки"}
+        path = c.avatars.ensure(girl, outfit, c.cfg.get("update_repo", "MrTokkuuu-dotcom/podruga"))
+        if not path:
+            return {"ok": False, "msg": "Этого наряда пока нет — скоро добавлю"}
+        prev = c.cfg.get("avatar_choice", "anya/default").split("/")[0]
+        values = {"avatar": f"{girl}/{outfit}"}
+        if girl != prev:                                  # другая девочка — её имя и голос
+            values.update({"companion_name": g["name"], "voice": g.get("voice", "xenia")})
+        c.update_settings(values)
+        c.avatars.activate(girl, outfit)
+        self._ui.reload_model()
+        print(f"[образы] {g['name']}: {outfit}")
+        return {"ok": True, "name": g["name"]}
 
     def preview_voice(self, voice, pitch="medium"):
         if self._companion:
@@ -349,6 +372,16 @@ class AppUI:
     def lie(self, on): self._call("lie", bool(on))
     def outfit(self, o): self._call("outfit", o)
     def show_chat(self): self._call("showChat")
+
+    def reload_model(self):
+        """Новая модель: копируем её к странице и перезагружаем окно (переписка из окна при этом очищается)."""
+        try:
+            from config import HOME
+            import shutil
+            shutil.copy2(Path(HOME) / "avatar.vrm", HTML.parent / "model.vrm")
+            self.window.evaluate_js("location.reload()")
+        except Exception as e:
+            print(f"[образы] перезагрузка окна: {e}")
 
     def hide_now(self):
         """Спрятать окно сразу, не дожидаясь очереди команд (при выходе)."""

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent
 HOME = Path(os.environ.get("PODRUGA_HOME", ROOT))
 
 USER_KEYS = {"companion_name", "user_name", "voice", "style", "pitch",
-             "trait_bold", "trait_play", "trait_talk", "walk", "guests"}   # что меняется из окна настроек
+             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar"}   # что меняется из окна настроек
 TRAITS_DEFAULT = {"trait_bold": "20", "trait_play": "55", "trait_talk": "30"}
 SILERO_SPEAKERS = {"xenia", "kseniya", "baya"}
 
@@ -86,6 +86,8 @@ def apply_user_settings(cfg: dict) -> None:
     if s.get("style"):
         cfg["voice"]["style"] = s["style"]
     cfg["traits"] = {k: int(s.get(k, v)) for k, v in TRAITS_DEFAULT.items()}
+    if s.get("avatar"):
+        cfg["avatar_choice"] = s["avatar"]
     if s.get("walk") in ("0", "1"):
         cfg.setdefault("walk", {})["enabled"] = s["walk"] == "1"
 
