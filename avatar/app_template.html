@@ -96,6 +96,10 @@
   .panel { position: absolute; inset: 0; background: rgba(20,16,32,.97); border-radius: 22px; padding: 16px;
     display: none; flex-direction: column; gap: 10px; overflow-y: auto; -webkit-user-select: text; user-select: text; }
   .panel.show { display: flex; }
+  .panel .xBtn { position: sticky; top: 0; align-self: flex-end; margin: -4px -4px -40px 0; z-index: 2; flex: none;
+    width: 30px; height: 30px; border: 0; border-radius: 50%; cursor: pointer; font-size: 15px; line-height: 30px;
+    background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .panel .xBtn:hover { background: #b5475f; color: #fff; }
   .panel h2 { margin: 2px 0 2px; font-size: 16px; }
   .panel p { margin: 0; color: var(--quiet); font-size: 12.5px; }
   .panel label { font-size: 12px; color: var(--quiet); display: flex; flex-direction: column; gap: 4px; }
@@ -127,7 +131,6 @@
   <div id="bar" class="pywebview-drag-region">
     <span class="dot" id="dot"></span><span class="name" id="title">Подруга</span>
     <span class="spacer"></span>
-    <button class="icon-btn" title="Меню" onclick="api('menu')">🌸</button>
     <button class="icon-btn" title="Настройки" onclick="openSettings()">⚙︎</button>
     <button class="icon-btn" title="Спрятать переписку" onclick="setMini(true)">▾</button>
     <button class="icon-btn" title="Закрыть" onclick="api('quit')">✕</button>
@@ -153,6 +156,7 @@
 
   <!-- первый запуск: ключ -->
   <div class="panel" id="keyPanel">
+    <button class="xBtn" title="Закрыть" onclick="closePanels()">✕</button>
     <h2>Привет! Давай познакомимся 💜</h2>
     <p>Чтобы я могла думать и говорить, нужен бесплатный ключ Google Gemini. Это одна минута:</p>
     <ol class="steps">
@@ -168,6 +172,7 @@
 
   <!-- настройки -->
   <div class="panel" id="setPanel">
+    <button class="xBtn" title="Закрыть" onclick="closePanels()">✕</button>
     <h2>Настройки</h2>
     <label>Как меня зовут<input id="sName"></label>
     <label>Как мне тебя называть<input id="sUser"></label>
@@ -284,6 +289,7 @@ const ui = {
   },
   outfit(o) { ui._outfit = o || ''; ui._paint(); },
   idle(name, sec) { if (window.VRM3D && VRM3D.ready && VRM3D.idle) VRM3D.idle(name, sec); },
+  persona(m) { window.PERSONA = m || {}; if (window.VRM3D && VRM3D.persona) VRM3D.persona(window.PERSONA); },
   showChat() { if (document.body.classList.contains('mini')) setMini(false); },
   emotion(e, holdMs) {
     ui._emo = e || 'calm'; ui._paint(); clearTimeout(ui._emoTimer);
@@ -339,7 +345,12 @@ function fillOutfits(sel) {
   if (!AVATARS) return;
   const g = AVATARS.girls.find(x => x.id === $('sGirl').value); if (!g) return;
   $('girlAbout').textContent = g.about || '';
-  $('sOutfit').innerHTML = g.outfits.map(o => `<option value="${o.id}" ${o.id === sel ? 'selected' : ''}>${o.name}${o.have ? '' : ' (скачается)'}</option>`).join('');
+  const opt = o => `<option value="${o.id}" ${o.id === sel ? 'selected' : ''}>${o.name}${o.have ? '' : ' (скачается)'}</option>`;
+  const groups = [...new Set(g.outfits.map(o => o.group || ''))];   // обычные — первыми, особые (традиционные и т.п.) — отдельно
+  $('sOutfit').innerHTML = groups.map(gr => {
+    const items = g.outfits.filter(o => (o.group || '') === gr).map(opt).join('');
+    return `<optgroup label="${gr || 'Обычные'}">${items}</optgroup>`;
+  }).join('');
 }
 async function applyAvatar() {
   note('avNote', 'Переодеваюсь…', true);
@@ -353,6 +364,7 @@ async function saveSettings() {
   note('setNote', r && r.ok ? 'Сохранено ✓' : 'Не сохранилось', r && r.ok);
 }
 window.addEventListener('pywebviewready', () => api('ui_ready'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanels(); });
 // если курсор давно не двигался — иногда сама смотрит по сторонам
 setInterval(() => {
   if (Date.now() - ui._lookT < 6000 || Math.random() > 0.35) return;

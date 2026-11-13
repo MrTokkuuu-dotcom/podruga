@@ -49,6 +49,7 @@ class NullUI:
     def outfit(self, o): pass
     def show_chat(self): pass
     def reload_model(self): pass
+    def persona(self, motion): pass
     def hide_now(self): pass
     visible = True
     def toggle_visible(self): pass
@@ -75,6 +76,13 @@ class Api:
 
     def ui_ready(self):
         self._ui._on_ready()
+        try:                                              # как двигается текущая девочка
+            import avatars
+            from config import load_config
+            cfg = self._companion.cfg if self._companion else load_config()
+            self._ui.persona(avatars.persona(avatars.current_girl(cfg)).get("motion", {}))
+        except Exception as e:
+            print(f"[образы] движения: {e}")
 
     def send_text(self, text):
         if self._companion:
@@ -179,13 +187,36 @@ class Api:
             return {"ok": False, "msg": "Этого наряда пока нет — скоро добавлю"}
         prev = c.cfg.get("avatar_choice", "anya/default").split("/")[0]
         values = {"avatar": f"{girl}/{outfit}"}
-        if girl != prev:                                  # другая девочка — её имя и голос
+        if girl != prev:                                  # другая девочка — её имя, голос и характер
             values.update({"companion_name": g["name"], "voice": g.get("voice", "xenia")})
+            values.update(self._girl_traits(c, prev, girl))
         c.update_settings(values)
         c.avatars.activate(girl, outfit)
         self._ui.reload_model()
         print(f"[образы] {g['name']}: {outfit}")
         return {"ok": True, "name": g["name"]}
+
+    @staticmethod
+    def _girl_traits(c, prev: str, girl: str) -> dict:
+        """Ползунки характера и манера речи — у каждой девочки свои: уходящей запоминаем,
+        новой возвращаем её прошлые (или её характер по умолчанию)."""
+        import avatars
+        path = c.cfg["_data_dir"] / "girl_traits.json"
+        try:
+            saved = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, ValueError):
+            saved = {}
+        t = c.cfg.get("traits", {})
+        saved[prev] = {**{k: int(v) for k, v in t.items()}, "style": c.cfg.get("voice", {}).get("style", "")}
+        try:
+            path.write_text(json.dumps(saved, ensure_ascii=False, indent=1), encoding="utf-8")
+        except OSError:
+            pass
+        mine = saved.get(girl) or dict(avatars.persona(girl).get("traits", {}))
+        out = {k: str(v) for k, v in mine.items() if k.startswith("trait_")}
+        if mine.get("style"):
+            out["style"] = mine["style"]
+        return out
 
     def preview_voice(self, voice, pitch="medium"):
         if self._companion:
@@ -372,6 +403,7 @@ class AppUI:
     def lie(self, on): self._call("lie", bool(on))
     def outfit(self, o): self._call("outfit", o)
     def show_chat(self): self._call("showChat")
+    def persona(self, motion): self._call("persona", motion)
 
     def reload_model(self):
         """Новая модель: копируем её к странице и перезагружаем окно (переписка из окна при этом очищается)."""

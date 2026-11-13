@@ -10,6 +10,21 @@ ROOT = Path(__file__).resolve().parent
 RAW = "https://raw.githubusercontent.com/{repo}/avatars/{girl}/{outfit}.vrm"
 
 
+def persona(gid: str) -> dict:
+    """Характер девочки из avatars.json: traits (ползунки по умолчанию), character (для Google),
+    motion (как двигается: любимые позы, скорость, покачивание)."""
+    try:
+        data = json.loads((ROOT / "avatars.json").read_text(encoding="utf-8"))
+        g = next((g for g in data["girls"] if g["id"] == gid), None)
+        return (g or {}).get("persona", {})
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def current_girl(cfg: dict) -> str:
+    return (cfg.get("avatar_choice") or "anya/default").split("/")[0]
+
+
 class Avatars:
     def __init__(self, home: Path):
         self.home = Path(home)
@@ -39,7 +54,8 @@ class Avatars:
         girls = []
         for g in self.data["girls"]:
             girls.append({"id": g["id"], "name": g["name"], "about": g.get("about", ""),
-                          "outfits": [{"id": o["id"], "name": o["name"], "have": self.path(g["id"], o["id"]).exists()}
+                          "outfits": [{"id": o["id"], "name": o["name"], "group": o.get("group", ""),
+                                       "have": self.path(g["id"], o["id"]).exists()}
                                       for o in g["outfits"]]})
         return {"girls": girls, "current": current or "anya/default"}
 

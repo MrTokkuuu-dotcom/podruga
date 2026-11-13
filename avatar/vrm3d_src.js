@@ -99,11 +99,35 @@ const POSES = {
   poke:    { lUpZ: -1.0, rUpZ: 1.15, lUpY: -0.5, lLoY: -2.0, headY: -0.25, headZ: -0.12, spineZ: -0.05 },
   // тащат окно: руки в стороны, «ой-ой»
   drag:    { lUpZ: -0.85, rUpZ: 0.85, lUpY: -0.2, rUpY: 0.2, lLoY: -0.6, rLoY: 0.6, headX: -0.05 },
+  // держит себя за локоть — тихо, чуть стеснительно (Аня)
+  elbow:   { lUpZ: -1.28, lUpY: -0.5, lLoY: -1.45, lLoZ: -0.3, rUpZ: 1.33, rUpY: 0.12, rLoY: 0.35, rLoZ: 0.1,
+             headZ: 0.08, headX: 0.05 },
+  // обе руки на поясе — уверенно (Алиса)
+  hips2:   { rUpZ: 0.75, rUpY: -0.1, rLoY: 0.35, rLoZ: 1.5, rHandZ: 0.5, lUpZ: -0.75, lUpY: 0.1, lLoY: -0.35, lLoZ: -1.5, lHandZ: -0.5,
+             chestX: -0.04, headZ: -0.04 },
+  // руки за головой — беззаботно (Алиса)
+  headBehind: { lUpZ: 0.7, rUpZ: -0.7, lUpY: -0.4, rUpY: 0.4, lLoY: 0, rLoY: 0, lLoZ: 2.2, rLoZ: -2.2,
+             chestX: -0.06, headX: -0.06 },
+  // ладони у сердца — тепло (Таня)
+  heart:   { lUpZ: -1.15, rUpZ: 1.15, lUpY: -0.6, rUpY: 0.6, lLoY: -2.0, rLoY: 2.0, lLoZ: -0.15, rLoZ: 0.15,
+             headZ: 0.08, headX: 0.04 },
+  // щека на ладони — мечтательно (Таня)
+  cheek:   { rUpZ: 1.0, rUpY: 0.5, rUpX: -0.55, rLoY: 2.7, rLoZ: 0.1, rHandX: 0.25,
+             lUpZ: -1.22, lUpY: -0.5, lUpX: -0.3, lLoY: -1.3, lLoZ: -0.3, headZ: -0.18 },
   // спит стоя
   sleep:   { lUpZ: -1.3, rUpZ: 1.3, lUpY: -0.35, rUpY: 0.35, lLoY: -1.0, rLoY: 1.0, lLoZ: -0.3, rLoZ: 0.3,
              headX: 0.38, headZ: 0.15, spineX: 0.06 },
 };
 const IDLE = ['rest', 'rest', 'rest', 'clasp', 'behind', 'hip', 'look', 'sway', 'think', 'foldArms', 'foldArms'];
+// характер в движениях (у каждой девочки свой, приходит из avatars.json): любимые позы, как часто их меняет,
+// скорость шага, размах покачивания, наклон головы, как подпрыгивает от радости
+const PERSONA = { idle: IDLE, pace: 1, speed: 1, sway: 1, tilt: 0, bounce: 1 };
+function setPersona(m) {
+  m = m || {};
+  const ok = (m.idle || []).filter(n => POSES[n] || ['rest', 'look', 'sway', 'foldArms'].includes(n));
+  PERSONA.idle = ok.length ? ok : IDLE;
+  for (const k of ['pace', 'speed', 'sway', 'tilt', 'bounce']) PERSONA[k] = typeof m[k] === 'number' ? m[k] : (k === 'tilt' ? 0 : 1);
+}
 // жесты из библиотек: только верх тела (руки, корпус, голова), ноги остаются в её ровной стойке
 const GESTURES = { foldArms: 1, yes: 1, no: 1 };
 
@@ -251,7 +275,7 @@ function stageMove(dt) {
   if (g && standing) {
     const dir = Math.sign(g.x - S.x) || S.dir || 1, dist = (g.x - S.x) * dir;
     S.dir = dir;
-    if (Math.abs((sm.yaw || 0) - dir * YAW) < 0.55) vt = Math.min(SPEED, Math.sqrt(2 * ACCEL * Math.max(dist, 0)));
+    if (Math.abs((sm.yaw || 0) - dir * YAW) < 0.55) vt = Math.min(SPEED * PERSONA.speed, Math.sqrt(2 * ACCEL * Math.max(dist, 0)));
     if (dist <= 0.5 && S.v < 8) {
       S.x = g.x; S.goal = null; S.dir = 0; S.v = 0;
       pyCall('walk_done', true);
@@ -430,10 +454,11 @@ function mix(base, over, w) {
 function chooseIdle(t) {
   if (t < S.idleUntil) return;
   const prev = S.idle;
-  let next = IDLE[Math.floor(Math.random() * IDLE.length)];
+  const L = PERSONA.idle;
+  let next = L[Math.floor(Math.random() * L.length)];
   if (next === prev) next = 'rest';
   S.idle = next;
-  S.idleUntil = t + (next === 'rest' ? 6 + Math.random() * 8 : next === 'hair' ? 3 : 5 + Math.random() * 6);
+  S.idleUntil = t + (next === 'hair' ? 3 : (next === 'rest' ? 6 + Math.random() * 8 : 5 + Math.random() * 6) * PERSONA.pace);
 }
 
 const isAsleep = () => (S.face === 'sleep' && !S.seq) || S.seq === 'asleep';
@@ -488,7 +513,8 @@ function pose(t) {
   if (asleep && !S.sitting) P = mix(P, POSES.sleep, 1);
   else if (POSES[S.idle]) P = mix(P, POSES[S.idle], 1);
   if (!asleep && S.idle === 'look') { P.headY += Math.sin(t * 0.7) * 0.35; P.headX -= 0.05; }
-  if (!asleep && S.idle === 'sway') { P.spineZ += Math.sin(t * 1.1) * 0.03; P.headZ += Math.sin(t * 1.1 + 1) * 0.06; }
+  if (!asleep && S.idle === 'sway') { const f = 0.8 + 0.3 * PERSONA.sway; P.spineZ += Math.sin(t * f) * 0.03 * PERSONA.sway; P.headZ += Math.sin(t * f + 1) * 0.06 * PERSONA.sway; }
+  if (!asleep) P.headZ += PERSONA.tilt;
   let wantArms = !asleep ? (POSES[S.idle] || S.idle === 'foldArms' ? 1 : 0) : 1;
   const walkW = A.walk ? A.walk.w : 0;
   if (walkW > 0.01 && !S.dragging) {
@@ -499,7 +525,7 @@ function pose(t) {
     P.spineX += 0.04 * walkW; P.spineY = (P.spineY || 0) + Math.cos(sm.walkPh || 0) * 0.07 * walkW;
   }
   // стоит: еле заметно переносит вес — только корпусом и головой, ступни на месте
-  if (!moving && !S.sitting) { const ws = Math.sin(t * 0.23) * Math.sin(t * 0.11 + 1); P.spineZ += ws * 0.018; P.headZ -= ws * 0.02; }
+  if (!moving && !S.sitting) { const ws = Math.sin(t * 0.23 * (0.6 + 0.4 * PERSONA.sway)) * Math.sin(t * 0.11 + 1) * PERSONA.sway; P.spineZ += ws * 0.018; P.headZ -= ws * 0.02; }
 
   // 1б) куда смотрит: идёт боком, стоит лицом к нам
   // ложится — разворачивается боком: лежит вдоль экрана, головой к углу, а не ногами к нам
@@ -526,7 +552,7 @@ function pose(t) {
   const emoPose = { joy: 'happy', shy: 'shy', sad: 'sad', surprise: 'surprise', think: 'think', tender: 'clasp' }[S.emo];
   if (!asleep && !S.seq && emoPose && !S.sitting) { P = mix(P, POSES[emoPose], 0.85); wantArms = 1; }
   if (S.face === 'think' && !S.sitting) { P = mix(P, POSES.think, 1); wantArms = 1; }
-  if (!asleep && S.emo === 'joy') P.lift = Math.max(0, Math.sin(t * 6)) * 0.012;   // подпрыгивает
+  if (!asleep && S.emo === 'joy') P.lift = Math.max(0, Math.sin(t * 6)) * 0.012 * PERSONA.bounce;   // подпрыгивает
 
   // 3) касания и перетаскивание
   if (S.dragging) { P = mix(P, POSES.drag, 1); wantArms = 1; }
@@ -1015,7 +1041,7 @@ async function init(url) {
 window.VRM3D = {
   ready: false,
   async start(url) {
-    try { await init(url); this.ready = true; console.log('[3D] модель загружена'); return true; }
+    try { await init(url); if (window.PERSONA) setPersona(window.PERSONA); this.ready = true; console.log('[3D] модель загружена'); return true; }
     catch (e) { console.error('[3D] не загрузилась', e); return false; }
   },
   state(face, emo, act) {
@@ -1061,6 +1087,7 @@ window.VRM3D = {
   gesture(name, sec) { startGesture(name, sec); },
   idle(name, sec) { if (POSES[name] || name === 'look' || name === 'sway' || name === 'rest' || name === 'foldArms') { S.idle = name; S.idleUntil = (S.t || 0) + (sec || 4); } },
   full(on) { S.full = !!on; },
+  persona(m) { setPersona(m); },
   _zone(x, y) { return zoneAt(x, y); },
   _body() { return BODY; },
   // для проверки: остановить живой цикл и прокрутить время вручную (ровными шагами)

@@ -6,9 +6,11 @@
   ## название            — новый раздел
   @всегда                — раздел работает, даже если она только что задала вопрос
   @ответ                 — это ответ на её вопрос («нормально», «хорошо») — тоже можно сразу
+  @своё                  — если у девочки есть свои фразы в разделе, берём только их (про любимое и о себе)
   ? фраза                — как он может сказать (слова через пробел; {n} — число, {что} — остаток)
   ! КОМАНДА {что}        — что выполнить (как у Gemini: ОТКРЫТЬ, МУЗЫКА, ГРОМКОСТЬ, ТАЙМЕР)
-  {эмоция} текст         — вариант ответа; [утро]/[день]/[вечер]/[ночь] в начале — только в это время
+  {эмоция} текст         — вариант ответа; [утро]/[день]/[вечер]/[ночь] в начале — только в это время;
+                           <аня>/<алиса>/<таня> в начале — только у этой девочки (её словечки и манера)
 В ответах можно писать {user}, {name}, {time}, {date}, {weekday}, {daypart}, {n}, {что}."""
 import random
 import re
@@ -32,6 +34,7 @@ NUM = {"ноль": 0, "один": 1, "одну": 1, "одна": 1, "два": 2, 
 WEEKDAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
 MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября",
           "октября", "ноября", "декабря"]
+GIRL_TAG = {"аня": "anya", "алиса": "alisa", "таня": "tanya"}
 EMO_RU = {"радость": "joy", "нежность": "tender", "смущение": "shy", "удивление": "surprise",
           "грусть": "sad", "задумчивость": "think", "спокойствие": "calm"}
 
@@ -69,8 +72,10 @@ class Section:
         self.triggers: list[list[str]] = []
         self.commands: list[str] = []
         self.replies: list[tuple[str | None, str, str]] = []   # (время суток, эмоция, текст)
+        self.owner: list[str | None] = []                       # чья фраза: anya / alisa / tanya или общая
         self.always = False
         self.answer = False
+        self.own_only = False
         self.service = False
         self.recent: deque = deque(maxlen=8)
 
@@ -96,6 +101,8 @@ def load(paths: list[Path]) -> list[Section]:
                 cur.always = True
             elif line == "@ответ":
                 cur.answer = True
+            elif line == "@своё":
+                cur.own_only = True
             elif line == "@служебное":
                 cur.service = True
             elif line.startswith("?"):
@@ -105,7 +112,10 @@ def load(paths: list[Path]) -> list[Section]:
             elif line.startswith("!"):
                 cur.commands.append(line[1:].strip())
             else:
-                part = None
+                part, owner = None, None
+                m = re.match(r"<(аня|алиса|таня)>\s*", line)
+                if m:
+                    owner, line = GIRL_TAG[m.group(1)], line[m.end():]
                 m = re.match(r"\[(утро|день|вечер|ночь)\]\s*", line)
                 if m:
                     part, line = m.group(1), line[m.end():]
@@ -114,6 +124,7 @@ def load(paths: list[Path]) -> list[Section]:
                 if m and m.group(1) in EMO_RU:
                     emo, line = EMO_RU[m.group(1)], line[m.end():]
                 cur.replies.append((part, emo, line))
+                cur.owner.append(owner)
     return [s for s in sections if s.service or (s.triggers and (s.replies or s.commands))]
 
 
@@ -153,6 +164,7 @@ class QuickReplies:
         # replies.txt + replies_*.txt рядом с программой (большие наборы), в конце — свои из data
         extra = sorted(p for p in Path(app_dir).glob("replies_*.txt"))
         self.paths = [Path(app_dir) / "replies.txt", *extra, Path(data_dir) / "replies_my.txt"]
+        self.girl = "anya"                         # текущая девочка (ставит main)
         self.reload()
 
     def reload(self):
@@ -231,7 +243,10 @@ class QuickReplies:
 
     def _pick(self, s: Section, t: datetime, no_question: bool = False):
         dp = daypart(t)
-        ok = [i for i, (p, _, _) in enumerate(s.replies) if p in (None, dp)]
+        ok = [i for i, (p, _, _) in enumerate(s.replies) if p in (None, dp) and s.owner[i] in (None, self.girl)]
+        own = [i for i in ok if s.owner[i]]
+        if own and (s.own_only or random.random() < 0.6):          # у неё есть свои словечки — чаще говорит по-своему
+            ok = own
         if no_question:
             ok = [i for i in ok if "?" not in s.replies[i][2]] or ok
         fresh = [i for i in ok if i not in s.recent] or ok

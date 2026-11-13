@@ -101,6 +101,16 @@ class Companion:
     def load_character(self):
         self.character = (ROOT / self.cfg["character_file"]).read_text(encoding="utf-8").format(
             name=self.cfg["companion_name"], user=self.user)
+        try:                                       # у каждой девочки свой характер поверх общего
+            import avatars
+            own = avatars.persona(avatars.current_girl(self.cfg)).get("character")
+            if own:
+                self.character += "\n\n## Какая именно ты\n" + own + \
+                    "\n(Если имя в настройках другое — тебя зовут {}.)".format(self.cfg["companion_name"])
+        except Exception as e:
+            print(f"[образы] характер: {e}")
+        if getattr(self, "quick", None):
+            self.quick.girl = __import__("avatars").current_girl(self.cfg)
         self.journal.user = self.user
         self.ui.title(self.cfg["companion_name"])
 
@@ -996,6 +1006,8 @@ class Companion:
         try:
             from quick import QuickReplies
             self.quick = QuickReplies(ROOT, self.cfg["_data_dir"])
+            import avatars
+            self.quick.girl = avatars.current_girl(self.cfg)
         except Exception as e:
             self.quick = None
             print(f"[быстро] готовые ответы не загрузились: {e}")
