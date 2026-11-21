@@ -936,9 +936,10 @@ function wantFps() {
                 (S.posture === 'lie' && S.lieRaw < 1) || S.seqAct;
   if (going) return 60;
   if (S.seq === 'closing') return 30;
-  const active = S.touch || nowMs - S.lipT < 1500 || nowMs - S.lookT < 1500;
-  if (isAsleep()) return active ? 30 : 12;                 // спит — только дыхание
-  return active ? 60 : 30;                                 // просто стоит — 30 кадров хватает
+  const active = S.touch || nowMs - S.lipT < 1500;         // говорит или её трогают — плавно
+  const looking = nowMs - S.lookT < 1500;                  // поворачивает голову за мышкой — 30 хватает
+  if (isAsleep()) return active ? 30 : 8;                  // спит — только дыхание
+  return active ? 60 : looking ? 30 : 20;                  // просто стоит — 20 кадров хватает
 }
 function reportBox() {
   // прямоугольник, где она нарисована (по костям + запас) — Python делает остальное окно «прозрачным для мышки»
@@ -976,10 +977,12 @@ function loop(now) {
   if (FROZEN) { requestAnimationFrame(loop); return; }
   const fps = wantFps();
   // ниже 60 кадров страницу незачем будить 60 раз в секунду: каждое пробуждение стоит процессора и окна
+  // ниже 60: будим страницу ровно к следующему кадру (раньше будили на 9 мс раньше — выходило 40 кадров вместо 30)
+  const step = fps ? 1000 / fps : 400;
   if (fps >= 60) requestAnimationFrame(loop);
-  else setTimeout(() => requestAnimationFrame(loop), fps ? Math.max(0, 1000 / fps - 9) : 400);
+  else setTimeout(() => requestAnimationFrame(loop), Math.max(0, last + step - performance.now() - 6));
   // запас 3 мс: время в WebKit округлено, иначе кадр 15–16 мс считался «слишком ранним» и пропадал через один
-  if (!fps || (fps >= 60 && now - last < 1000 / fps - 3)) return;
+  if (!fps || now - last < step - 3) return;
   last = now;
   const dt = Math.min(0.1, clock.getDelta()), t = clock.elapsedTime;
   if (vrm) {
