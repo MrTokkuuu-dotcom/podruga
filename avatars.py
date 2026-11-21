@@ -59,9 +59,27 @@ class Avatars:
                                       for o in g["outfits"]]})
         return {"girls": girls, "current": current or "anya/default"}
 
+    # --- номер правки модели: в avatars.json rev больше, чем скачано, — качаем заново ---
+    def _revs_path(self) -> Path:
+        return self.dir / "revs.json"
+
+    def _revs(self) -> dict:
+        try:
+            return json.loads(self._revs_path().read_text(encoding="utf-8"))
+        except (FileNotFoundError, ValueError):
+            return {}
+
+    def want_rev(self, girl: str, outfit: str) -> int:
+        g = self.girl(girl) or {}
+        o = next((o for o in g.get("outfits", []) if o["id"] == outfit), {})
+        return int(o.get("rev", 1))
+
+    def outdated(self, girl: str, outfit: str) -> bool:
+        return self.path(girl, outfit).exists() and self._revs().get(f"{girl}/{outfit}", 1) < self.want_rev(girl, outfit)
+
     def ensure(self, girl: str, outfit: str, repo: str) -> Path | None:
         p = self.path(girl, outfit)
-        if p.exists():
+        if p.exists() and not self.outdated(girl, outfit):
             return p
         url = RAW.format(repo=repo, girl=girl, outfit=outfit)
         tmp = p.with_suffix(".part")
@@ -72,11 +90,27 @@ class Avatars:
             if tmp.stat().st_size < 1_000_000:
                 raise RuntimeError("файл слишком маленький — похоже, его ещё нет")
             tmp.replace(p)
+            revs = self._revs()
+            revs[f"{girl}/{outfit}"] = self.want_rev(girl, outfit)
+            self._revs_path().write_text(json.dumps(revs, ensure_ascii=False, indent=1), encoding="utf-8")
             return p
         except Exception as e:
             print(f"[образы] не скачалось {girl}/{outfit}: {e}")
             tmp.unlink(missing_ok=True)
-            return None
+            return p if p.exists() else None              # обновить не вышло — остаётся прежняя
+
+    def refresh(self, current: str, repo: str) -> bool:
+        """Фоном при запуске: докачать обновлённые модели. True — текущая модель обновилась."""
+        cur_changed = False
+        for g in self.data["girls"]:
+            for o in g["outfits"]:
+                if self.outdated(g["id"], o["id"]):
+                    print(f"[образы] есть новая версия {g['id']}/{o['id']} — скачиваю")
+                    old = self._revs().get(f"{g['id']}/{o['id']}", 1)
+                    self.ensure(g["id"], o["id"], repo)
+                    if self._revs().get(f"{g['id']}/{o['id']}", 1) > old and f"{g['id']}/{o['id']}" == current:
+                        cur_changed = self.activate(g["id"], o["id"])
+        return cur_changed
 
     def activate(self, girl: str, outfit: str) -> bool:
         """Сделать модель текущей: её берёт окно при загрузке (~/Podruga/avatar.vrm)."""

@@ -182,8 +182,9 @@ class Companion:
         else:
             self._spoke_end = time.monotonic()
 
-    YES_START = ("да", "конечно", "ага", "угу", "точно", "согласна", "ещё бы", "еще бы", "обязательно", "с удовольствием")
-    NO_START = ("нет", "не-а", "неа", "ни за что", "вряд ли")
+    YES_START = ("да", "конечно", "ага", "угу", "точно", "согласна", "ещё бы", "еще бы", "обязательно", "с удовольствием",
+                 "yes", "yeah", "yep", "sure", "absolutely", "응", "그래", "좋아", "네", "당연하지", "물론이지")
+    NO_START = ("нет", "не-а", "неа", "ни за что", "вряд ли", "no", "nope", "아니", "아니야", "싫어")
 
     def _her_line(self, text: str) -> None:
         """Её реплика: в переписку, а в начале ответа «да»/«нет» — жестом (палец вверх / качает головой)."""
@@ -224,6 +225,13 @@ class Companion:
         parts = [self.character, "",
                  "## Твой характер сейчас (настройки " + self.user + ")", traits_text(self.cfg.get("traits", {})),
                  FORMAT_RULES.format(user=self.user), "",
+                 "## Языки\n" + self.user + " может говорить по-русски, по-английски и по-корейски и вставлять "
+                 "в русскую речь английские названия (игры, программы, сайты: Valorant, Discord, YouTube). "
+                 "Это не ошибки распознавания — понимай их как есть и не подменяй похожими русскими словами; "
+                 "названия пиши в оригинале. Отвечай на том языке, на котором его последняя фраза: на русскую — "
+                 "по-русски, на английскую — по-английски, на корейскую — по-корейски (просто и естественно, "
+                 "как подруга). Одна фраза — один язык: не смешивай русские и корейские слова в одном "
+                 "предложении. Эмоции в {} и команды << >> всегда пиши по-русски.", "",
                  "## Память о " + self.user, self.memory.read() or "(пока пусто)", "",
                  f"## Сейчас\n{WEEKDAYS[t.weekday()]}, {t.strftime('%d.%m.%Y %H:%M')}"
                  + (f"\nУже стоят напоминания: {reminders}" if reminders else ""), "",
@@ -231,6 +239,10 @@ class Companion:
         doing = self.activity.describe() if hasattr(self, "activity") else None
         if doing:
             parts += ["", "## Чем он занят", doing + " Можешь иногда к месту это упомянуть, но не каждый раз."]
+        if getattr(self, "lang", "ru") == "ko":
+            parts += ["", "## Режим: по-корейски",
+                      f"{self.user} попросил говорить по-корейски: отвечай по-корейски, коротко и естественно, "
+                      f"на «반말», как близкая подруга. Эмоции в {{}} и команды оставляй по-русски, как обычно."]
         if getattr(self, "lang", "ru") == "en":
             parts += ["", "## Режим: практика английского",
                       f"Говори с {self.user} по-английски, простыми фразами. Если он ошибся — мягко "
@@ -338,7 +350,7 @@ class Companion:
 
             def filler():                              # Google задумался — не молчим
                 if not started.is_set() and not self._cancel and getattr(self, "quick", None):
-                    f = self.quick.service("думаю")
+                    f = self.quick.service("думаю", self._phrase_lang)
                     if f:
                         self.speaker.speak(f[0], f[1])
             timer = threading.Timer(self.cfg.get("brain", {}).get("filler_after", 1.6), filler)
@@ -437,7 +449,8 @@ class Companion:
             elif kind == "ГУЛЯТЬ" and getattr(self, "walker", None):
                 self.walker.command(arg)
             elif kind == "РЕЖИМ":
-                self.set_lang("en" if "eng" in arg.lower() or "англ" in arg.lower() else "ru")
+                a = arg.lower()
+                self.set_lang("en" if "eng" in a or "англ" in a else "ko" if "кор" in a or "kor" in a else "ru")
             else:
                 print(f"[команда] не знаю такую: {c}")
 
@@ -485,6 +498,11 @@ class Companion:
             self.enrolling = 0
             self.ui.add("sys", "Голос забыт: снова слушаю всех")
 
+    def _prepare_voice(self, lang: str) -> None:
+        voice = getattr(getattr(self, "speaker", None), "voice", None)
+        if lang != "ru" and voice is not None and hasattr(voice, "prepare"):
+            voice.prepare(lang)
+
     # --- практика английского ---
     def set_lang(self, lang: str) -> None:
         if lang == getattr(self, "lang", "ru"):
@@ -494,7 +512,7 @@ class Companion:
         voice = getattr(self.speaker, "voice", None)
         if voice is not None and hasattr(voice, "set_lang"):
             voice.set_lang(lang)
-        self.ui.add("sys", "🇬🇧 Практика английского" if lang == "en" else "🇷🇺 Снова по-русски")
+        self.ui.add("sys", {"en": "🇬🇧 Практика английского", "ko": "🇰🇷 Говорим по-корейски"}.get(lang, "🇷🇺 Снова по-русски"))
 
     # --- зрение ---
     def screenshot(self) -> bytes | None:
@@ -522,6 +540,9 @@ class Companion:
         if not self.ready.is_set():
             return
         self.ui.add("me", text)
+        from tts import VoiceRouter
+        self._phrase_lang = VoiceRouter.script_of(text)      # написал по-корейски — и ответ по-корейски
+        self._prepare_voice(self._phrase_lang)
         if not self.awake:
             self.awake = True
         from wake import LOOK_PHRASES, _norm
@@ -617,18 +638,18 @@ class Companion:
 
     def quick_reply(self, text: str):
         """→ (текст ответа, эмоция, команды) или None."""
-        if not getattr(self, "quick", None) or getattr(self.speaker.voice, "lang", "ru") == "en":
-            return None
+        if not getattr(self, "quick", None) or getattr(self, "lang", "ru") != "ru" and self._phrase_lang == "ru":
+            return None                                  # практика английского/корейского — пусть отвечает Google
         if is_goodbye(text, self.cfg["wake"]["sleep_phrases"]):
             return None
         name = self.cfg.get("companion_name", "")
         if name:                                         # «Аня, привет» → «привет»
             text = re.sub(rf"\b{re.escape(name)}\b", " ", text, flags=re.IGNORECASE)
-        m = self.quick.match(text, self._after_question())
+        m = self.quick.match(text, self._after_question(), self._phrase_lang)
         if not m:
             return None
         parts, emo, cmds = m
-        reply = " ".join(self.quick.fill(t, ctx, self.user, self.cfg["companion_name"]) for t, ctx in parts)
+        reply = " ".join(self.quick.fill(t, ctx, self.user, self.cfg["companion_name"], self._phrase_lang) for t, ctx in parts)
         return reply, emo, cmds
 
     def quick_say(self, text: str) -> bool:
@@ -812,9 +833,11 @@ class Companion:
         text = None
         if whisper:
             text = whisper.result()
-            print(f"   (Whisper {self.stt.last_secs:.2f} с): {text or '—'}")
+            print(f"   (Whisper {self.stt.last_secs:.2f} с, {getattr(self.stt, 'last_lang', 'ru')}): {text or '—'}")
         tm["text"] = time.monotonic()
         if text:
+            self._phrase_lang = getattr(self.stt, "last_lang", "ru") or "ru"
+            self._prepare_voice(self._phrase_lang)
             if not self.addressed_to_me(text):
                 return
             if intents.is_sleep(text):                   # «спокойной ночи» — сразу, без Google
@@ -983,6 +1006,7 @@ class Companion:
             try:
                 from avatars import Avatars
                 self.avatars = Avatars(HOME)
+                threading.Thread(target=self._refresh_outfits, name="outfits", daemon=True).start()
             except Exception as e:
                 print(f"[образы] {e}")
             from reactions import Reactions
@@ -998,9 +1022,8 @@ class Companion:
             import platform
             if platform.machine() == "arm64":
                 try:
-                    from stt import WhisperSTT
-                    self.stt = WhisperSTT(HOME, st.get("model", "small"),
-                                          notify=lambda m: self.ui.add("sys", m))
+                    from stt import make_stt
+                    self.stt = make_stt(HOME, st, notify=lambda m: self.ui.add("sys", m), hints=self._app_names)
                 except Exception as e:
                     print(f"[уши] Whisper недоступен: {e}")
         try:
@@ -1078,6 +1101,38 @@ class Companion:
                 print("[чёрный ящик] ответ идёт дольше 25 с, где сейчас каждый поток:")
                 sys.stdout.flush()
                 faulthandler.dump_traceback(file=sys.__stderr__, all_threads=True)
+
+    def _refresh_outfits(self):
+        """Обновлённые наряды докачиваются сами; если обновился нынешний — сразу переодеваем."""
+        time.sleep(20)                                  # не мешаем запуску
+        try:
+            cur = self.cfg.get("avatar_choice") or "anya/default"
+            if self.avatars.refresh(cur, self.cfg.get("update_repo", "MrTokkuuu-dotcom/podruga")):
+                print(f"[образы] нынешний наряд обновился: {cur}")
+                self.ui.reload_model()
+        except Exception as e:
+            print(f"[образы] обновление нарядов: {e}")
+
+    _apps_cache = (0.0, [])
+    _phrase_lang = "ru"                 # на каком языке его последняя фраза (ru / en / ko)
+
+    def _app_names(self) -> list[str]:
+        """Названия открытых программ — подсказка слуху (кэш на 30 с)."""
+        t, names = self._apps_cache
+        if time.monotonic() - t < 30:
+            return names
+        names = []
+        try:
+            from AppKit import NSWorkspace
+            for a in NSWorkspace.sharedWorkspace().runningApplications():
+                if a.activationPolicy() == 0 and a.localizedName():          # обычные программы с окнами
+                    n = str(a.localizedName())
+                    if n.isascii() and n not in ("Finder", "Python", "python"):
+                        names.append(n)
+        except Exception:
+            pass
+        self._apps_cache = (time.monotonic(), names)
+        return names
 
     # --- обновления на лету ---
     def _restart_watch(self):

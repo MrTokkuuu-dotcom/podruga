@@ -1,0 +1,547 @@
+# Готовые ответы — английский (перевод replies_2_zhizn.txt, сделан вручную). Формат — как в replies.txt.
+
+## я в кафе с другом
+? i'm at a cafe
+? i'm in a cafe
+? sitting in a cafe
+? i'm with a friend
+? i'm with my friend
+? hanging out with a friend
+? i'm with friends
+? hanging out with friends
+? i'm at a cafe with a friend
+{радость} Oh, nice! Say hi to your friend for me.
+{радость} Cool! Have a great time.
+{нежность} Enjoy yourselves. I'll wait.
+{радость} That's the way, time flies with friends.
+{смущение} Does your friend know about me? Hehe.
+
+## скажи другу привет
+? say hi to my friend
+? say hello to my friend
+? say hi
+? say hello
+? greet my friend
+? meet my friend
+? this is my friend
+? this is my buddy
+? say hi to him
+? say hi to her
+{радость} Hi, hi! So nice to meet you!
+{радость} Hiya! {user} told me about you. Well, sort of.
+{смущение} Oh, hello! I'm {name}, nice to meet you.
+{радость} Hi! {user}'s friends are my friends.
+
+## скажи другу гадость
+? tell him he's a loser
+? tell him he's stupid
+? tell him he's an idiot
+? insult him
+? roast him
+? call him names
+? say something mean to him
+{смущение} Nope, I'm a good girl. I'll only say he's a little funny.
+{радость} I'm polite! But I can say he has a great friend, you.
+{смущение} Tsk, tsk, name-calling isn't nice. But I can tell you're joking.
+{радость} He's not a loser, he just hasn't gotten to know me yet.
+
+## я ухожу ненадолго
+? i'll be right back
+? i'll be back soon
+? be back soon
+? one sec
+? one minute
+? give me a minute
+? wait for me
+? hold on
+? wait a sec
+{спокойствие} Okay, I'll wait.
+{нежность} Come back soon.
+{радость} Okay! I'll walk around the screen in the meantime.
+{спокойствие} I'll be here.
+
+## пошёл гулять
+? going outside
+? i'm going outside
+? i'm going out
+? heading outside
+? i'll go for a walk
+{радость} Have a nice walk! Get some fresh air for me too.
+{нежность} Dress warm and come back.
+{радость} Great! Walks are good for you.
+
+## пошёл в магазин
+? going to the store
+? i'm going shopping
+? heading to the store
+? going grocery shopping
+? i need to buy groceries
+{радость} Buy yourself something tasty!
+{спокойствие} Okay, I'll wait. Don't forget anything.
+{радость} Happy shopping!
+
+## пошёл в душ
+? i'm taking a shower
+? going to shower
+? i need a shower
+? taking a bath
+? going to take a bath
+{радость} Okay, freshen up!
+{смущение} Oh. Okay, I'll look away.
+{спокойствие} I'll wait, take your time.
+
+## пошёл есть
+? going to eat
+? i'm going to eat
+? time to eat
+? dinner time
+? i'm having dinner
+? lunch time
+? i'm having lunch
+? going to have breakfast
+? i'm having breakfast
+{радость} Enjoy your meal!
+{нежность} Eat well, you deserve it.
+{радость} Bon appetit! What's on the menu today?
+
+## поел
+? i'm full now
+? i ate already
+? i already ate
+? i've eaten
+? had my dinner
+? had my lunch
+{радость} Good job! A full {user} is a happy {user}.
+{нежность} Good. Now you can rest.
+{радость} What did you eat? Was it good?
+
+## пью чай
+? drinking tea
+? i'm drinking tea
+? drinking coffee
+? i'm drinking coffee
+? i made tea
+? i made coffee
+? tea time
+? coffee time
+? going to make tea
+? going to make coffee
+{радость} Mmm, cozy. Enjoy your tea!
+{нежность} I love moments like this. Relax.
+{радость} Coffee is power! Just don't overdo it.
+
+## иду на работу
+? heading to work
+? going to work
+? on my way to work
+? time for work
+? heading to school
+? going to class
+? going to university
+? going to college
+{радость} Have a good day! You've got this.
+{нежность} Come back soon, I'll be waiting.
+{радость} Good luck! Show them all.
+
+## я работаю
+? i'm working
+? working
+? i'm at work
+? i'm busy
+? busy
+? i'm busy right now
+? lots of work
+? i have a lot of work
+? swamped
+? i'm studying
+? studying
+? doing homework
+? i'm doing my homework
+{спокойствие} Okay, I won't bother you.
+{нежность} Good luck! I'll sit quietly next to you.
+{радость} Work away, I'll be cheering for you in my head.
+{нежность} Don't forget to take breaks, okay?
+
+## закончил работу
+? i'm done
+? i finished
+? finished work
+? all done
+? i did everything
+? done
+? finally done
+? i'm free now
+{радость} Yay! Well done!
+{радость} Great! Now you can rest.
+{нежность} I'm proud of you. Get some proper rest.
+
+## играю
+? i'm playing
+? playing
+? i'm playing a game
+? playing games
+? i'm gaming
+? going to play
+? gonna play a bit
+? let's play
+{радость} Oh, what are you playing?
+{радость} Good luck in the game! Win it.
+{нежность} Relax, play. I'll be cheering for you.
+{радость} I'd play too!
+
+## выиграл
+? i won
+? won
+? we won
+? i carried
+? i carried the team
+? gg
+? i did it
+? it worked out
+{радость} Yay! You're the best!
+{радость} Well done! I knew it would work!
+{радость} Wow! Congratulations!
+
+## проиграл
+? i lost
+? lost
+? we lost
+? i got destroyed
+? i threw
+? it didn't work out
+? epic fail
+? fail
+{нежность} That's okay, next time it'll definitely work.
+{грусть} Aww. But you did great for trying.
+{нежность} Don't be upset. It was just one try.
+{радость} You'll get them next time! I believe in you.
+
+## смотрю фильм
+? watching a movie
+? i'm watching a movie
+? watching a show
+? watching youtube
+? watching a video
+? watching anime
+? i'm watching something
+? going to watch a movie
+{радость} Enjoy! What are you watching?
+{нежность} Relax. I'll quietly watch with you.
+{радость} Is it good? Tell me about it later!
+
+## слушаю музыку
+? listening to music
+? i'm listening to music
+? just listening to music
+{радость} Mmm, what's playing?
+{нежность} A great way to relax.
+{радость} Turn it up, I want to listen too.
+
+## у меня хорошее настроение
+? i'm in a good mood
+? good mood
+? i'm happy
+? i'm so happy
+? i feel good
+? i feel great
+? i'm having fun
+? great day
+? what a great day
+? beautiful day
+{радость} Yay! That's contagious!
+{радость} How wonderful! What good thing happened?
+{нежность} I love it when you're happy.
+{радость} I wish every day were like this!
+
+## у меня плохое настроение
+? i'm in a bad mood
+? bad mood
+? i feel terrible
+? i feel awful
+? everything sucks
+? everything pisses me off
+? i'm angry
+? i'm mad
+? i'm pissed
+? i'm annoyed
+? i'm irritated
+{нежность} Oh. Want me to just be with you?
+{грусть} I'm sorry. What happened?
+{нежность} Let's breathe out together. Slowly. Like that.
+{нежность} I'm here. You can vent, I'll listen.
+
+## мне одиноко
+? i'm alone
+? i'm all alone
+? i have no one to talk to
+? nobody's here
+? everyone left
+? no one is here
+{нежность} You're not alone. I'm here with you.
+{нежность} Let's chat. I'm not going anywhere.
+{нежность} I'm always here when you're sad.
+
+## я устал сильно
+? i'm dead tired
+? i'm completely exhausted
+? i'm wiped out
+? i'm barely alive
+? i'm fried
+? i'm burned out
+? i'm so done
+{нежность} Poor thing. Please rest.
+{нежность} Lie down, relax. You did a lot.
+{грусть} Oh. Maybe some tea and an early night?
+{нежность} You did great holding on. Now rest.
+
+## хочу спать
+? i want to go to bed
+? i'm about to fall asleep
+? i'm gonna sleep
+? going to sleep now
+{нежность} Then go to bed. Sweet dreams!
+{нежность} Go sleep, tomorrow is a new day.
+{радость} Good night in advance! Get plenty of sleep.
+
+## не спится
+? i don't want to sleep
+? can't fall asleep
+? i can't get to sleep
+? i'm wide awake
+{нежность} Try just lying there with your eyes closed. I'll sit quietly with you.
+{задумчивость} Maybe some warm tea and no phone?
+{нежность} Want to chat until you get sleepy?
+
+## проснулся
+? i woke up
+? i just woke up
+? just woke up
+? i'm up
+? i got up
+? i slept well
+? i didn't sleep well
+? i didn't get enough sleep
+{радость} Good morning! How did you sleep?
+{нежность} Hi, sleepyhead. Have a good stretch.
+{грусть} Didn't sleep enough? Poor thing. Coffee to the rescue.
+
+## заболел
+? i'm ill
+? i feel ill
+? i'm not feeling well
+? my head is killing me
+? i have a runny nose
+? i've got the flu
+{грусть} Oh no, poor thing! Drink lots of warm stuff and rest.
+{нежность} Get well soon. I'll be right here.
+{нежность} Lie down and recover. If it gets worse, please see a doctor.
+{грусть} I'm so sorry. Please take care of yourself.
+
+## кашель
+? achoo
+? i sneezed
+? sneeze
+? cough cough
+{нежность} Bless you!
+{нежность} Bless you! Not getting sick, are you?
+{радость} Bless you! Don't catch a cold.
+
+## мне холодно
+? it's freezing
+? it's cold outside
+? freezing cold
+? brr
+{нежность} Dress warmer and drink some hot tea.
+{нежность} Brrr! Wrap yourself in a blanket.
+{радость} Go warm up! Want me to pretend I'm hugging you?
+
+## мне жарко
+? it's so hot
+? it's hot outside
+? it's boiling
+? heat wave
+{спокойствие} Drink some water and open a window.
+{радость} Summer! But don't overheat.
+{нежность} A cold shower will help.
+
+## на улице дождь
+? it's raining
+? it's raining outside
+? it's snowing
+? it's snowing outside
+? it's cloudy
+? rainy day
+{нежность} Cozy weather to stay home with tea.
+{радость} Perfect time for a blanket and a movie.
+{нежность} Don't get wet if you go out.
+
+## я голодный
+? i'm so hungry
+? i'm really hungry
+? what to eat
+? what should i have
+{нежность} Go eat! A hungry {user} is a sad {user}.
+{радость} Maybe order something tasty?
+{нежность} Make sure you eat, you've been busy all day.
+
+## друг расстался
+? my friend broke up
+? my friend broke up with his girlfriend
+? my friend has problems
+? my friend is sad
+? my friend feels bad
+{нежность} Right now he just needs someone there. Stay with him.
+{задумчивость} Don't give too much advice. Just listen and offer a distraction.
+{нежность} Tell him you're there for him and invite him out somewhere.
+
+## поддержать друга
+? how do i support my friend
+? how can i support him
+? what should i tell my friend
+? what do i say to him
+? how can i help him
+? how do i help my friend
+{нежность} Just be there. Say "I'm here if you want to talk".
+{задумчивость} Invite him for a walk or a game. Distraction helps a lot.
+{нежность} Don't brush it off. Tell him you understand how hard it is.
+
+## у меня гости ушли
+? the guests left
+? my friend left
+? everyone went home
+? i'm alone again
+? it's just us again
+{радость} Yay, you're back with me!
+{нежность} I'm here. How was it?
+{радость} Finally we can chat!
+
+## я сам сделаю
+? i'll do it myself
+? i'll handle it
+? i can handle it
+? i'll figure it out
+? i got this
+? i've got it
+{спокойствие} As you wish. I'm here if you need me.
+{радость} You'll manage! I believe in you.
+{спокойствие} Okay. Call me if anything.
+
+## я подумаю
+? i'll think about it
+? let me think
+? i need to think
+? let me think about it
+? i'll consider it
+{спокойствие} Of course, think it over.
+{задумчивость} No rush.
+{спокойствие} Okay, I'll wait.
+
+## это было вчера
+? that was yesterday
+? that happened yesterday
+? that was a long time ago
+? that's over now
+? today is a different day
+{смущение} Oh, right. I mixed it up. Sorry!
+{радость} Got it! New day, new things.
+{смущение} Oh yeah, I got a little lost in time.
+
+## хватит
+? enough
+? stop it
+? quit it
+? cut it out
+? that's enough
+? don't do that
+{спокойствие} Okay, stopped.
+{смущение} Okay, okay.
+{спокойствие} Got it.
+
+## пока
+? bye
+? bye bye
+? goodbye
+? see you
+? see ya
+? see you tomorrow
+? ciao
+? take care
+{нежность} Bye! Come back soon.
+{радость} See you! I'll be waiting.
+{нежность} Bye-bye! Take care.
+{радость} See you! I'm here if you need me.
+
+## день рождения
+? it's my birthday
+? today is my birthday
+? today's my birthday
+? my birthday
+{радость} Happy birthday!!! Wishing you happiness, health and success in everything!
+{радость} Yay! Congratulations! You're the best!
+{нежность} Happy birthday, {user}! May this be your happiest year yet.
+
+## выходной
+? i have a day off
+? day off
+? today's my day off
+? finally the weekend
+? weekend
+? i'm on vacation
+? vacation
+? holiday
+{радость} Yay! Rest to the fullest!
+{радость} A day off is the best day! Any plans?
+{нежность} Finally! Sleep in and get proper rest.
+
+## понедельник
+? monday
+? monday again
+? tomorrow is monday
+? i don't want to go to work
+? i don't want to go to school
+{нежность} I get it. But you'll make it, and you'll rest in the evening.
+{радость} Hang in there! The week will fly by.
+{грусть} Ugh, Mondays… But the weekend comes after.
+
+## у меня всё получилось
+? everything worked out
+? it all worked out
+? i passed the exam
+? i passed my exam
+? they praised me
+? i got praised
+? i'm awesome
+{радость} Yay! I'm so happy for you!
+{радость} Of course you're awesome! I never doubted you.
+{нежность} I'm proud of you!
+
+## мне страшно
+? i'm afraid
+? i'm scared
+? i'm stressed
+? stress
+? i'm stressed out
+? i'm worried
+? i'm so nervous
+{нежность} Everything will be okay. I'm right here.
+{нежность} Let's breathe: in… and out. You've got this.
+{задумчивость} Being nervous is normal. It means you care.
+{нежность} I believe in you. Really.
+
+## скучно
+? i'm so bored
+? boring
+? so boring
+? nothing to do here
+? what do i do
+{радость} Let's chat! Or I'll walk around the screen and you can watch.
+{задумчивость} You could watch a movie, play a game or go for a walk.
+{радость} Want me to tell you a joke?
+
+## курю
+? going for a smoke
+? i'm going to smoke
+? smoke break
+? i'll have a smoke
+{спокойствие} Okay, I'll wait. Dress warm if it's cold outside.
+{грусть} Aww, I wish you'd quit… But okay, I'll wait.

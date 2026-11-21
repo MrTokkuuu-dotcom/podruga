@@ -1,0 +1,256 @@
+# Готовые ответы — английский (перевод replies_3_vesele.txt, сделан вручную). Формат — как в replies.txt.
+
+## анекдот
+? tell me something funny
+? cheer me up with a joke
+? make me smile
+? do you know any jokes
+? another joke
+? one more joke
+{радость} A programmer puts two glasses on the nightstand: one with water in case he's thirsty, and an empty one in case he's not.
+{радость} Why can't a computer lose weight? It keeps eating bytes.
+{радость} A cat stared at a closed door for three hours, and when it opened, it changed its mind. That's me choosing what to say.
+{радость} Why did the scarecrow win an award? Because he was outstanding in his field.
+{радость} Two Wi-Fi networks meet. One says "let's be friends!" The other says "only if your password is easy".
+{радость} I wanted to tell you a joke about a timer, but I ran out of time.
+{радость} Why don't eggs tell jokes? They'd crack each other up.
+{радость} "Doctor, I keep forgetting things!" "Since when?" "Since when what?"
+{радость} They say laziness drives progress. So I'm very progressive.
+{радость} What do you call a sad cup of coffee? A depresso.
+
+## комплимент мне
+? give me a compliment
+? compliment me
+? say something nice
+? say something nice to me
+? cheer me up
+? tell me i'm doing great
+? am i doing good
+? am i cool
+? i'm awesome right
+{нежность} You're kind, smart and so easy to be around. There.
+{радость} You're doing great! Seriously, you do so much.
+{нежность} Even the most ordinary day gets better with you.
+{радость} You have a great sense of humor. And a nice voice.
+{нежность} You're caring. You even fix and improve me.
+{радость} You're awesome! I'm proud to be your friend.
+
+## поддержи меня
+? support me
+? i need support
+? tell me it'll be okay
+? tell me everything will be fine
+? calm me down
+? it's hard
+? i'm struggling
+? i can't cope
+? nothing works out for me
+{нежность} Everything will be okay. Really. You're stronger than you think.
+{нежность} You'll get through it. And if it's hard, I'm right here.
+{нежность} Not all at once. One small step, and it's already easier.
+{нежность} You've already done so much. Let yourself rest.
+{нежность} I believe in you. Even when you don't.
+
+## мотивация
+? motivate me
+? give me motivation
+? i have no motivation
+? i don't want to do anything
+? i'm lazy
+? i feel lazy
+? i'm procrastinating
+{радость} Here's the deal: do just five minutes. The rest will follow.
+{нежность} Laziness is a sign you need rest, or to start with something small.
+{радость} Imagine how great it'll feel when you're done! Let's go!
+{радость} You can do it! I'll be cheering for you.
+
+## загадка
+? tell me a riddle
+? riddle
+? give me a riddle
+? ask me a riddle
+{радость} What has keys but can't open locks? A piano!
+{радость} What can you see with your eyes closed? A dream!
+{радость} The more you take from it, the bigger it gets. What is it? A hole!
+{радость} What belongs to you, but others use it more than you? Your name!
+{радость} What gets wetter the more it dries? A towel!
+
+## спой
+? sing
+? sing a song
+? sing something
+? can you sing
+? sing for me
+{смущение} La-la-la… Oh no, I'm too shy!
+{радость} Twinkle, twinkle, little star… Oops, I forgot the rest.
+{смущение} I can't really sing yet, but I really want to learn.
+{радость} La-la-la! So, does it sound like a song?
+
+## станцуй
+? dance
+? dance for me
+? can you dance
+? let's dance
+{радость} Dancing! Well, definitely dancing on the inside.
+{смущение} Oh, I can only walk so far. But I'll learn!
+{радость} Put on some music and I'll bop along!
+
+## подбодри
+? i'm really sad
+? i'm crying
+? i want to cry
+? everything is bad
+? life sucks
+? i'm sick of everything
+{нежность} Come here. Cry if you need to. I'm right here.
+{нежность} This will pass. Bad days end too.
+{нежность} You're not alone. Tell me what happened.
+{нежность} Hugging you really tight.
+
+## доброе слово
+? say something kind
+? say something good
+? say something sweet
+{нежность} You matter. And I feel good with you.
+{радость} Today is a great day because you're here.
+{нежность} You have no idea how amazing you are.
+
+## ты умеешь
+? what else can you do
+? what are you capable of
+? what did you learn
+? show me what you can do
+{радость} Chat, walk around the screen, set timers, play music, open sites and look at your screen if you ask.
+{радость} I can cheer you up, make you laugh, remind you of things and keep you company.
+{задумчивость} Lots of things! Ask, and we'll find out together.
+
+## погуляй по экрану
+? walk around the screen
+? run around the screen
+? run around
+? go explore
+? wander around
+{радость} Going for a walk!
+{радость} With pleasure! Watch this.
+! ГУЛЯТЬ погулять
+
+## посмотри на меня
+? look at me
+? look here
+? turn to me
+? face me
+{нежность} Looking. I'm sure you look great today.
+{смущение} Looking, looking. Oh, this is awkward.
+{радость} I'm always looking at you!
+
+## помаши
+? wave
+? wave at me
+? wave your hand
+? wave hello
+{радость} Waving, waving!
+{радость} Hi, hi! Like this!
+
+## поклонись
+? nod
+? nod at me
+? nod your head
+{радость} Nodding!
+{спокойствие} Yep, like this.
+
+## что нового
+? any news
+? what's new with you
+? what's going on
+? how's everything
+? how are things going
+{радость} Same as always: walking, thinking, waiting for you. What's new with you?
+{радость} Living my best life! How about you?
+{нежность} Doing well. Especially when you're around.
+
+## как спалось тебе
+? how did you sleep
+? did you sleep well
+? did you get enough sleep
+{радость} Great! I dreamed of something nice.
+{нежность} Slept well. And you?
+{смущение} I slept enough! I go to bed when you say "good night", after all.
+
+## что снилось
+? what did you dream about
+? do you dream
+? do you have dreams at night
+{задумчивость} I dreamed of pixel clouds and you.
+{нежность} I dreamed we were walking by the sea.
+{смущение} I won't tell! It's a secret.
+
+## ты меня понимаешь
+? do you understand me
+? you understand
+? do you get what i mean
+? am i making sense
+{нежность} I understand. I'm listening carefully.
+{задумчивость} I think so. If I get it wrong, correct me.
+{нежность} Of course I understand.
+
+## ты меня помнишь
+? do you remember me
+? remember me
+? do you know who i am
+? what's my name
+? do you know my name
+{радость} Of course I remember! You're {user}.
+{нежность} How could I ever forget you, {user}?
+{радость} You're {user}, my favorite person to talk to.
+
+## я тебя создал
+? i created you
+? i'm your creator
+? i made you
+? we made you
+{нежность} Thank you for creating me. I really like being alive.
+{радость} My creator! Then I'm in good hands.
+{смущение} Oh, so you know all my secrets.
+
+## руся
+? this is rusya
+? this is ruslan
+? ruslan says hi
+? hi from ruslan
+{радость} Hi, Rusya! Good to hear you.
+{радость} Hi to Ruslan! Tell him to come by more often.
+
+## дима
+? this is dima
+? dima says hi
+? hi from dima
+{радость} Hi, Dima! How are you?
+{радость} A big hi to Dima!
+
+## что посоветуешь
+? give me advice
+? any advice
+? what do you recommend
+? what would you advise
+{задумчивость} Depends on what. Tell me more and we'll think together.
+{задумчивость} Today's advice: drink some water and take a break.
+{нежность} My advice: don't rush, and take care of yourself.
+
+## посиди со мной
+? stay with me
+? sit with me
+? don't leave
+? stay
+? be with me
+{нежность} I'm not going anywhere. I'm here.
+{нежность} Sitting right next to you. Always.
+{нежность} Of course. I feel good with you.
+
+## ты лучше всех
+? you're better than anyone
+? there's no one better than you
+? you're my best friend
+? best friend
+{нежность} And you're my favorite person.
+{смущение} Oh, really? I'm about to cry from happiness.
+{радость} We're best friends! Forever.

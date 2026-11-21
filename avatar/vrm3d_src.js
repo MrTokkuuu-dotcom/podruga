@@ -121,12 +121,14 @@ const POSES = {
 const IDLE = ['rest', 'rest', 'rest', 'clasp', 'behind', 'hip', 'look', 'sway', 'think', 'foldArms', 'foldArms'];
 // характер в движениях (у каждой девочки свой, приходит из avatars.json): любимые позы, как часто их меняет,
 // скорость шага, размах покачивания, наклон головы, как подпрыгивает от радости
-const PERSONA = { idle: IDLE, pace: 1, speed: 1, sway: 1, tilt: 0, bounce: 1 };
+const PERSONA = { idle: IDLE, pace: 1, speed: 1, sway: 1, tilt: 0, bounce: 1, arms: 1, yes: 'clip', no: 'clip' };
 function setPersona(m) {
   m = m || {};
   const ok = (m.idle || []).filter(n => POSES[n] || ['rest', 'look', 'sway', 'foldArms'].includes(n));
   PERSONA.idle = ok.length ? ok : IDLE;
   for (const k of ['pace', 'speed', 'sway', 'tilt', 'bounce']) PERSONA[k] = typeof m[k] === 'number' ? m[k] : (k === 'tilt' ? 0 : 1);
+  PERSONA.yes = typeof m.yes === 'string' ? m.yes : 'clip';
+  PERSONA.no = typeof m.no === 'string' ? m.no : 'clip';
 }
 // жесты из библиотек: только верх тела (руки, корпус, голова), ноги остаются в её ровной стойке
 const GESTURES = { foldArms: 1, yes: 1, no: 1 };
@@ -518,7 +520,7 @@ function pose(t) {
   let wantArms = !asleep ? (POSES[S.idle] || S.idle === 'foldArms' ? 1 : 0) : 1;
   const walkW = A.walk ? A.walk.w : 0;
   if (walkW > 0.01 && !S.dragging) {
-    const c = Math.cos(sm.walkPh || 0), a = 0.25 * walkW;
+    const c = Math.cos(sm.walkPh || 0), a = 0.25 * walkW * PERSONA.arms;      // размах рук — у каждой свой
     P.lUpX = lerp(P.lUpX, a * c, walkW); P.rUpX = lerp(P.rUpX, -a * c, walkW);
     P.lLoY = lerp(P.lLoY, -(0.22 + 0.3 * Math.max(0, -c)), walkW); P.rLoY = lerp(P.rLoY, 0.22 + 0.3 * Math.max(0, c), walkW);
     P.lUpZ = lerp(P.lUpZ, -1.3, walkW); P.rUpZ = lerp(P.rUpZ, 1.3, walkW);
@@ -563,6 +565,15 @@ function pose(t) {
     if (S.touch === 'face') P = mix(P, POSES.poke, w);
     if (S.touch === 'body') P = mix(P, POSES.shy, w);
     if (S.touch !== 'dropped') wantArms = 1;
+  }
+
+  // 3б) мягкие «да»/«нет» без клипа: кивок, кивок с ладонями у сердца, покачать головой
+  if (S.soft && now - S.soft.start < S.soft.dur && !S.sitting) {
+    const st = (now - S.soft.start) / 1000, fade = Math.min(1, st * 5) * Math.min(1, (S.soft.dur - (now - S.soft.start)) / 300);
+    if (S.soft.kind === 'nod' || S.soft.kind === 'nodHeart') P.headX += Math.max(0, Math.sin(st * 7)) * 0.16 * fade * Math.max(0, 1 - st / 1.6);
+    if (S.soft.kind === 'nodHeart') { P = mix(P, POSES.heart, 0.85 * fade); wantArms = 1; }
+    if (S.soft.kind === 'shake') P.headY += Math.sin(st * 9) * 0.24 * fade * Math.max(0, 1 - st / 1.8);
+    if (S.soft.kind === 'shakeSoft') { P.headY += Math.sin(st * 6.5) * 0.13 * fade * Math.max(0, 1 - st / 1.8); P.headZ += 0.06 * fade; }
   }
 
   // 4) разовые движения из программы и при засыпании
@@ -1087,7 +1098,11 @@ window.VRM3D = {
     else if (kind === 'cancel') { S.seq = ''; S.seqAct = ''; S.sleepAfterLie = false; S.posture = 'stand'; }
   },
   pos() { return { x: S.x, y: S.y, posture: S.posture, seq: S.seq, sitK: sm.sitK, lieK: sm.lieK, v: S.v, goal: S.goal, support: S.support, jump: !!S.jump, edgeK: sm.edgeK }; },
-  gesture(name, sec) { startGesture(name, sec); },
+  gesture(name, sec) {                             // «да»/«нет»: у каждой девочки по-своему
+    const how = (name === 'yes' || name === 'no') ? PERSONA[name] : 'clip';
+    if (how === 'clip' || !how) startGesture(name, sec);
+    else S.soft = { kind: how, start: performance.now(), dur: (sec || 2) * 1000 };
+  },
   idle(name, sec) { if (POSES[name] || name === 'look' || name === 'sway' || name === 'rest' || name === 'foldArms') { S.idle = name; S.idleUntil = (S.t || 0) + (sec || 4); } },
   full(on) { S.full = !!on; },
   persona(m) { setPersona(m); },

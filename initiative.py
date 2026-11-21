@@ -139,8 +139,17 @@ class Initiative:
                             f"{ask[1]}: «{ask[0]}» (сказанное вчера «завтра» — это уже сегодня). "
                             f"Одним коротким вопросом, своими словами.")
             else:
+                topic = ""
+                try:                                      # у каждой девочки свои любимые темы
+                    import avatars
+                    import random
+                    own = avatars.persona(avatars.current_girl(c.cfg)).get("starters") or []
+                    if own and random.random() < 0.7:
+                        topic = " Например: " + random.choice(own)
+                except Exception:
+                    pass
                 self._start("Вы давно молчите. Сама начни коротенький разговор: спроси что-то простое "
-                            "про его дела или скажи что-то тёплое. Не повторяй то, что уже говорила.")
+                            "про его дела или скажи что-то тёплое. Не повторяй то, что уже говорила." + topic)
 
     def _start(self, instruction: str) -> None:
         self.last_initiative = time.monotonic()

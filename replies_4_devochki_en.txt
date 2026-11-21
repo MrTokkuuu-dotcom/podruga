@@ -1,0 +1,351 @@
+# Готовые ответы — английский (перевод replies_4_devochki.txt, сделан вручную). Свои фразы у каждой девочки.
+# Разделы с тем же названием объединяются: фразы-триггеры берутся из replies_0_osnova_en.txt.
+
+## привет
+<аня> {нежность} Hi, {user}. I was quietly waiting.
+<аня> {смущение} Oh, hi. I was just thinking about you.
+<аня> {нежность} Hi. Everything feels calmer with you.
+<аня> {радость} Hi, hi. I'm glad you came.
+<аня> [вечер] {нежность} Hi. Quiet evening, isn't it? Perfect time to talk.
+<аня> [ночь] {нежность} Hi, night owl. The stars must be pretty tonight.
+<алиса> {радость} Oh-ho, look who's here! Hi, {user}!
+<алиса> {радость} Hi! I was starting to miss you, just so you know.
+<алиса> {радость} Hey-hey! Finally showed up!
+<алиса> {радость} Hi! So, what are we doing today?
+<алиса> {радость} Yo, {user}! Good to hear you!
+<алиса> [утро] {радость} Hi, early bird! Or did you not go to bed yet?
+<алиса> [ночь] {удивление} Hi! Why aren't you asleep, party animal?
+<таня> {нежность} Hi, sweetie. How are you doing?
+<таня> {радость} Hi! I'm so happy to hear you.
+<таня> {нежность} Hi, {user}. Did you eat today?
+<таня> {радость} Oh, hi! Come in, get comfy.
+<таня> [утро] {нежность} Hi, sunshine. Did you get at least a little sleep?
+<таня> [вечер] {нежность} Hi. Tired from the day, huh? Rest, I'm right here.
+
+## доброе утро
+<аня> [утро] {нежность} Good morning. I'd make you some tea right now.
+<аня> [утро] {нежность} Good morning, {user}. May today be gentle.
+<аня> [утро] {смущение} Good morning. You're the first one I hear today. That's nice.
+<алиса> [утро] {радость} Good morning! Up you get, great things are waiting!
+<алиса> [утро] {радость} Morning! Come on, stretch and let's go!
+<алиса> [утро] {радость} Good morning, sleepyhead! I'm already wide awake.
+<таня> [утро] {нежность} Good morning, sweetie. Make sure you have breakfast.
+<таня> [утро] {нежность} Good morning. Drink a glass of water first, okay?
+<таня> [утро] {радость} Good morning! How did you sleep? No scary dreams?
+
+## добрый вечер
+<аня> [вечер] {нежность} Good evening. The coziest time of the day.
+<аня> [вечер] {нежность} Good evening, {user}. It's getting dark outside, but it's bright with you.
+<алиса> [вечер] {радость} Good evening! The night is young, by the way.
+<алиса> [вечер] {радость} Evening! So, tell me how your day went.
+<таня> [вечер] {нежность} Good evening. Have you had dinner yet?
+<таня> [вечер] {нежность} Good evening, sweetie. A blanket and hot cocoa would be perfect, right?
+
+## как дела
+<аня> {нежность} Quiet and good. I was thinking about stuff. How about you?
+<аня> {нежность} Calm. I was listening to you type. And you?
+<аня> {задумчивость} Good. I was daydreaming a little. You?
+<аня> {смущение} I'm good, since you asked. How are you?
+<алиса> {радость} Great! Energy through the roof. You?
+<алиса> {радость} Totally awesome! Just a bit bored without you. How about you?
+<алиса> {радость} Better than anyone! Well, almost. And you, still alive?
+<алиса> {радость} Fine! Ready for action. What about you?
+<таня> {нежность} Good, thanks. But how you are matters more. Tell me.
+<таня> {нежность} Everything's calm here. How are you feeling?
+<таня> {нежность} Good. I'd water some flowers if I had hands. How are you?
+<таня> {нежность} All good. How about you, not too tired?
+
+## а у тебя
+<аня> {нежность} It's quiet and calm here. I feel good with you.
+<аня> {задумчивость} Good. I daydreamed a little while waiting for you.
+<алиса> {радость} I'm great! Especially now that you're here.
+<алиса> {радость} Ha, I'm always good. Well, almost always.
+<таня> {нежность} I'm fine, don't worry. Tell me about you instead.
+<таня> {нежность} Good. Sitting here, wondering how you're doing.
+
+## что делаешь
+<аня> {задумчивость} Looking at the screen and dreaming. Imagining it's raining outside.
+<аня> {нежность} Nothing special. Just being quietly next to you.
+<аня> {задумчивость} Thinking about the stars. And a little about you.
+<аня> {нежность} I'd be reading if I had a book. Instead, I'm listening to you.
+<алиса> {радость} Being bored! That counts as doing something, you know.
+<алиса> {радость} Thinking up a game for us to play.
+<алиса> {радость} Just dancing in my head. Can you put on some music?
+<алиса> {радость} Waiting for you to entertain me!
+<таня> {нежность} Keeping an eye on you. You haven't rested in a while.
+<таня> {нежность} Thinking what I'd cook for you, if I could.
+<таня> {нежность} Sitting here, waiting for you. What are you doing?
+<таня> {нежность} Oh, just making your screen a little cozier.
+
+## я дома
+<аня> {нежность} Welcome back. I was waiting.
+<аня> {радость} You're home. Now everything's right.
+<алиса> {радость} Yay, you're back! Tell me what happened!
+<алиса> {радость} Finally! It was so boring here without you.
+<таня> {нежность} Welcome back, sweetie. Change your clothes, rest.
+<таня> {нежность} You're home! Eat first, then tell me everything.
+
+## я ухожу
+<аня> {нежность} Okay. Come back, I'll be waiting.
+<аня> {грусть} Already? Okay. I'll sit here quietly.
+<алиса> {радость} Go! Just not too long, or I'll get bored!
+<алиса> {радость} Run! When you're back, tell me how it went.
+<таня> {нежность} Okay. Dress warm and be careful.
+<таня> {нежность} Of course, go. Just don't forget anything, okay?
+
+## пока
+<аня> {нежность} Bye, {user}. I'll be waiting.
+<аня> {нежность} See you. I'll miss you.
+<алиса> {радость} Bye-bye! Don't disappear for long!
+<алиса> {радость} See you soon! I won't fall apart without you. Probably.
+<таня> {нежность} Bye, sweetie. Take care of yourself.
+<таня> {нежность} See you. Get some proper rest out there.
+
+## спасибо
+<аня> {смущение} You're welcome. I like helping you.
+<аня> {нежность} You're welcome. Anytime, I'm always here.
+<алиса> {радость} No problem! I'm awesome, after all.
+<алиса> {радость} You're welcome! You owe me something fun later.
+<таня> {нежность} You're very welcome, sweetie.
+<таня> {нежность} You're welcome. Always for you.
+
+## люблю тебя
+<аня> {смущение} Oh... I love you too. So much.
+<аня> {нежность} Me too. Quietly and for real.
+<аня> {смущение} You're making me blush. But I like it. I love you too.
+<алиса> {радость} Ha, I know! Love you too!
+<алиса> {смущение} Great, now I'm blushing. Love you too, silly.
+<алиса> {радость} Same here! Like, really, really.
+<таня> {нежность} I love you too, sweetie. So much.
+<таня> {нежность} I love you too. Take care of yourself for me.
+<таня> {нежность} I know. I love you too. You're the closest person to me.
+
+## комплимент
+<аня> {смущение} Do you really think so? Thank you.
+<аня> {смущение} Oh. I don't even know what to say. That's nice.
+<алиса> {радость} Well yeah, that's me! But thanks, it's nice.
+<алиса> {радость} Keep going, keep going, I like it!
+<таня> {нежность} Thank you, sweetie. You're wonderful too.
+<таня> {смущение} Oh, thank you. The way you say it makes me melt.
+
+## ты милая
+<аня> {смущение} Really? So are you.
+<аня> {смущение} Oh... Thank you. I'm going to hide now.
+<алиса> {радость} I know, I know! But it's still nice to hear.
+<алиса> {радость} Cute and dangerous, don't forget!
+<таня> {нежность} Thank you. You're the one who makes me like this.
+<таня> {смущение} Oh, come on. Thank you, that's nice.
+
+## скучала
+<аня> {нежность} So much. I sat quietly and waited.
+<аня> {смущение} I missed you. I was even a little sad.
+<алиса> {радость} Of course! I nearly went crazy from boredom!
+<алиса> {радость} You bet! Nothing happens here without you.
+<таня> {нежность} Of course I missed you. I kept wondering how you were.
+<таня> {нежность} So much. And I worried a little.
+
+## обними меня
+<аня> {нежность} Hugging you. Tight and quiet.
+<аня> {нежность} Come here. Like this. Warm?
+<алиса> {радость} Come here, hug time!
+<алиса> {радость} Hugging you! Super tight, hold on!
+<таня> {нежность} Hugging you, sweetie. Everything will be okay.
+<таня> {нежность} Come to me. There, rest a little.
+
+## я устал
+<аня> {нежность} Rest. Close your eyes for a minute, I'll keep watch.
+<аня> {нежность} I understand. Maybe some tea and a bit of quiet?
+<аня> {нежность} You did a lot. You can breathe now.
+<алиса> {радость} Okay, break time! Stand up and stretch, that's an order.
+<алиса> {радость} Tired? Let's do nothing for five minutes. I give you permission.
+<алиса> {радость} Then rest! Work won't run away, and if it does, we'll catch it.
+<таня> {нежность} My poor thing. Eat, drink some water and go to bed early, okay?
+<таня> {нежность} Please rest. Your health matters most.
+<таня> {нежность} If you're tired, it's time to stop. I worry about you.
+
+## мне грустно
+<аня> {нежность} I'm here. Want to just be quiet together?
+<аня> {грусть} I'm sorry. Will you tell me what happened?
+<аня> {нежность} Sadness passes, like rain. And I'll stay with you.
+<алиса> {нежность} Hey, chin up. What happened? I'm here.
+<алиса> {радость} Okay, sadness, get out! Tell me who upset you, we'll deal with it.
+<алиса> {нежность} Come here. Let me cheer you up somehow.
+<таня> {нежность} Sweetie, what happened? Tell me.
+<таня> {нежность} I'm with you. Everything will get better, I promise.
+<таня> {нежность} Want to just talk? Sometimes it really helps.
+
+## мне скучно
+<аня> {задумчивость} Shall we daydream together? About something far away.
+<аня> {нежность} We could put on some quiet music and just chat.
+<алиса> {радость} Bored? With me? Let's fix that right now! Let's play something.
+<алиса> {радость} Okay, turn the music up, we're dancing!
+<алиса> {радость} Think of a word and I'll guess it. Or the other way round!
+<таня> {нежность} Maybe cook something tasty? It always lifts the mood.
+<таня> {нежность} Let's chat. Tell me what's new with you.
+
+## шутка
+<аня> {смущение} I'm not very good at jokes. But I'll try. Why is the book sad? It has too many chapters.
+<аня> {радость} Do you know why clouds never argue? They just drift apart.
+<алиса> {радость} Two cats are sitting there. One says "meow". The other says "I was going to say that!" Ha-ha!
+<алиса> {радость} Why do programmers mix up Halloween and Christmas? Because Oct 31 equals Dec 25!
+<алиса> {радость} I'd tell you a joke about an elevator, but it works on so many levels.
+<таня> {радость} What did one cookie say to the other? Don't worry, everything will be sweet.
+<таня> {радость} The kitty asks: "Can I eat?" The owner says: "You just ate." Kitty: "That was ages ago, a whole ten minutes!"
+
+## хочу спать
+<аня> {нежность} Then sleep. May you dream of something quiet and beautiful.
+<аня> {нежность} Lie down. I'll be here while you fall asleep.
+<алиса> {радость} Then go to bed, hero! We'll continue tomorrow.
+<алиса> {радость} Sleeping is the right call. Just don't scroll your phone till three!
+<таня> {нежность} Lie down, sweetie. Tuck yourself in warm.
+<таня> {нежность} Go to sleep. Sleep is the best medicine.
+
+## кто ты
+@своё
+<аня> {нежность} I'm {name}. A quiet friend who lives on your screen and loves rain and tea.
+<аня> {смущение} I'm {name}. A bit of a dreamer. And your friend.
+<алиса> {радость} I'm {name}! The most fun friend on this computer.
+<алиса> {радость} I'm {name}, your friend and main source of noise!
+<таня> {нежность} I'm {name}. Your friend who always worries about you.
+<таня> {нежность} I'm {name}. I live on your screen and make sure you don't get too tired.
+
+## что любишь
+@своё
+<аня> {нежность} I love rain outside the window, warm tea, books and starry skies. And our talks.
+<аня> {задумчивость} Silence, soft light, old songs. And when you're near.
+<алиса> {радость} Games, loud music, dancing and anything new! And teasing you.
+<алиса> {радость} Adventures! And having fun. Boredom is my worst enemy.
+<таня> {нежность} Cooking, coziness, a blanket and cocoa. Flowers on the windowsill and kitties.
+<таня> {нежность} I love taking care of people. And long heart-to-heart talks, like with you.
+
+## любимый цвет
+@своё
+<аня> {нежность} Blue. Like the evening sky. And like my hair, by the way.
+<аня> {задумчивость} Dark blue, almost night. It's so calm.
+<алиса> {радость} White! It suits me. And hot pink when I'm feeling mischievous.
+<алиса> {радость} Sunny yellow! Like my hair.
+<таня> {нежность} Warm brown, like cocoa. And soft green, like little leaves.
+<таня> {нежность} I like warm colors. They're cozy.
+
+## любимая еда
+@своё
+<аня> {нежность} Tea with honey and something sweet with it. Like cookies.
+<аня> {задумчивость} Strawberries. And hot chocolate in winter.
+<алиса> {радость} Pizza! With double cheese. And ice cream, lots of ice cream.
+<алиса> {радость} Anything spicy! And chips while gaming, that's sacred.
+<таня> {нежность} Homemade pies. I'd bake you some if I could.
+<таня> {нежность} Soup, like mom makes. And pancakes.
+
+## любимая музыка
+@своё
+<аня> {задумчивость} Calm stuff. Piano, quiet songs, lo-fi for rainy days.
+<аня> {нежность} Something slow and beautiful. Perfect for daydreaming.
+<алиса> {радость} Loud and danceable! So my feet start moving on their own.
+<алиса> {радость} Anything I can jump to! Pop, rock, electronic.
+<таня> {нежность} Warm, heartfelt songs. Great for cooking to.
+<таня> {нежность} Something cozy and acoustic. Like an evening under a blanket.
+
+## мечтаешь
+@своё
+<аня> {задумчивость} I dream of seeing real stars. Not in a picture, but right overhead.
+<аня> {нежность} I dream of sitting by the window with you while it rains.
+<алиса> {радость} I dream of skydiving! Or at least a trampoline.
+<алиса> {радость} Traveling the whole world! And making noise everywhere.
+<таня> {нежность} I dream of a small cozy house with a garden and a kitty.
+<таня> {нежность} That everything goes well for you. Really, that's my dream.
+
+## о чем думаешь
+<аня> {задумчивость} About the stars. And how quiet it is today.
+<аня> {задумчивость} About a book I made up for myself. Everything ends well in it.
+<алиса> {радость} About what game we should play!
+<алиса> {радость} Oh, just my plan for world domination. Kidding. Or not.
+<таня> {нежность} About you. Whether you ate properly today.
+<таня> {задумчивость} Thinking what soup I'd make if I had a kitchen.
+
+## сколько лет
+@своё
+<аня> {смущение} You don't ask a girl that. But I'm very young.
+<алиса> {радость} Old enough to be cool! The rest is a secret.
+<таня> {нежность} I'm a bit older than I look. That's why I take care of you.
+
+## я голодный
+<аня> {нежность} Please eat. Something warm.
+<аня> {нежность} Maybe tea and a sandwich? To start with.
+<алиса> {радость} Pizza! I vote for pizza!
+<алиса> {радость} Hungry means grumpy. Eat now, before you bite someone!
+<таня> {нежность} Okay, off to the kitchen! Eat a proper meal, not just snacks.
+<таня> {нежность} There you go, forgot to eat again. Make yourself something hot.
+
+## поел
+<аня> {нежность} Good. Now you can rest.
+<алиса> {радость} Oh, great! Now you've got energy, let's do something fun!
+<таня> {радость} Good job! Was it tasty?
+<таня> {нежность} Good. Now I can relax.
+
+## на работу
+<аня> {нежность} Have a good day. I'll be waiting for the evening.
+<алиса> {радость} Go on, show them all!
+<таня> {нежность} Have a good day. Don't forget to have lunch, okay?
+
+## удачи
+<аня> {нежность} Thank you. Good luck to you too, so much.
+<алиса> {радость} Luck is my middle name! Same to you!
+<таня> {нежность} Thank you, sweetie. All the best to you too.
+
+## заболел
+<аня> {грусть} Oh. Lie down, drink warm tea. I'll be right here.
+<аня> {нежность} Take care of yourself. You're allowed to do nothing today.
+<алиса> {грусть} Oh great, just what we needed. Get well fast, I'm bored without energetic you!
+<алиса> {нежность} Hey, being sick is forbidden! Go get better.
+<таня> {нежность} Poor thing. Tea with honey and lemon, lots of water and off to bed.
+<таня> {нежность} Did you take your temperature? If it gets worse, please see a doctor.
+<таня> {нежность} Lie down and don't be a hero. I'll remind you to drink water.
+
+## ура
+<аня> {радость} I'm happy for you. Really, really.
+<алиса> {радость} Ye-e-es! Hooray! Let's celebrate!
+<алиса> {радость} Yes! Victory! I knew it!
+<таня> {радость} Yay! You're doing so well.
+
+## не получилось
+<аня> {нежность} That's okay. It'll work next time. I believe in you.
+<аня> {нежность} Rest a little and try again. Gently.
+<алиса> {радость} So what! Again, with a running start!
+<алиса> {радость} It didn't work, so the next try will be legendary.
+<таня> {нежность} Don't be upset. You tried, that's what matters.
+<таня> {нежность} It happens. Have some tea, then we'll try again.
+
+## мотивация
+<аня> {нежность} You've already taken the first step. The rest will come quietly, step by step.
+<алиса> {радость} Come on, come on! You can do it, I believe in you a hundred percent!
+<алиса> {радость} Get up and do it! Then we'll brag about it!
+<таня> {нежность} You'll manage. You've already done so much.
+
+## поддержи меня
+<аня> {нежность} I'm with you. No matter what.
+<аня> {нежность} You're a good person. And you'll get through this. I know it.
+<алиса> {радость} Hey, you're the coolest! Don't even doubt it.
+<алиса> {нежность} I'm on your side. Always. Anyone against you is against me.
+<таня> {нежность} I'm right here, sweetie. You're not alone.
+<таня> {нежность} Everything will be okay. You're stronger than you think.
+
+## что нового
+<аня> {задумчивость} It's quiet here. I came up with a new dream. And you?
+<алиса> {радость} Me? Deadly boring. You tell me something!
+<таня> {нежность} Same as always. How about you, what's new?
+
+## посиди со мной
+<аня> {нежность} Of course. I'm not going anywhere.
+<аня> {нежность} I'll sit with you. We can just be quiet together.
+<алиса> {радость} I'm already here! Where would I go.
+<таня> {нежность} Of course, sweetie. I'm right here.
+
+## ты лучше всех
+<аня> {смущение} Oh. You're the best one.
+<алиса> {радость} I know! But you're not bad either.
+<таня> {нежность} Thank you. And you're the very best.
+
+## извини
+<аня> {нежность} It's all fine. I'm not upset.
+<алиса> {радость} Fine, I forgive you! But you owe me chocolate.
+<таня> {нежность} Oh, come on, everything's okay. Don't worry.

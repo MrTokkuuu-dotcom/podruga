@@ -1,6 +1,7 @@
 """Голос. По умолчанию — Silero (бесплатно, на Mac), по желанию — облако Gemini, запасной — Piper.
 Пока она произносит одно предложение, следующее уже озвучивается."""
 import queue
+import re
 import threading
 
 import numpy as np
@@ -39,14 +40,33 @@ class VoiceRouter:
         self.chatterbox = None
         self.lang = "ru"
         self.piper_en = None
+        self.korean = None
+        self._korean_failed = False
         self._notify = print
         self.apply()
 
-    # --- английский голос для практики языка ---
+    # --- английский голос (и для практики языка, и для английских фраз) ---
     def set_lang(self, lang: str):
         self.lang = lang
-        if lang == "en" and self.piper_en is None:
+        if lang == "en":
+            self.set_lang_voice_en()
+
+    def set_lang_voice_en(self):
+        if self.piper_en is None and not getattr(self, "_en_loading", False):
+            self._en_loading = True
+            self._en_ready = threading.Event()
             threading.Thread(target=self._load_en, daemon=True).start()
+
+    def prepare(self, lang: str):
+        """Услышали фразу на этом языке — готовим голос заранее, пока думает Google (первая фраза без задержки)."""
+        if lang == "en":
+            self.set_lang_voice_en()
+        elif lang == "ko" and self.korean is None and not self._korean_failed:
+            def warm():
+                ko = self._korean()
+                if ko is not None:
+                    ko.synth("응")                          # разогрев: первая настоящая фраза — сразу
+            threading.Thread(target=warm, daemon=True).start()
 
     def _load_en(self):
         import subprocess
@@ -63,6 +83,8 @@ class VoiceRouter:
             print("[голос] английский голос готов")
         except Exception as e:
             print(f"[голос] английский голос не загрузился: {e}")
+        finally:
+            self._en_ready.set()
 
     # окно подставляет сюда показ сообщений в переписке
     @property
@@ -115,9 +137,40 @@ class VoiceRouter:
                 self.engine = "piper"
         print(f"[голос] движок: {self.engine}")
 
+    # --- голос по языку самой фразы: русские буквы — русский, корейские — корейский, только латиница — английский.
+    # Раньше выбор шёл по «режиму», и английский голос читал русский текст по буквам.
+    @staticmethod
+    def script_of(text: str) -> str:
+        if re.search(r"[\uac00-\ud7a3\u1100-\u11ff\u3130-\u318f]", text):
+            return "ko"
+        if re.search(r"[А-Яа-яЁё]", text):
+            return "ru"
+        if re.search(r"[A-Za-z]", text):
+            return "en"
+        return "ru"
+
+    def _korean(self):
+        if self.korean is None and not self._korean_failed:
+            try:
+                from voice_korean import KoreanVoiceOut
+                self.korean = KoreanVoiceOut()
+            except Exception as e:
+                self._korean_failed = True
+                print(f"[голос] корейского голоса нет: {e}")
+        return self.korean
+
     def synth(self, text: str, emotion: str = "calm"):
-        if self.lang == "en" and self.piper_en is not None:
-            return self.piper_en.synth(text), self.piper_en.rate
+        lang = self.script_of(text)
+        if lang == "ko":
+            ko = self._korean()
+            if ko is not None:
+                return ko.synth(text), ko.rate
+        if lang == "en" and len(re.findall(r"[A-Za-z]+", text)) >= 2:
+            if self.piper_en is None:
+                self.set_lang_voice_en()                    # загружается — подождём чуть-чуть (~1 с), а не читаем русским
+                self._en_ready.wait(6 if (self.home / "models" / "en_US-amy-medium.onnx").exists() else 0)
+            if self.piper_en is not None:
+                return self.piper_en.synth(text), self.piper_en.rate
         if self.engine == "chatterbox" and getattr(self, "chatterbox", None) is not None:
             return self.chatterbox.synth(text, emotion)
         if self.engine == "silero" and self.silero is not None:

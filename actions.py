@@ -17,6 +17,12 @@ SITES = {
     "papago": "https://papago.naver.com", "папаго": "https://papago.naver.com",
     "карты": "https://map.naver.com", "погода": "https://weather.naver.com",
     "chatgpt": "https://chatgpt.com", "claude": "https://claude.ai",
+    # корейские названия
+    "유튜브": "https://www.youtube.com", "구글": "https://www.google.com", "지메일": "https://mail.google.com",
+    "네이버": "https://www.naver.com", "쿠팡": "https://www.coupang.com", "인스타그램": "https://www.instagram.com",
+    "인스타": "https://www.instagram.com", "틱톡": "https://www.tiktok.com", "넷플릭스": "https://www.netflix.com",
+    "파파고": "https://papago.naver.com", "지도": "https://map.naver.com", "날씨": "https://weather.naver.com",
+    "챗지피티": "https://chatgpt.com", "maps": "https://map.naver.com", "weather": "https://weather.naver.com",
 }
 APPS = {
     "telegram": "Telegram", "телеграм": "Telegram", "kakaotalk": "KakaoTalk", "какао": "KakaoTalk",
@@ -25,6 +31,10 @@ APPS = {
     "safari": "Safari", "сафари": "Safari", "chrome": "Google Chrome", "хром": "Google Chrome",
     "finder": "Finder", "файндер": "Finder", "калькулятор": "Calculator",
     "capcut": "CapCut", "капкат": "CapCut", "terminal": "Terminal", "терминал": "Terminal",
+    "텔레그램": "Telegram", "카카오톡": "KakaoTalk", "카톡": "KakaoTalk", "음악": "Music", "스포티파이": "Spotify",
+    "메모": "Notes", "캘린더": "Calendar", "달력": "Calendar", "사파리": "Safari", "크롬": "Google Chrome",
+    "파인더": "Finder", "계산기": "Calculator", "calculator": "Calculator", "캡컷": "CapCut", "터미널": "Terminal",
+    "디스코드": "Discord", "discord": "Discord", "스팀": "Steam", "steam": "Steam",
 }
 
 

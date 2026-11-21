@@ -92,6 +92,8 @@ class SileroVoiceOut:
                 f"{escape(text)}</prosody></speak>")
 
     def synth(self, text: str, emotion: str = "calm") -> tuple[np.ndarray, int]:
+        from translit import speakable
+        text = speakable(text)                      # латиницу русский голос пропускает — читаем по-русски
         if self.model is None:
             if self.fallback:
                 return self.fallback.synth(text), self.fallback.rate

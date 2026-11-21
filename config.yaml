@@ -26,7 +26,7 @@ voice:
   speed: 1.05
 
 microphone:
-  energy_threshold: 300    # порог громкости; подобрать: python mic_test.py
+  energy_threshold: 300    # порог громкости в шумной комнате; в тихой она сама опускает его до 90
   end_silence_ms: 900      # сколько тишины = фраза закончилась (меньше — отвечает раньше, но может перебить на паузе)
   min_speech_ms: 500       # короче — не считаем фразой (кашель, щелчок)
   speech_prob: 0.6         # фильтр голоса 0..1: выше — строже к музыке и шуму (проверка: mic_test)
@@ -91,4 +91,6 @@ backup_keep_days: 30
 
 stt:
   enabled: true            # распознавать речь прямо на Mac (Whisper), в Google — уже текст
-  model: "small"           # small (~480 МБ) — баланс; base — быстрее и хуже; medium — точнее и медленнее
+  engine: "mlx"            # mlx — Whisper large-v3-turbo на видеочипе (ru/en/ko, ~0,3 с); small — прежний
+  languages: ["ru", "en", "ko"]   # какие языки она слышит (язык фразы определяет сама)
+  model: "small"           # прежний слух (запасной, пока новый не скачался): small (~480 МБ)

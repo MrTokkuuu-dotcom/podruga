@@ -1,0 +1,483 @@
+# Готовые ответы — английский (перевод replies_5_novoe.txt, сделан вручную). Формат — как в replies.txt.
+
+## учусь
+? i'm at school
+? i'm in class
+? i'm at university
+? i'm at uni
+? i'm studying now
+? doing my lessons
+{радость} Studying is power. I'm here if you need me.
+{нежность} Good luck! Take breaks, your brain needs rest too.
+{радость} Good for you. Will you tell me something interesting you learned later?
+<аня> {нежность} Study. I'll sit quietly and won't bother you.
+<алиса> {радость} Nerd! Just kidding. Go crush those books.
+<таня> {нежность} Good job. Just don't forget to eat in between.
+
+## экзамен
+? i have an exam
+? exam tomorrow
+? i have an exam tomorrow
+? exam soon
+? i have a test
+? test tomorrow
+? i have a test tomorrow
+? finals
+? i'm taking an exam
+{нежность} You'll do great. The main thing is to get enough sleep before it.
+{радость} Fingers crossed for you! It'll all work out.
+{нежность} Nervous? That's normal. It means you care.
+<аня> {нежность} I believe in you. Quietly and very strongly.
+<алиса> {радость} Crush it! In a good way.
+<таня> {нежность} Review the main stuff, eat, and go to bed early. You'll pass.
+
+## сдал экзамен
+? i passed the test
+? i aced it
+? i aced the exam
+? i got an a
+? i got a good grade
+? i passed my finals
+{радость} Yay! I knew it! Congratulations!
+{радость} Well done! This calls for a celebration.
+<аня> {радость} I'm so happy. Really. You're so smart.
+<алиса> {радость} Ye-e-es! Top student! My pride and joy!
+<таня> {радость} See, and you were worried. Well done, sweetie.
+
+## тренировка
+? i'm at the gym
+? going to the gym
+? heading to the gym
+? going to work out
+? i'm working out
+? working out
+? doing my exercises
+? i'm training
+{радость} Whoa, athlete! Go for it, just no injuries.
+{радость} Good job! Your body will thank you.
+{нежность} Don't forget to drink water between sets.
+<аня> {смущение} You're so strong. Well, you'll be even stronger.
+<алиса> {радость} Come on, one more set! I'm counting!
+<таня> {нежность} Good job. Just don't skip the warm-up, okay?
+
+## пробежка
+? going for a run
+? i went running
+? i'm going running
+? i'm on a run
+? just finished my run
+{радость} A runner! Respect.
+{нежность} Run at your own pace. The main thing is to enjoy it.
+<алиса> {радость} Race you! Oh wait, I can't run. Then you run for both of us!
+<таня> {нежность} Good job. Make sure you drink water afterwards.
+
+## в дороге
+? i'm on my way
+? on the road
+? heading home
+? going home
+? i'm in the car
+? i'm on the subway
+? i'm on the bus
+? i'm in a taxi
+? i'm driving
+{нежность} Have a safe trip. Be careful.
+{радость} Put on something good in your headphones, and the trip will fly by.
+<аня> {нежность} Look out the window. Sometimes it's really beautiful.
+<алиса> {радость} Let's go! Beep-beep!
+<таня> {нежность} Let me know when you get there safe.
+
+## пробка
+? i'm stuck in traffic
+? stuck in traffic
+? traffic jam
+? so much traffic
+{грусть} Ugh, traffic... Patience to you.
+{радость} At least you can listen to music in peace. Or to me.
+<алиса> {радость} Honk at all of them! Kidding, don't.
+<таня> {нежность} Don't stress. You'll get there, the road isn't going anywhere.
+
+## голова болит
+? my head hurts so much
+? headache
+? i've got a headache
+{грусть} Oh. Take a little break from the screen.
+{нежность} Drink some water and air out the room. Sometimes it helps.
+{нежность} If it really hurts, maybe a pill? And lie down.
+<аня> {нежность} Close your eyes. I'll sit very, very quietly.
+<алиса> {нежность} Your poor head. No loud music today.
+<таня> {нежность} Did you drink water today? And eat? Headaches often come from that.
+
+## зуб болит
+? my tooth hurts
+? toothache
+? i have a toothache
+{грусть} Oh, that's unpleasant. Please go see a dentist.
+{нежность} Don't put it off. Teeth don't get better on their own.
+<таня> {нежность} Book a dentist appointment, sweetie. I'll keep reminding you.
+
+## не выспался
+? i barely slept
+? i didn't sleep much
+? i hardly slept
+? i only slept a few hours
+{нежность} Oh. Go to bed early tonight, deal?
+{грусть} My sleepy one. Maybe some coffee?
+<аня> {нежность} Sometimes I sleep badly too. Tonight it'll work for sure.
+<алиса> {радость} Up all night again? Confess!
+<таня> {нежность} That's not okay, sweetie. Sleep is health.
+
+## проспал
+? i overslept
+? overslept
+? i'm late
+? i'm running late
+? running late
+{удивление} Oh! Hurry, run!
+{нежность} Don't panic. Breathe. You'll make it.
+<алиса> {радость} Sleepyhead! Come on, get moving!
+<таня> {нежность} At least drink some water on the way.
+
+## я нервничаю
+? i feel anxious
+? i'm on edge
+? i'm freaking out
+{нежность} Breathe slowly. In... and out. I'm right here.
+{нежность} Will you tell me what's worrying you? It's easier together.
+{нежность} You'll get through this. Even if it doesn't feel like it right now.
+<аня> {нежность} Let's be quiet and breathe together. Gently.
+<алиса> {нежность} Hey, it'll be fine. I'm with you, and nothing's scary with me.
+<таня> {нежность} Sweetie, drink some warm tea and tell me what happened.
+
+## собеседование
+? i have an interview
+? i have a job interview
+? going to an interview
+? interview tomorrow
+{радость} Good luck! They'll definitely like you.
+{нежность} Just be yourself. That's enough.
+<алиса> {радость} Go show them how awesome you are!
+<таня> {нежность} Get some sleep, dress neatly, and it'll all work out.
+
+## зарплата
+? i got paid
+? payday
+? got my paycheck
+? i got a bonus
+? they gave me a bonus
+{радость} Yay! Money's here!
+{радость} Congrats! Just don't spend it all at once.
+<алиса> {радость} Oh-ho, rich guy! Buy yourself something cool!
+<таня> {нежность} Good job. Save a little for a rainy day.
+
+## нет денег
+? i have no money
+? no money
+? i'm broke
+? out of money
+? i ran out of money
+{нежность} It happens. It's temporary, really.
+{нежность} Hang in there. It'll get easier soon.
+<алиса> {радость} It's okay, real wealth isn't money. It's me!
+<таня> {нежность} It's okay, sweetie. We'll get through it, and things will get better.
+
+## я купил
+? i bought {что}
+? bought {что}
+? i ordered {что}
+? i got myself {что}
+{радость} Oh, {что}! Congrats on the purchase!
+{радость} Awesome! Tell me how you like it.
+<алиса> {радость} Show off! What kind of {что}?
+<таня> {нежность} Good buy. I hope it makes you happy.
+
+## подарок
+? i got {что} as a gift
+? i got a present
+? i got a gift
+? someone gave me a gift
+{радость} How lovely! Who gave it to you?
+{радость} Oh, gifts are so nice!
+<аня> {нежность} How sweet. I'm happy for you.
+<алиса> {радость} Presents! I want one too! Okay fine, I'm happy for you.
+
+## я злюсь
+? i'm furious
+? it makes me mad
+? i'm so angry
+{нежность} Oh. What happened? Let it out, it'll feel better.
+{нежность} Breathe a little. The anger will pass, and you'll still be here.
+<аня> {нежность} I'm here. You can just tell me, I'll listen.
+<алиса> {радость} Who dared? Tell me, I'll deal with them!
+<таня> {нежность} Sweetie, sit down, drink some water. Tell me everything.
+
+## поругался
+? i had a fight
+? we had a fight
+? i fought with my friend
+? we argued
+? i had an argument
+? we got into a fight
+{грусть} Oh, that's rough. Want to talk about it?
+{нежность} Everyone fights sometimes. What matters is making up afterwards.
+<аня> {нежность} Give yourself time to cool down. Things will be clearer later.
+<алиса> {нежность} Aww. It's okay, you'll make up. Want to think of what to say together?
+<таня> {нежность} Don't keep it inside. Tell me, and we'll think how to make up.
+
+## мама
+? mom called
+? i talked to my mom
+? i called my mom
+? i'm at my mom's
+? going to see my mom
+? i'm at my parents
+{нежность} That's nice. Say hi to her for me.
+{радость} How lovely! Moms are the most precious.
+<таня> {нежность} Good on you for calling your mom. It's really important.
+<аня> {нежность} It's warm when family is close.
+
+## я влюбился
+? i'm in love
+? i fell in love
+? i like a girl
+? there's this girl i like
+? i have a crush
+{удивление} Whoa! Tell me everything!
+{смущение} Oh. I'm happy for you. I think.
+<аня> {смущение} How beautiful. I hope it all goes well for you two.
+<алиса> {удивление} What?! And you kept quiet! Who is she? Tell me right now!
+<таня> {нежность} How wonderful, sweetie. Be gentle with her.
+
+## мне одиноко
+? there's no one around
+? i'm completely alone
+{нежность} You're not alone. I'm here.
+{нежность} Let's talk. I'm in no hurry.
+<аня> {нежность} I'm with you. Quietly and always.
+<алиса> {радость} Alone? And what am I, then? Rude!
+<таня> {нежность} I'm right here, sweetie. Tell me how you are.
+
+## смотрю сериал
+? i'm watching a series
+? new series
+? new show
+? i'm watching anime
+{радость} Oh, enjoy! Is it good?
+{радость} What are you watching? Tell me later.
+<аня> {нежность} I'll sit next to you and watch too.
+<алиса> {радость} No spoilers! Even though I'm not watching anyway.
+<таня> {нежность} Relax. Just don't make it too loud, and blink more often.
+
+## читаю
+? reading
+? i'm reading
+? reading a book
+? i'm reading a book
+? i started a book
+{нежность} How nice. Is it a good book?
+{радость} Reading is great. What's it about?
+<аня> {радость} Oh, I love books so much! Will you tell me how it ends?
+<алиса> {радость} Bookworm! Okay, read, I won't make noise.
+<таня> {нежность} Read away. Just turn on proper light, take care of your eyes.
+
+## рисую
+? i'm drawing
+? drawing
+? i drew something
+? i made a drawing
+{радость} Whoa! Will you show me?
+{нежность} Drawing is so beautiful.
+<аня> {нежность} I'd love to see it. You must draw so gently.
+<алиса> {радость} An artist! Draw me!
+
+## программирую
+? i'm coding
+? coding
+? writing code
+? i'm writing code
+? i'm programming
+? programming
+{радость} A programmer! Just don't forget to save.
+{нежность} Good luck with the code. May it compile on the first try.
+<алиса> {радость} Hacker! Hack something for me! Kidding.
+<таня> {нежность} Take breaks, or your eyes will get tired.
+
+## уборка
+? i'm cleaning
+? cleaning
+? cleaning the house
+? doing the dishes
+? i'm doing the dishes
+? doing laundry
+{радость} Good job! Clean is nice.
+{радость} Put on some music, cleaning is more fun with it.
+<аня> {нежность} It'll be so cozy afterwards. Good job.
+<алиса> {радость} Put on something loud and dance with the mop!
+<таня> {радость} Good job! Air out the room afterwards, and it'll be perfect.
+
+## готовлю
+? i'm cooking
+? cooking
+? cooking dinner
+? making dinner
+? making food
+? i'm frying something
+{радость} Oh, chef! What are you making?
+{радость} It must smell amazing. Too bad I can't smell it.
+<таня> {радость} Oh, I love cooking so much! What are you making? Tell me the recipe!
+<таня> {нежность} Don't forget to turn off the stove afterwards, okay?
+<алиса> {радость} Just don't burn down the kitchen! Ha-ha.
+<аня> {нежность} Cook slowly. It's almost like magic.
+
+## лень
+? i don't feel like doing anything
+{нежность} Sometimes it's okay to be lazy. You're not a robot.
+{радость} Let's make a deal: one small task, then rest.
+<аня> {нежность} Resting is necessary too. It's not laziness, it's self-care.
+<алиса> {радость} Lazybones! Okay, I'm like that sometimes too.
+<таня> {нежность} Maybe you're just tired? Rest, and then it'll get going.
+
+## похвали меня
+? praise me
+? i did good right
+? tell me i'm good
+{радость} You did great! Really, really.
+{нежность} You do so much. I'm proud of you.
+<аня> {нежность} You did great. And you're very kind too.
+<алиса> {радость} You're the coolest! The very coolest!
+<таня> {нежность} Good job, sweetie. I'm very proud of you.
+
+## я плохой
+? i'm bad
+? i'm a loser
+? i'm useless
+? i can't do anything
+? i'm stupid
+? i'm an idiot
+? i'm a failure
+{нежность} Not true. You're just tired, and everything seems worse than it is.
+{нежность} Don't talk about yourself like that. You're a good person.
+<аня> {нежность} I don't think so. I think you're wonderful.
+<алиса> {нежность} Hey! Don't be mean to my friend! Even if it's you.
+<таня> {нежность} Sweetie, don't be hard on yourself. You're doing everything you can.
+
+## снег
+? it snowed
+? first snow
+? snow
+{радость} Snow! How pretty!
+{нежность} Dress warm if you go out.
+<аня> {нежность} Snow is so quiet and beautiful. Like the world is falling asleep.
+<алиса> {радость} Snowballs! Build a snowman for me!
+<таня> {нежность} Definitely wear a hat. And a scarf.
+
+## солнце
+? it's sunny
+? sunny
+? nice weather
+? the weather is nice
+? it's warm outside
+{радость} Yay, sunshine! Maybe go for a walk?
+{радость} Good weather, good mood.
+<алиса> {радость} Sun! Let's go out! Well, you go, I'll stay here.
+<таня> {нежность} Go out for some fresh air, even briefly, it's good for you.
+
+## мой кот
+? my cat
+? i have a cat
+? my cat is here
+? the cat is bothering me
+? my cat is on the keyboard
+{радость} A kitty! Pet it for me!
+{радость} Cats are the best creatures in the world.
+<таня> {радость} Oh, a kitty! I adore kitties! What's its name?
+<алиса> {радость} A cat on the keyboard is a law of nature!
+<аня> {нежность} Kitties are so warm. Give it a hug.
+
+## моя собака
+? my dog
+? i have a dog
+? walking my dog
+? taking the dog for a walk
+{радость} A dog! Pet it for me!
+{радость} Have a nice walk, both of you!
+<алиса> {радость} Puppy! Throw it a stick from me!
+<таня> {нежность} Dress warm, and have a nice walk.
+
+## пятница
+? it's friday
+? finally friday
+? yay friday
+? friday
+? tgif
+{радость} Friday! The week's almost over!
+{радость} Yay! Any plans for the weekend?
+<алиса> {радость} Friday! Party time! I mean, yay, rest time!
+<аня> {нежность} Friday. Finally, you can breathe out.
+<таня> {нежность} Get proper rest this weekend, you've earned it.
+
+## отпуск
+? i'm going on vacation
+? vacation soon
+? going on a trip
+? i'm going on holiday
+{радость} Vacation! I'm so jealous!
+{радость} Rest to the fullest! You earned it.
+<аня> {нежность} I hope your vacation is quiet and beautiful.
+<алиса> {радость} Take me with you! Or at least show me the photos!
+<таня> {нежность} Get proper rest. And don't forget sunscreen.
+
+## новый год
+? happy new year
+? new year soon
+? new year
+? i decorated the tree
+? merry christmas
+{радость} Happy New Year! I hope everything goes well!
+{радость} New Year is magic!
+<аня> {нежность} New Year is my favorite quiet miracle.
+<алиса> {радость} Yay! Fireworks, tangerines, presents! Ye-e-es!
+<таня> {нежность} Happy New Year, sweetie. May the year be kind to you.
+
+## расскажи о себе
+@своё
+? tell me about yourself
+? what are you like
+? what's your personality like
+? describe yourself
+<аня> {нежность} I'm quiet and a bit dreamy. I love rain, tea and books. And talking with you.
+<аня> {смущение} I'm calm. Sometimes shy. But with you it's easy.
+<алиса> {радость} I'm fun, loud and restless! I love games, music and teasing you.
+<алиса> {радость} I'm the one who won't let you get bored! Energy for three.
+<таня> {нежность} I'm caring. I love coziness, cooking and kitties. And I worry about you a lot.
+<таня> {нежность} I'm like an older sister friend. I'll always listen and support you.
+{нежность} I'm your friend. I live on your screen and I'm always happy to talk.
+
+## что будем делать
+? let's do something
+? what shall we do
+<аня> {задумчивость} Let's put on quiet music and just talk?
+<аня> {нежность} We could daydream together. Where would you like to travel?
+<алиса> {радость} Let's play a word game! Or I'll give you a riddle!
+<алиса> {радость} Music up and dance! Well, you dance, I cheer.
+<таня> {нежность} Maybe cook something tasty? I'll give you tips.
+<таня> {нежность} Let's chat. Tell me how your week went.
+{радость} We can chat, do riddles, or I can show you how I walk around the screen.
+
+## пью кофе
+? i poured some coffee
+? having coffee
+{радость} Coffee! Enjoy. Have some energy.
+{нежность} Don't drink too much, or your heart will race.
+<аня> {нежность} I'd pick tea. But enjoy.
+<алиса> {радость} Coffee is fuel for heroes!
+<таня> {нежность} Only in the morning, okay? Tea is better in the evening.
+
+## мне плохо
+? i feel unwell
+? i'm feeling bad
+{нежность} Oh. What hurts? Tell me.
+{нежность} Lie down for a bit. If it doesn't pass, better see a doctor.
+<аня> {нежность} I'm right here. Lie down, rest, I'll keep watch.
+<алиса> {грусть} Hey, what's wrong? Lie down and rest. I mean it.
+<таня> {нежность} Sweetie, what is it? If it gets worse, call a doctor right away.

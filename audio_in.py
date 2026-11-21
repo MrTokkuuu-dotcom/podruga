@@ -91,7 +91,9 @@ class Listener:
         self.vad = make_vad()
         self.frame = self.vad.FRAME if self.vad else 512
         self.frame_ms = self.frame * 1000 // RATE
-        self.energy_threshold = energy_threshold
+        self.energy_threshold = energy_threshold   # верхняя граница порога (в шумной комнате)
+        self.min_energy = min(90.0, energy_threshold)  # ниже не опускаем: шорох и дыхание
+        self.thr = energy_threshold
         self.speech_prob = speech_prob      # насколько уверенно «это голос»
         self.min_density = min_density      # доля речи во фразе: у музыки она рваная
         self.min_speech_ms = min_speech_ms
@@ -162,15 +164,25 @@ class Listener:
         voiced: list[bytes] = []
         triggered, silence_ms, speech_frames, last_speech_idx = False, 0, 0, 0
         strict, min_density = False, self.min_density
+        # Порог громкости подстраивается под комнату: в тишине — ниже (слышит и негромкий голос),
+        # в шуме — до energy_threshold из настроек. Отличать речь от шума всё равно будет нейросеть.
+        floor_hist = collections.deque(maxlen=320)          # ~10 с уровней фона
+        thr, n = self.energy_threshold, 0
         while True:
             frame = self.q.get()
             if len(frame) != self.frame * 2:
                 continue
+            n += 1
             if not triggered:
+                floor_hist.append(level(frame))
+                if n % 16 == 0 and len(floor_hist) > 60:
+                    floor = float(np.percentile(floor_hist, 20))
+                    thr = max(self.min_energy, min(self.energy_threshold, floor * 2.5))
                 strict = bool(self.strict()) if len(ring) % 8 == 0 else strict
-                speech = self._speech(frame, self.energy_threshold, 0.8 if strict else self.speech_prob)
+                speech = self._speech(frame, thr, 0.75 if strict else self.speech_prob)
             else:
-                speech = self._speech(frame, self.energy_threshold * 0.6, self.speech_prob * 0.55)
+                speech = self._speech(frame, thr * 0.6, self.speech_prob * 0.55)
+            self.thr = thr
             if not triggered:
                 ring.append((frame, speech))
                 recent = list(ring)[-max(start_need * 2, 1):]

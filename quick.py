@@ -23,7 +23,11 @@ FILLER = {"ну", "слушай", "а", "вот", "да", "ага", "угу", "�
           "ты", "мне", "мол", "типа", "просто", "уже", "вообще", "давай-ка", "ну-ка"}
 FILLER |= {"кстати", "короче", "бля", "блин", "блядь", "сука", "епта", "млин", "слышь", "значит", "получается",
            "походу", "типо", "сейчас", "щас", "теперь", "тогда", "вобщем", "в общем", "ну-ка", "аня", "анечка", "анют", "анюта", "солнце", "зай", "зая"}
-KEEP_FILLER = {"ты", "мне"}          # убираем, только если без них фраза совпала
+FILLER |= {"um", "uh", "like", "well", "hey", "so", "oh", "okay", "please", "just",
+           "음", "어", "그", "아", "저기", "근데", "좀", "그냥", "야"}
+KEEP_FILLER = {"ты", "мне"}
+SERVICE_THINK = {"en": ["Hmm, let me think.", "One sec.", "Just a moment.", "Hmm…"],
+                 "ko": ["음, 잠깐만.", "잠깐만 기다려.", "생각 좀 해볼게.", "음…"]}          # убираем, только если без них фраза совпала
 NUM = {"ноль": 0, "один": 1, "одну": 1, "одна": 1, "два": 2, "две": 2, "три": 3, "четыре": 4,
        "пять": 5, "шесть": 6, "семь": 7, "восемь": 8, "девять": 9, "десять": 10,
        "одиннадцать": 11, "двенадцать": 12, "тринадцать": 13, "четырнадцать": 14,
@@ -39,9 +43,28 @@ EMO_RU = {"радость": "joy", "нежность": "tender", "смущени
           "грусть": "sad", "задумчивость": "think", "спокойствие": "calm"}
 
 
+_CYR_LAT = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+                    ["a", "b", "v", "g", "d", "e", "yo", "zh", "z", "i", "y", "k", "l", "m", "n", "o", "p", "r", "s",
+                     "t", "u", "f", "kh", "ts", "ch", "sh", "shch", "", "y", "", "e", "yu", "ya"]))
+# частые имена — как их пишут по-корейски; остальные по-корейски не подставляем
+_KO_NAMES = {"дима": "디마", "дмитрий": "드미트리", "руслан": "루슬란", "руся": "루샤", "аня": "아냐", "алиса": "알리사",
+             "таня": "타냐", "саша": "사샤", "маша": "마샤", "миша": "미샤", "катя": "카탸", "настя": "나스탸"}
+
+
+def name_in(name: str, lang: str) -> str:
+    """Имя для английской/корейской фразы: «Дима» → «Dima» / «디마»."""
+    if not name or not re.search(r"[А-Яа-яЁё]", name):
+        return name
+    if lang == "ko":
+        return _KO_NAMES.get(name.lower(), "")
+    lat = "".join(_CYR_LAT.get(ch.lower(), ch) for ch in name)
+    return lat[:1].upper() + lat[1:]
+
+
 def norm(text: str) -> str:
     text = text.lower().replace("ё", "е")
     text = re.sub(r"[^\w\s\-]", " ", text)
+    text = re.sub(r"(\d)([가-힣a-z])", r"\1 \2", text)      # «5분» → «5 분», «10min» → «10 min»
     return " ".join(text.split())
 
 
@@ -67,8 +90,9 @@ def words_to_number(ws: list[str]) -> int | None:
 
 
 class Section:
-    def __init__(self, name: str):
+    def __init__(self, name: str, lang: str = "ru"):
         self.name = name
+        self.lang = lang                                           # ru / en / ko — на каком языке фразы
         self.triggers: list[list[str]] = []
         self.commands: list[str] = []
         self.replies: list[tuple[str | None, str, str]] = []   # (время суток, эмоция, текст)
@@ -85,15 +109,16 @@ def load(paths: list[Path]) -> list[Section]:
     for path in paths:
         if not path.exists():
             continue
+        flang = "en" if path.stem.endswith("_en") else "ko" if path.stem.endswith("_ko") else "ru"
         for raw in path.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if not line or line.startswith("#") and not line.startswith("##"):
                 continue
             if line.startswith("##"):
                 name = line[2:].strip()
-                cur = next((x for x in sections if x.name == name), None)   # одноимённые — объединяем
+                cur = next((x for x in sections if x.name == name and x.lang == flang), None)   # одноимённые — объединяем
                 if cur is None:
-                    cur = Section(name)
+                    cur = Section(name, flang)
                     sections.append(cur)
             elif cur is None:
                 continue
@@ -133,6 +158,12 @@ def _match_trigger(trig: list[str], ws: list[str], start: int):
     caps, i = {}, start
     for k, t in enumerate(trig):
         if t == "{что}":
+            if k + 1 < len(trig):                        # «{что} 열어줘» — что-то в начале/середине (корейский порядок)
+                for j in range(len(ws) - 1, i, -1):
+                    r = _match_trigger(trig[k + 1:], ws, j)
+                    if r and r[0] == len(ws):
+                        return r[0], {**caps, "что": " ".join(ws[i:j]), **r[1]}
+                return None
             rest = ws[i:]
             if not rest:
                 return None
@@ -165,6 +196,7 @@ class QuickReplies:
         extra = sorted(p for p in Path(app_dir).glob("replies_*.txt"))
         self.paths = [Path(app_dir) / "replies.txt", *extra, Path(data_dir) / "replies_my.txt"]
         self.girl = "anya"                         # текущая девочка (ставит main)
+        self._lang = "ru"
         self.reload()
 
     def reload(self):
@@ -187,7 +219,7 @@ class QuickReplies:
                     best = list(acc)
                 return
             for s in self.sections:
-                if s.service:
+                if s.service or s.lang != self._lang:
                     continue
                 for trig in s.triggers:
                     r = _match_trigger(trig, ws, i)
@@ -196,8 +228,9 @@ class QuickReplies:
         walk(0, [])
         return best
 
-    def match(self, text: str, after_question: bool = False):
-        """→ (ответ, эмоция, [команды]) или None, если пусть думает Gemini."""
+    def match(self, text: str, after_question: bool = False, lang: str = "ru"):
+        """→ (ответ, эмоция, [команды]) или None, если пусть думает Gemini. lang — язык его фразы."""
+        self._lang = lang if lang in ("ru", "en", "ko") else "ru"
         ws = norm(text).split()
         if not ws or len(ws) > 9:
             return None
@@ -254,9 +287,12 @@ class QuickReplies:
         s.recent.append(i)
         return s.replies[i][2], s.replies[i][1]
 
-    def service(self, name: str):
-        """Фраза из служебного раздела (например, «думаю» — пока ждём Google)."""
-        s = next((x for x in self.sections if x.service and x.name == name and x.replies), None)
+    def service(self, name: str, lang: str = "ru"):
+        """Фраза из служебного раздела (например, «думаю» — пока ждём Google) на нужном языке."""
+        s = next((x for x in self.sections if x.service and x.name == name and x.replies and x.lang == lang), None)
+        if s is None and name == "думаю" and lang in SERVICE_THINK:      # перевода нет — свои короткие
+            return random.choice(SERVICE_THINK[lang]), "think"
+        s = s or next((x for x in self.sections if x.service and x.name == name and x.replies and x.lang == "ru"), None)
         return self._pick(s, datetime.now()) if s else None
 
     # --- самообучение: частые простые фразы, на которые всё равно ходили в Google ---
@@ -301,9 +337,22 @@ class QuickReplies:
         return learned
 
     @staticmethod
-    def fill(text: str, ctx: dict, user: str, name: str) -> str:
+    def fill(text: str, ctx: dict, user: str, name: str, lang: str = "ru") -> str:
         t = datetime.now()
-        vals = {"user": user, "name": name, "time": t.strftime("%H:%M"),
-                "date": f"{t.day} {MONTHS[t.month - 1]}", "weekday": WEEKDAYS[t.weekday()],
-                "daypart": daypart(t), "n": str(ctx.get("n", "")), "что": ctx.get("что", "")}
-        return re.sub(r"\{(\w+)\}", lambda m: vals.get(m.group(1), m.group(0)), text)
+        if lang != "ru":                                   # имя русскими буквами чужой голос не прочтёт
+            user, name = name_in(user, lang), name_in(name, lang)
+        if lang == "en":
+            date = t.strftime("%B ") + str(t.day)
+            wd = t.strftime("%A")
+            dp = {"утро": "morning", "день": "afternoon", "вечер": "evening", "ночь": "night"}[daypart(t)]
+        elif lang == "ko":
+            date = f"{t.month}월 {t.day}일"
+            wd = "월화수목금토일"[t.weekday()] + "요일"
+            dp = {"утро": "아침", "день": "낮", "вечер": "저녁", "ночь": "밤"}[daypart(t)]
+        else:
+            date, wd, dp = f"{t.day} {MONTHS[t.month - 1]}", WEEKDAYS[t.weekday()], daypart(t)
+        vals = {"user": user, "name": name, "time": t.strftime("%H:%M"), "date": date, "weekday": wd,
+                "daypart": dp, "n": str(ctx.get("n", "")), "что": ctx.get("что", "")}
+        out = re.sub(r"\{(\w+)\}", lambda m: vals.get(m.group(1), m.group(0)), text)
+        out = re.sub(r"\s+([,.!?])", r"\1", re.sub(r"\s{2,}", " ", out))
+        return re.sub(r",([!?.])", r"\1", out).strip()             # «안녕, !» без имени → «안녕!»
