@@ -4,7 +4,7 @@
 //  предплечье: y — сгиб в локте вперёд (левое <0, правое >0)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { VRMLoaderPlugin, VRMUtils, VRMSpringBoneCollider, VRMSpringBoneColliderShapeCapsule, VRMSpringBoneColliderShapeSphere } from '@pixiv/three-vrm';
+import { VRMLoaderPlugin, VRMUtils, VRMSpringBoneCollider, VRMSpringBoneColliderShapeCapsule } from '@pixiv/three-vrm';
 import ANIMS from './anims.json';
 import { createSitLayer } from './anim/keyposes.js';      // анимации Quaternius (CC0), переложены tools/retarget_ual.py
 
@@ -746,6 +746,7 @@ function pose(t) {
     vrm.scene.position.z = lerp(hips.position.z, 0, rollK) - _hipsWorld.z;
   }
 
+  skirtDrape(Math.max(S.sitKind ? smooth(clamp01((S.sitting ? S.downT : 1.4 - S.upT) / 0.6)) * sm.sitLayerW : 0, sm.hemW || 0));
   if (SIT && sm.hemW > 0.01) SIT.hem(smooth(sm.hemW));   // присела перед прыжком / приземлилась — придерживает подол
   if (!fs && SIT_LAST && sm.sitLayerW > 0) fs = SIT_LAST.fs;
   if (fs && SIT) {                                    // ноги, таз и опорные руки — поверх всего остального
@@ -948,7 +949,14 @@ function setupTouch() {
 }
 
 // ---------- физика одежды и тела (spring bones) ----------
+const SKIRT = [];                                    // настройки пружинок юбки — сидя ткань мягче и тяжелее, ложится на ноги
+function skirtDrape(k) {
+  if (!SKIRT.length || Math.abs(k - (sm.drapeK ?? -1)) < 0.01) return;
+  sm.drapeK = k;
+  for (const st of SKIRT) { st.stiffness = lerp(0.6, 0.1, k); st.gravityPower = lerp(0.3, 0.9, k); st.dragForce = lerp(0.4, 0.55, k); }
+}
 function tunePhysics() {
+  SKIRT.length = 0; sm.drapeK = -1;                  // другая модель — свои пружинки
   const mgr = vrm.springBoneManager; if (!mgr) return;
   const raw = (n) => vrm.humanoid.getRawBoneNode(n);
   // коллайдеры-капсулы на ноги и таз: юбка и пальто не проходят сквозь тело
@@ -962,12 +970,6 @@ function tunePhysics() {
   const legs = [capsule('leftUpperLeg', 'leftLowerLeg', 0.085), capsule('rightUpperLeg', 'rightLowerLeg', 0.085),
                 capsule('leftLowerLeg', 'leftFoot', 0.06), capsule('rightLowerLeg', 'rightFoot', 0.06),
                 capsule('hips', 'spine', 0.13)].filter(Boolean);
-  // ладони тоже не проходят сквозь юбку — и могут придержать подол (шар на кисти)
-  for (const h of ['leftHand', 'rightHand']) {
-    const b = raw(h); if (!b) continue;
-    const col = new VRMSpringBoneCollider(new VRMSpringBoneColliderShapeSphere({ radius: 0.045, offset: new THREE.Vector3(0, 0, 0) }));
-    b.add(col); legs.push(col);
-  }
   const legGroup = { name: 'podruga-legs', colliders: legs };
   let n = { bust: 0, skirt: 0, coat: 0 };
   for (const j of mgr.joints) {
@@ -978,7 +980,8 @@ function tunePhysics() {
       st.stiffness = 1.0; st.dragForce = 0.32; st.gravityPower = 0.03; st.gravityDir = new THREE.Vector3(0, -1, 0);
       n.bust++;
     } else if (/Skirt/i.test(name) && !/Coat/i.test(name)) {
-      st.stiffness = 0.6; st.dragForce = 0.28; st.gravityPower = 0.15;
+      st.stiffness = 0.6; st.dragForce = 0.4; st.gravityPower = 0.3;     // тяжелее: не взлетает, когда она садится
+      SKIRT.push(st);
       st.gravityDir = new THREE.Vector3(0, -1, 0);
       if (!j.colliderGroups.includes(legGroup)) j.colliderGroups.push(legGroup);
       n.skirt++;

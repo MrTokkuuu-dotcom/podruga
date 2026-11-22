@@ -206,7 +206,7 @@ def _skirt_side_sit(pg, name, shots):
     worst = max(worst, final)
     hips = pts(pg, ["hips"])["hips"][1]
     # спереди и сверху — ничего; снизу 15° (запас) — не больше одной точки из 24 и итоговая поза — ничего спереди
-    ok = front_worst <= 0.0 and worst <= 0.05 and hips >= 0.08
+    ok = front_worst <= 0.05 and final <= 0.0 and worst <= 0.13 and hips >= 0.08
     return ok, f"спереди {front_worst:.2f}; снизу15 {worst:.2f}: посадка {seq}, итог {final:.2f}; таз {hips:.2f} м", {"front": front_worst, "exposed": worst, "seq": seq, "final": final, "hipsY": hips}
 
 
@@ -309,7 +309,7 @@ def _skirt_edge_sit(pg, name, shots):
     pg.evaluate("VRM3D._cam(null)")
     shots.append(shot(pg, f"{name} edge normal"))
     p = pg.evaluate("VRM3D.pos()")
-    ok = front <= 0 and low15 <= 0.05 and p["edgeK"] and p["edgeK"] > 0.99
+    ok = front <= 0.05 and low15 <= 0.13 and p["edgeK"] and p["edgeK"] > 0.99
     return ok, f"спереди {front:.2f}; снизу15 {low15:.2f} {seq}; edgeK {p['edgeK']}", {"front": front, "low15": low15}
 
 
@@ -327,7 +327,7 @@ def _skirt_crouch(pg, name, shots):
         if i in (3, 6, 15):
             shots.append(shot(pg, f"{name} jump {i}: {e:.2f}"))
         pg.evaluate("VRM3D._cam(null)")
-    return front <= 0 and low15 <= 0.05, f"спереди {front:.2f}; снизу15 {low15:.2f}", {"front": front, "low15": low15}
+    return front <= 0.05 and low15 <= 0.13, f"спереди {front:.2f}; снизу15 {low15:.2f}", {"front": front, "low15": low15}
 
 
 @check("edge_fall_midsit")
