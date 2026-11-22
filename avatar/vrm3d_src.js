@@ -1072,7 +1072,7 @@ function tick(dt, t) {
   placeCamera();
   vrm.update(dt);
 }
-// замер плавности: раз в 10 с — сколько кадров нарисовано против желаемого, самый долгий промежуток,
+// замер плавности: раз в минуту — сколько кадров нарисовано против желаемого, самый долгий промежуток,
 // сколько мс считается кадр (среднее/максимум) и сколько занимает отрисовка. Пишется в журнал Python ([кадры]).
 const CALLS = [];                                   // последние вызовы из Python — чтобы понять, что было перед паузой
 const PERF = { t0: 0, n: 0, gapMax: 0, last: 0, tick: 0, tickMax: 0, draw: 0, drawMax: 0, want: {} };
@@ -1087,7 +1087,7 @@ function perfNote(now, tickMs, fps) {
   }
   P.last = now; P.n++; P.tick += tickMs; P.tickMax = Math.max(P.tickMax, tickMs);
   P.want[fps] = (P.want[fps] || 0) + 1;
-  if (now - P.t0 > 10000) {
+  if (now - P.t0 > 60000) {                           // раз в минуту — чтобы журнал не разрастался
     const sec = (now - P.t0) / 1000;
     const what = S.sitting || S.sitKind ? 'сидит' : S.lieRaw > 0 ? 'лежит' : (S.goal || S.v > 0) ? 'идёт' : S.jump ? 'прыгает' : 'стоит';
     pyCall('perf', `${what}: ${(P.n / sec).toFixed(1)} к/с (хотела ${Object.entries(P.want).map(([k, v]) => k + '×' + v).join(' ')}), ` +
