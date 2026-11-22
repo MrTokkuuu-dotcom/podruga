@@ -4,8 +4,9 @@
 //  предплечье: y — сгиб в локте вперёд (левое <0, правое >0)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { VRMLoaderPlugin, VRMUtils, VRMSpringBoneCollider, VRMSpringBoneColliderShapeCapsule } from '@pixiv/three-vrm';
-import ANIMS from './anims.json';      // анимации Quaternius (CC0), переложены tools/retarget_ual.py
+import { VRMLoaderPlugin, VRMUtils, VRMSpringBoneCollider, VRMSpringBoneColliderShapeCapsule, VRMSpringBoneColliderShapeSphere } from '@pixiv/three-vrm';
+import ANIMS from './anims.json';
+import { createSitLayer } from './anim/keyposes.js';      // анимации Quaternius (CC0), переложены tools/retarget_ual.py
 
 const S = {
   face: 'sleep', emo: 'calm', act: '', actStart: 0, mouth: 0, lipT: 0,
@@ -22,6 +23,11 @@ const S = {
   // сон по порядку: '' → drowsy (идёт, глаза открыты) → closing (лежит, глаза закрываются) → asleep
   seq: '', seqAct: '', seqActStart: 0, seqT: 0, sleepAfterLie: false,
 };
+let OLD_SIT = false;                               // для проверок «до»: старая посадка «обняла колени»
+let SIT = null;                                   // сидит боком на полу (anim/keyposes.js)
+const SIT_IN = 2.2, SIT_OUT = 1.4;                 // сколько секунд садится и встаёт (боком на полу)
+const EDGE_IN = 1.8, EDGE_OUT = 1.4;               // на край окна
+let SIT_LAST = null;                               // последняя поза слоя посадки — чтобы плавно погасить его, если прервали
 let vrm = null, renderer, scene, camera, clock, lookTarget, host, canvas;
 const sm = {};
 const smv = {};                // скорости для пружин
@@ -165,7 +171,16 @@ let fitCamera = function (w, h) {
   placeCamera();
   camera.updateProjectionMatrix();
 };
+let CAM_TEST = null;                               // для проверок: камера вокруг таза под углом (VRM3D._cam)
 function placeCamera() {
+  if (CAM_TEST) {
+    const h = bone('hips').getWorldPosition(new THREE.Vector3()), e = THREE.MathUtils.degToRad(CAM_TEST.elev);
+    const a = THREE.MathUtils.degToRad(CAM_TEST.azim || 0), d = CAM_TEST.dist || 2.6;
+    camera.clearViewOffset(); camera.aspect = canvas.width / canvas.height; camera.updateProjectionMatrix();
+    camera.position.set(h.x + d * Math.cos(e) * Math.sin(a), h.y + d * Math.sin(e), h.z + d * Math.cos(e) * Math.cos(a));
+    camera.lookAt(h.x, h.y + (CAM_TEST.dy || 0), h.z);
+    return;
+  }
   const x = S.worldX || 0;
   camera.position.set(x, CAM.y, CAM.dist);
   camera.lookAt(x, CAM.ty, 0);
@@ -261,6 +276,7 @@ function jumpStep(dt) {
   }
 }
 function fallDown() {                                 // окно закрыли или увели из-под ног — спрыгивает вниз
+  if (S.sitKind === 'edge') { S.sitKind = ''; S.sitting = false; S.upT = 9; }   // слой посадки плавно гаснет (sitLayerW)
   S.support = null; S.edge = false;
   if (S.posture === 'edge') S.posture = 'stand';
   if (!startJump(S.x, floorAt(S.x), null)) S.y = floorAt(S.x);
@@ -355,7 +371,7 @@ const HOLD_ADD = [['neck', 0, 0.25, 0], ['head', 0.05, 0.45, 0], ['leftUpperLeg'
 function layStep(dt) {
   const L = A.layUp; if (!L) return false;
   const a = L.action, wantLie = S.posture === 'lie';
-  if (wantLie && (S.lay === '' || S.lay === 'up') && S.v < 1 && !S.sitting) {
+  if (wantLie && (S.lay === '' || S.lay === 'up') && S.v < 1 && !S.sitting && !S.sitKind) {
     if (S.lay === '') { a.reset(); a.time = L.dur; }
     a.paused = false; a.timeScale = -LAY_DOWN; a.play(); S.lay = 'down';
   }
@@ -371,7 +387,15 @@ function layStep(dt) {
 function updatePosture(dt) {
   // тело полностью из анимации: ложится/встаёт или прыгает
   const whole = (S.lay && S.lay !== 'done') || !!S.jump;
-  sm.layW = lerp(sm.layW || 0, whole ? 1 : 0, 1 - Math.exp(-dt / (whole ? 0.1 : 0.22)));
+  sm.layW = lerp(sm.layW || 0, whole ? 1 : 0, 1 - Math.exp(-dt / (S.jump ? 0.1 : 0.3)));   // в клип «ложится» — мягко
+  // сидит боком и просят лечь (или уснуть) — сначала встаёт, потом ложится как обычно
+  if (S.posture === 'lie' && S.sitting && S.sitKind === 'floor') { S.sitting = false; S.upT = 0; SIT.begin('exit'); }
+  if (S.sitKind === 'floor' && !S.sitting && S.posture === 'lie') {
+    S.upT += dt;
+    sm.sitK = 1 - smooth(S.upT / 1.25); sm.lieK = 0;
+    if (S.upT <= SIT_OUT) return;
+    S.sitKind = '';
+  }
   if (S.posture === 'lie' || S.lay) {
     if (layStep(dt)) {
       sm.sitK = 0; sm.lieK = smooth(S.lieRaw);
@@ -381,13 +405,25 @@ function updatePosture(dt) {
     }
   }
   const down = S.posture !== 'stand';
-  if (down && !S.sitting && S.v < 1) { S.sitting = true; S.downT = 0; S.upT = 9; restart('sitEnter'); }
+  if (S.dir) S.lastDir = S.dir;
+  if (down && !S.sitting && S.v < 1) {
+    S.sitting = true; S.downT = 0; S.upT = 9;
+    S.sitKind = !SIT || OLD_SIT ? '' : S.posture === 'sit' ? 'floor' : S.posture === 'edge' ? 'edge' : '';
+    if (S.sitKind === 'floor') SIT.begin('enter', (S.lastDir || 0) > 0 ? -1 : 1);
+    else if (S.sitKind === 'edge') SIT.begin('edgeEnter', 1, null, 0);
+    else restart('sitEnter');
+  }
   if (S.sitting) S.downT += dt;
   // лечь — только когда уже сидит; встать — сначала сесть обратно
   const canLie = S.posture === 'lie' && S.sitting && S.downT > 2.0;
   S.lieRaw = clamp01(S.lieRaw + (canLie ? dt / 3.6 : -dt / 3.0));
-  if (S.sitting && !down && S.lieRaw <= 0) { S.sitting = false; S.upT = 0; restart('sitExit'); }
-  if (!S.sitting) S.upT += dt;
+  if (S.sitting && !down && S.lieRaw <= 0) {
+    S.sitting = false; S.upT = 0;
+    if (S.sitKind === 'floor') SIT.begin('exit');
+    else if (S.sitKind === 'edge') SIT.begin('edgeExit', 1, null, EDGE_DROP * (sm.edgeK || 0));
+    else restart('sitExit');
+  }
+  if (!S.sitting) { S.upT += dt; if (S.sitKind && S.upT > (S.sitKind === 'edge' ? EDGE_OUT : SIT_OUT)) S.sitKind = ''; }
   sm.sitK = S.sitting ? smooth((S.downT - 0.55) / 1.25) : 1 - smooth(S.upT / 1.25);
   if (S.sitting && !down) sm.sitK = 1;               // пока встаёт из положения лёжа, остаётся сидя
   if (S.posture === 'edge' && S.sitting) S.edge = true;
@@ -423,6 +459,7 @@ function mixerStep(dt) {
   const t = {};
   if (S.jump && A.jumpStart) t[S.jump.phase === 'crouch' ? 'jumpStart' : S.jump.phase === 'air' ? 'jumpAir' : 'jumpLand'] = 1;
   else if (S.lay && A.layUp) t.layUp = 1;
+  else if (S.sitKind) { /* сидит боком / на краю: ноги и таз — anim/keyposes.js */ }
   else if (S.sitting) { if (S.downT < 1.2) t.sitEnter = 1; else t[talking ? 'sitTalk' : 'sitIdle'] = 1; }
   else if (S.upT < 1.35) t.sitExit = 1;
   else {
@@ -498,6 +535,8 @@ function lieAt(k, base) {
   return { roll: lerp(a.roll, b.roll, u), P: out };
 }
 const ADD_BONES = new Set(['neck', 'head']);
+const CROUCH_ADD = [['leftUpperLeg', -0.22], ['rightUpperLeg', 0.22], ['leftLowerLeg', 0.1], ['rightLowerLeg', -0.1]];
+let NO_CROUCH_ADD = false;
 const LEG_BONES = new Set(['hips', 'leftUpperLeg', 'rightUpperLeg', 'leftLowerLeg', 'rightLowerLeg', 'leftFoot', 'rightFoot']);
 const _e = new THREE.Euler(), _q = new THREE.Quaternion(), _hipsWorld = new THREE.Vector3();
 
@@ -537,7 +576,16 @@ function pose(t) {
     if (t > S.nextGlance) { S.glanceUntil = t + 1.2 + Math.random() * 1.3; S.nextGlance = t + 4 + Math.random() * 6; }
     if (talking || t < S.glanceUntil) { P.headY -= yaw * 0.7; P.spineY = (P.spineY || 0) - yaw * 0.15; }
   }
-  const sitK = sm.sitK || 0, lieK = sm.lieK || 0;
+  const sitK = S.sitKind ? 0 : (sm.sitK || 0), lieK = sm.lieK || 0;
+  let fs = null;
+  const edgeKind = S.sitKind === 'edge';
+  sm.sitLayerW = S.sitKind && !S.jump ? 1 : Math.max(0, (sm.sitLayerW || 0) - FRAME_DT / 0.25);   // прервали (упала с окна) — гаснет за 0,25 с
+  if (S.sitKind && SIT) {
+    fs = SIT.pose(S.sitting ? clamp01(S.downT / (edgeKind ? EDGE_IN : SIT_IN)) : clamp01(S.upT / (edgeKind ? EDGE_OUT : SIT_OUT)));
+    SIT_LAST = { fs, edge: edgeKind };
+    for (const f in fs.P) P[f] = (P[f] || 0) + fs.P[f];
+    if (!S.seq && S.sitting && S.downT > SIT_IN + 1 && Math.sin(t * 0.37) > 0.6) P.headY += Math.sin(t * 0.9) * 0.25;
+  }
   if (sitK > 0) {
     P = mix(P, SIT_POSE, sitK);
     wantArms = sitK > 0.15 ? 1 : wantArms;
@@ -681,6 +729,12 @@ function pose(t) {
       hips.position.z = lerp(hips.position.z, 0, sitK);
     }
   }
+  // присед перед прыжком и приземление: у клипа колени врозь — сводим колени (поверх клипа)
+  const cw = A.jumpStart ? clamp01(A.jumpStart.w + A.jumpLand.w) : 0;
+  if (cw > 0.01 && !NO_CROUCH_ADD) {
+    for (const [n, z] of CROUCH_ADD) { const b = bone(n); if (b) { _q.setFromEuler(_e.set(0, 0, z * cw)); b.quaternion.multiply(_q); } }
+    sm.hemW = cw;
+  } else sm.hemW = 0;
   // лёжа: вся модель заваливается на бок вокруг таза, таз остаётся у пола — не «переворачивается вокруг ступней»
   vrm.scene.rotation.set(0, yaw, roll);
   const rollK = roll / (Math.PI / 2);
@@ -690,6 +744,19 @@ function pose(t) {
     vrm.scene.position.x = (S.worldX || 0) - _hipsWorld.x;
     vrm.scene.position.y = lerp(hips.position.y, LIE_Y, rollK) - _hipsWorld.y;
     vrm.scene.position.z = lerp(hips.position.z, 0, rollK) - _hipsWorld.z;
+  }
+
+  if (SIT && sm.hemW > 0.01) SIT.hem(smooth(sm.hemW));   // присела перед прыжком / приземлилась — придерживает подол
+  if (!fs && SIT_LAST && sm.sitLayerW > 0) fs = SIT_LAST.fs;
+  if (fs && SIT) {                                    // ноги, таз и опорные руки — поверх всего остального
+    const onEdge = S.sitKind === 'edge';
+    let swing = null;
+    if (onEdge && S.sitting && S.downT > EDGE_IN) {    // на краю болтает ногами, иногда замирает
+      const amp = 0.05 * smooth(clamp01((S.downT - EDGE_IN) / 1.5)) * smooth(clamp01(Math.sin(t * 0.21) * 2 + 0.6));
+      const a1 = Math.sin(t * 1.3), a2 = Math.sin(t * 1.3 + 2.4);
+      swing = { L: [0, amp * 0.3 * a1, amp * a1], R: [0, amp * 0.3 * a2, amp * a2] };
+    }
+    SIT.apply(fs, { W: sm.sitLayerW, yOff: onEdge ? EDGE_DROP * (sm.edgeK || 0) : 0, swing });
   }
 
   if (vrm.lookAt) {
@@ -895,6 +962,12 @@ function tunePhysics() {
   const legs = [capsule('leftUpperLeg', 'leftLowerLeg', 0.085), capsule('rightUpperLeg', 'rightLowerLeg', 0.085),
                 capsule('leftLowerLeg', 'leftFoot', 0.06), capsule('rightLowerLeg', 'rightFoot', 0.06),
                 capsule('hips', 'spine', 0.13)].filter(Boolean);
+  // ладони тоже не проходят сквозь юбку — и могут придержать подол (шар на кисти)
+  for (const h of ['leftHand', 'rightHand']) {
+    const b = raw(h); if (!b) continue;
+    const col = new VRMSpringBoneCollider(new VRMSpringBoneColliderShapeSphere({ radius: 0.045, offset: new THREE.Vector3(0, 0, 0) }));
+    b.add(col); legs.push(col);
+  }
   const legGroup = { name: 'podruga-legs', colliders: legs };
   let n = { bust: 0, skirt: 0, coat: 0 };
   for (const j of mgr.joints) {
@@ -1037,6 +1110,7 @@ async function init(url) {
   sm.headY = p.y + 0.12;
   sm.hipsBase = bone('hips').position.y;
   try { tunePhysics(); } catch (e) { console.warn('[3D] физика не настроилась', e); }
+  try { SIT = createSitLayer(bone, vrm.scene, sm.hipsBase); } catch (e) { console.warn('[3D] посадка боком не настроилась', e); SIT = null; }
   BOUNDS = measureBounds();
   buildAnims();
 
@@ -1133,6 +1207,80 @@ window.VRM3D = {
     o.sitK = sm.sitK; o.lieK = sm.lieK; o.seq = S.seq; o.rate = A.walk ? +A.walk.action.timeScale.toFixed(3) : 0;
     return o;
   },
+  // для проверок: положения любых костей в мире
+  _pts(names) {
+    const o = {}, v = new THREE.Vector3();
+    for (const n of names) { const b = bone(n); if (b) { b.getWorldPosition(v); o[n] = [v.x, v.y, v.z]; } }
+    return o;
+  },
+  // для проверок: камера вокруг таза (elev — градусы вверх от горизонта, отрицательные — снизу); null — как обычно
+  _cam(elev, azim, dist, dy) {
+    CAM_TEST = elev == null ? null : { elev, azim: azim || 0, dist, dy };
+    if (!CAM_TEST && camera) fitCamera(VIEW.w, VIEW.h);
+    placeCamera(); renderer.render(scene, camera);
+  },
+  // для проверок «видно ли под юбкой»: точки в паху (в осях таза) — сколько из них камера видит как голую кожу/бельё
+  _oldSit(on) { OLD_SIT = !!on; NO_CROUCH_ADD = !!on; },
+  _exposed() {
+    // «видно бельё»: луч к точке паха первым попадает в голую кожу/бельё (Body_00_SKIN) именно в зоне белья —
+    // в осях таза |x| ≤ 2,5 см, ниже кости таза на 5,5–14 см (выше — уже живот). Попадание в бедро сбоку не считается.
+    const hips = bone('hips'); if (!hips) return -1;
+    vrm.scene.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(), meshes = [], loc = new THREE.Vector3();
+    vrm.scene.traverse((o) => { if (o.isMesh && o.visible) meshes.push(o); });
+    const hands = [];
+    for (const sd of ['left', 'right']) for (const b of ['Hand', 'IndexProximal', 'MiddleIntermediate', 'LittleProximal', 'ThumbDistal']) {
+      const nb = bone(sd + b); if (nb) hands.push(nb.getWorldPosition(new THREE.Vector3()));
+    }
+    const handNear = (p) => hands.some((q) => q.distanceTo(p) < 0.055);
+    // кожа таза, а не бедра: у вершин треугольника вес кости таза больше, чем костей ног
+    const onPelvis = (h) => {
+      const g = h.object.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, sk = h.object.skeleton;
+      if (!si || !sw || !sk) return true;
+      let pel = 0, leg = 0;
+      for (const vi of [h.face.a, h.face.b, h.face.c]) for (let k = 0; k < 4; k++) {
+        const b = sk.bones[si.getComponent(vi, k)], w = sw.getComponent(vi, k);
+        const nm = (b && b.name) || '';
+        if (/Hips|Spine/i.test(nm)) pel += w; else if (/UpperLeg|Leg/i.test(nm)) leg += w;
+      }
+      return pel > leg;
+    };
+    let n = 0, hit = 0;
+    for (const x of [-0.02, 0, 0.02]) for (const y of [-0.04, -0.07, -0.1, -0.12]) for (const z of [0.02, 0.06]) {
+      const p = new THREE.Vector3(x, y, z); hips.localToWorld(p);
+      const dir = p.clone().sub(camera.position), dist = dir.length(); dir.normalize();
+      ray.set(camera.position, dir); ray.far = dist + 0.3;
+      const h = ray.intersectObjects(meshes, false)[0]; n++;
+      if (!h) continue;
+      const m = Array.isArray(h.object.material) ? h.object.material[h.face.materialIndex] : h.object.material;
+      if (!/Body_00_SKIN/.test((m && m.name) || '')) continue;
+      if (handNear(h.point)) continue;                // ладонь — тоже «кожа», но это не бельё
+      if (!onPelvis(h)) continue;                      // бедро, легшее спереди, закрывает — это не бельё
+      hips.worldToLocal(loc.copy(h.point));
+      if (Math.abs(loc.x) <= 0.025 && loc.y < -0.055 && loc.y > -0.14 && loc.z > -0.06 && loc.z < 0.12) {
+        hit++;
+        if (window._expDbg) window._expDbg.push([+loc.x.toFixed(3), +loc.y.toFixed(3), +loc.z.toFixed(3), h.object.name]);
+      }
+    }
+    return hit / n;
+  },
+  // для проверок: сколько точек подола (пружинки Skirt) глубже 1 см внутри бёдер (капсула бедро→колено, r=0.075)
+  _skirtInLegs() {
+    const mgr = vrm.springBoneManager; if (!mgr) return 0;
+    const seg = (n1, n2) => [bone(n1).getWorldPosition(new THREE.Vector3()), bone(n2).getWorldPosition(new THREE.Vector3())];
+    const legs = [seg('leftUpperLeg', 'leftLowerLeg'), seg('rightUpperLeg', 'rightLowerLeg')];
+    const ln = new THREE.Line3(), c = new THREE.Vector3(), p = new THREE.Vector3();
+    let n = 0;
+    for (const j of mgr.joints) {
+      const name = (j.bone && j.bone.name) || '';
+      if (!/Skirt/i.test(name) || /Coat/i.test(name)) continue;
+      j.bone.getWorldPosition(p);
+      for (const [a, b] of legs) { ln.set(a, b); ln.closestPointToPoint(p, true, c); if (c.distanceTo(p) < 0.075 - 0.01) { n++; break; } }
+    }
+    return n;
+  },
+  // для проверок: повороты костей (кватернионы, локальные)
+  _rots(names) { const o = {}; for (const n of names) { const b = bone(n); if (b) o[n] = b.quaternion.toArray(); } return o; },
   _dbg() { const r = {}; for (const n of ['hips','leftUpperLeg','leftLowerLeg']) { const b = bone(n); r[n] = b ? [b.rotation.x.toFixed(2), b.rotation.y.toFixed(2), b.rotation.z.toFixed(2)] : null; } r.lie = S.lie; r.lieK = sm.lieK; return r; },
   _portrait(span = 0.42, down = 0.0) {        // крупный план лица (для иконки)
     const top = (sm.headY || 1.6) + 0.14 - down, fov = 22;
