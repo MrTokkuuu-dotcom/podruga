@@ -35,6 +35,21 @@ PAUSE_LINES = {
 LOOK_TEXT = "Посмотри на мой экран и коротко скажи, что видишь."
 
 
+
+# что она отвечает на команды телу (коротко — само действие важнее слов)
+BODY_LINES = {
+    "ru": {"sit": ["Ага, присяду.", "Сажусь.", "Давай посидим."], "lie": ["Прилягу немножко.", "Ложусь.", "Ох, полежу."],
+           "stand": ["Встаю!", "Всё, встала.", "Поднимаюсь."], "pace": ["Пройдусь туда-сюда.", "Ага, разомнусь.", "Погуляю немножко."],
+           "left": ["Иду налево.", "Налево — так налево."], "right": ["Иду направо.", "Направо — поняла."],
+           "stop": ["Стою.", "Замерла.", "Всё, стою."]},
+    "en": {"sit": ["Okay, sitting down.", "Sure, I'll sit."], "lie": ["I'll lie down for a bit.", "Lying down."],
+           "stand": ["Getting up!", "Up I go."], "pace": ["I'll walk around a bit.", "Okay, a little walk."],
+           "left": ["Going left."], "right": ["Going right."], "stop": ["Stopping.", "Okay, I'll stay."]},
+    "ko": {"sit": ["응, 앉을게.", "앉을게~"], "lie": ["잠깐 누울게.", "누울게."], "stand": ["일어날게!", "일어났어."],
+           "pace": ["좀 걸어볼게.", "왔다 갔다 해볼게."], "left": ["왼쪽으로 갈게."], "right": ["오른쪽으로 갈게."],
+           "stop": ["멈췄어.", "여기 있을게."]},
+}
+
 class Companion:
     def __init__(self, cfg: dict, text_mode: bool = False):
         self.cfg = cfg
@@ -853,6 +868,18 @@ class Companion:
                 if follow:
                     self._say_followup(follow, wait_after=2.5)
                 self.go_sleep(say_goodnight=False)
+                return
+            body = intents.body_command(text) if getattr(self, "walker", None) else None
+            if body and not h.look:                      # «присядь», «ляг», «походи туда-обратно» — сразу, без Google
+                print(f"⚡ сразу: «{text}» → {body}")
+                tm["path"] = "сразу"
+                self.ui.add("me", text)
+                self.history.append({"role": "user", "text": text})
+                self.unsaved.append(f"{self.user}: {text}")
+                line = random.choice(BODY_LINES.get(self._phrase_lang, BODY_LINES["ru"])[body])
+                self.walker.command(body)
+                self.say(line, "joy" if body in ("pace", "stand") else "calm")
+                self._history_add(line)
                 return
             if not h.look and self.quick_answer(text=text, spoken=True):
                 return

@@ -222,6 +222,9 @@ def _skirt_old_sit(pg, name, shots):
 
 @check("skirt_through_legs")
 def _skirt_through_legs(pg, name, shots):
+    stand = max(pg.evaluate("(()=>{VRM3D._step(1,1/60);return VRM3D._skirtInLegs();})()") for _ in range(30))
+    if stand:
+        return False, f"даже стоя точек подола в бёдрах: {stand} — проверка врёт", stand
     sit_down(pg, 5)
     n = max(pg.evaluate("(()=>{VRM3D._step(1,1/60);return VRM3D._skirtInLegs();})()") for _ in range(60))
     return n == 0, f"точек подола в бёдрах: {n}", n

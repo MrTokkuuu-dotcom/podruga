@@ -318,7 +318,41 @@ class Walker:
         self._moved_by_user = True
         self._done.clear()
 
-    def sit(self, minutes: float | None = None, edge: bool = False):
+    def rest(self):
+        """Долго тихо — прилегла отдохнуть на 1–2,5 минуты; заговорили или позвали — встаёт."""
+        self.lying = True
+        self.c.ui.lie(True)
+        t0 = time.monotonic()
+        end = t0 + random.uniform(60, 150)
+        try:
+            while time.monotonic() < end and self.c.awake and not self._stop.is_set():
+                if self.c.busy.locked() or self.c.last_talk > t0:
+                    break
+                time.sleep(0.5)
+        finally:
+            if self.lying and self.c.awake:
+                self.stand_up()
+
+    def pace(self, times: int = 2):
+        """Походить туда-обратно: к левой трети экрана и к правой, пару раз."""
+        try:
+            g = self._geo()
+        except Exception:
+            return
+        vx, _, vw, _ = g["vis"]
+        ww = g["win"][2]
+        a, b = vx + (vw - ww) * 0.2, vx + (vw - ww) * 0.8
+        x = g["win"][0]
+        order = [a, b] if abs(x - b) < abs(x - a) else [b, a]
+        for _ in range(times):
+            for tx in order:
+                if self.interrupted():
+                    return
+                if not self.walk_to(tx):
+                    return
+                time.sleep(random.uniform(0.4, 1.0))
+
+    def sit(self, minutes: float | None = None, edge: bool = False, by_command: bool = False):
         self.busy, self.sitting = True, True
         self._stop.clear()
         if edge and self.support is not None:
@@ -328,7 +362,7 @@ class Walker:
         end = time.monotonic() + (minutes or random.uniform(0.7, 2.5)) * 60
         try:
             while time.monotonic() < end and not self.interrupted() and self.c.awake:
-                if self.c.busy.locked():                # заговорили — встаёт
+                if self.c.busy.locked() and not by_command:   # заговорили — встаёт (если сама села; по просьбе — сидит)
                     break
                 time.sleep(0.5)
         finally:
@@ -518,16 +552,27 @@ class Walker:
                     continue
                 if self.busy or time.monotonic() < self._next or not self._free():
                     continue
-                if self.support is not None and (time.monotonic() - self._on_ledge_since > 240 or random.random() < 0.35):
-                    self.jump_down()                          # погуляла по окну — пора вниз
-                elif self.support is None and self._ledges and random.random() < 0.3:
-                    self.climb()                              # залезть на окно
-                elif random.random() < 0.85:
+                quiet = time.monotonic() - self.c.last_talk         # сколько ты молчишь
+                r = random.random()
+                if self.support is not None and (time.monotonic() - self._on_ledge_since > 240 or r < 0.35):
+                    print("[сама] спрыгиваю с окна"); self.jump_down()   # погуляла по окну — пора вниз
+                elif self.support is None and self._ledges and r < 0.25:
+                    print("[сама] залезаю на окно"); self.climb()
+                elif r < 0.55:
+                    print("[сама] гуляю")
                     if self.walk_to(self._pick_target(self._geo())):
                         self._after_arrival()
+                elif r < 0.68:
+                    print("[сама] посижу"); self.sit()
+                elif r < 0.78:
+                    print("[сама] похожу туда-обратно"); self.pace(1)
+                elif r < 0.88:
+                    print("[сама] потягиваюсь"); self.c.ui.act("stretch", 2300)
+                elif quiet > 300 and self.support is None:
+                    print("[сама] прилягу отдохнуть"); self.rest()
                 else:
-                    self.sit()
-                self._next = time.monotonic() + random.uniform(40, 110)
+                    print("[сама] оглядываюсь"); self.c.ui.idle("look", random.uniform(4, 6))
+                self._next = time.monotonic() + random.uniform(30, 80)
             except Exception as e:
                 print(f"[прогулка] {e}")
                 self.busy = False
@@ -537,21 +582,28 @@ class Walker:
         what = (what or "").lower()
 
         def run():
+            if what in ("stand",):
+                if self.lying:
+                    self.stand_up()
+                return
             if self.lying:
                 self.stand_up()
-            if what.startswith(("сес", "сид", "сяд")):
-                self.sit(3)
-            elif what.startswith("стоп"):
+                time.sleep(2.0)                           # сначала встаёт, потом идёт/садится
+            if what.startswith(("сес", "сид", "сяд")) or what == "sit":
+                self.sit(5, by_command=True)
+            elif what.startswith("стоп") or what == "stop":
                 self.stop()
-            elif what.startswith("леч") or what.startswith("лож"):
+            elif what.startswith("леч") or what.startswith("лож") or what == "lie":
                 self.lie_down()
+            elif what == "pace":
+                self.pace()
             else:
                 try:
                     g = self._geo()
                 except Exception:
                     return
                 vx, _, vw, _ = g["vis"]
-                tx = vx if "лев" in what else vx + vw - g["win"][2] if "прав" in what else None
+                tx = vx if ("лев" in what or what == "left") else vx + vw - g["win"][2] if ("прав" in what or what == "right") else None
                 self.walk_to(tx)
         self.stop()
         time.sleep(0.1)

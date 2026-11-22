@@ -3,7 +3,7 @@
 // Координаты — пространство модели для «эталонного» тела (нога 0,8 м); под конкретную модель масштабируются.
 // side = +1: ноги уложены влево от неё (+X), опора на правую руку; side = -1 — зеркально.
 import * as THREE from 'three';
-import { createChain, solve, modelPos, endQuat, resetChain } from './ik.js';
+import { createChain, solve, modelPos, modelQuat, endQuat, resetChain } from './ik.js';
 
 const REF_LEG = 0.8;
 const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
@@ -219,7 +219,10 @@ export function createSitLayer(bone, scene, hipsBase) {
           const hang = endQuat(ch, along.clone().multiplyScalar(0.6).add(kneeFwd), kneeFwd.clone().negate().add(new THREE.Vector3(0, 0.3, 0)));
           const lying = smooth((0.12 * s - fy + 0.1 * smooth((0.34 * s - hp[1]) / (0.14 * s))) / 0.18);   // таз опускается к полу — ступни ложатся
           const hanging = smooth((-fy - 0.05 * s) / (0.12 * s));
-          const q = flat.clone().slerp(lie, lying * (1 - hanging)).slerp(hang, hanging);
+          // из «ровно» в «лежит» — почти 180°: идём через «носок вниз», чтобы короткий путь не переключался
+          const point = endQuat(ch, new THREE.Vector3(0, -1, 0).add(along.clone().multiplyScalar(0.25)), kneeFwd.clone());
+          const a = lying * (1 - hanging);
+          const q = (a < 0.5 ? flat.clone().slerp(point, a * 2) : point.clone().slerp(lie, (a - 0.5) * 2)).slerp(hang, hanging);
           solve(ch, V(f), V(n).normalize(), W, q);
         }
       }
@@ -232,11 +235,15 @@ export function createSitLayer(bone, scene, hipsBase) {
         const cur = modelPos(ch.end, scene, new THREE.Vector3());
         const fa = A.f || [cur.x, cur.y - yOff, cur.z], fb = B.f || [cur.x, cur.y - yOff, cur.z];
         const f = lerp3(fa, fb, u), n = lerp3(A.n, B.n, u);
-        const onFloor = f[1] < 0.06 * s;
+        const onW = smooth((0.08 * s - f[1]) / (0.05 * s));        // ладонь у пола — плавно разворачивается ладонью вниз
         f[1] += yOff;
         const out = which === 'hl' ? 1 : -1;
-        solve(ch, V(f), V(n).normalize(), w,
-              onFloor ? new THREE.Vector3(out * 0.8, 0, 0.6) : null, onFloor ? new THREE.Vector3(0, 1, 0) : null);
+        solve(ch, V(f), V(n).normalize(), w);
+        if (onW > 0.01 && ch.rEnd) {
+          const cur = modelQuat(ch.end, scene, new THREE.Quaternion());
+          const floorQ = endQuat(ch, new THREE.Vector3(out * 0.8, 0, 0.6), new THREE.Vector3(0, 1, 0));
+          solve(ch, V(f), V(n).normalize(), w, cur.slerp(floorQ, onW));
+        }
       }
     },
   };

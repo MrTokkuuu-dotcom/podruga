@@ -949,14 +949,15 @@ function setupTouch() {
 }
 
 // ---------- физика одежды и тела (spring bones) ----------
-const SKIRT = [];                                    // настройки пружинок юбки — сидя ткань мягче и тяжелее, ложится на ноги
+const SKIRT = [], LEG_COLS = [];                                    // настройки пружинок юбки — сидя ткань мягче и тяжелее, ложится на ноги
 function skirtDrape(k) {
   if (!SKIRT.length || Math.abs(k - (sm.drapeK ?? -1)) < 0.01) return;
   sm.drapeK = k;
-  for (const st of SKIRT) { st.stiffness = lerp(0.6, 0.1, k); st.gravityPower = lerp(0.3, 0.9, k); st.dragForce = lerp(0.4, 0.55, k); }
+  for (const st of SKIRT) { st.stiffness = lerp(0.6, 0.12, k); st.gravityPower = lerp(0.3, 0.7, k); st.dragForce = lerp(0.4, 0.55, k); }
+  for (const c of LEG_COLS) c.shape.radius = c.r0 * lerp(1, 1.25, k);   // сидя ткань ложится на бедро, а не в него
 }
 function tunePhysics() {
-  SKIRT.length = 0; sm.drapeK = -1;                  // другая модель — свои пружинки
+  SKIRT.length = 0; LEG_COLS.length = 0; sm.drapeK = -1;   // другая модель — свои пружинки
   const mgr = vrm.springBoneManager; if (!mgr) return;
   const raw = (n) => vrm.humanoid.getRawBoneNode(n);
   // коллайдеры-капсулы на ноги и таз: юбка и пальто не проходят сквозь тело
@@ -965,7 +966,9 @@ function tunePhysics() {
     const b = raw(boneName), c = raw(childName); if (!b || !c) return null;
     const shape = new VRMSpringBoneColliderShapeCapsule({ radius, offset: new THREE.Vector3(0, 0, 0),
                                                            tail: c.position.clone() });
-    const col = new VRMSpringBoneCollider(shape); b.add(col); return col;
+    const col = new VRMSpringBoneCollider(shape); b.add(col);
+    if (boneName !== 'hips') LEG_COLS.push({ shape, r0: radius });
+    return col;
   };
   const legs = [capsule('leftUpperLeg', 'leftLowerLeg', 0.085), capsule('rightUpperLeg', 'rightLowerLeg', 0.085),
                 capsule('leftLowerLeg', 'leftFoot', 0.06), capsule('rightLowerLeg', 'rightFoot', 0.06),
@@ -1277,6 +1280,7 @@ window.VRM3D = {
     for (const j of mgr.joints) {
       const name = (j.bone && j.bone.name) || '';
       if (!/Skirt/i.test(name) || /Coat/i.test(name)) continue;
+      if (!/Skirt/i.test((j.bone.parent && j.bone.parent.name) || '')) continue;   // корень у пояса — пришит к талии, не считаем
       j.bone.getWorldPosition(p);
       for (const [a, b] of legs) { ln.set(a, b); ln.closestPointToPoint(p, true, c); if (c.distanceTo(p) < 0.075 - 0.01) { n++; break; } }
     }
