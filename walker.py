@@ -293,6 +293,7 @@ class Walker:
                     break
         tx = max(x0, min(x1, tx))
         self.busy, self._moved_by_user = True, False
+        self._act = token = object()                      # кто сейчас «занял» её
         self._stop.clear()
         self._done.clear()
         self.c.ui.sit(False)
@@ -308,7 +309,8 @@ class Walker:
             if not ok:
                 self.c.ui.walk_stop()
         finally:
-            self.busy = False
+            if getattr(self, "_act", None) is token:       # другое действие (сесть по команде) не трогаем
+                self.busy = False
         return ok
 
     def arrived(self):
@@ -341,6 +343,7 @@ class Walker:
             return
         vx, _, vw, _ = g["vis"]
         ww = g["win"][2]
+        self._stop.clear()                                # команда перед этим всё остановила — теперь идём
         a, b = vx + (vw - ww) * 0.2, vx + (vw - ww) * 0.8
         x = g["win"][0]
         order = [a, b] if abs(x - b) < abs(x - a) else [b, a]
@@ -354,6 +357,7 @@ class Walker:
 
     def sit(self, minutes: float | None = None, edge: bool = False, by_command: bool = False):
         self.busy, self.sitting = True, True
+        self._act = token = object()
         self._stop.clear()
         if edge and self.support is not None:
             self.c.ui.sit_edge(True)                      # на краю окна, свесив ноги
@@ -366,9 +370,10 @@ class Walker:
                     break
                 time.sleep(0.5)
         finally:
-            self.c.ui.sit(False)
-            self.sitting = False
-            self.busy = False
+            if getattr(self, "_act", None) is token:       # если её уже заняли другим — не поднимаем и не снимаем «занята»
+                self.c.ui.sit(False)
+                self.sitting = False
+                self.busy = False
 
     def stop(self):
         self._stop.set()
@@ -552,6 +557,8 @@ class Walker:
                     continue
                 if self.busy or time.monotonic() < self._next or not self._free():
                     continue
+                if time.monotonic() < getattr(self, "_cmd_until", 0) or self.sitting:
+                    continue
                 quiet = time.monotonic() - self.c.last_talk         # сколько ты молчишь
                 r = random.random()
                 if self.support is not None and (time.monotonic() - self._on_ledge_since > 240 or r < 0.35):
@@ -580,6 +587,7 @@ class Walker:
 
     def command(self, what: str):
         what = (what or "").lower()
+        self._cmd_until = time.monotonic() + 30           # пока выполняет просьбу — сама ничего не затевает
 
         def run():
             if what in ("stand",):
@@ -590,7 +598,9 @@ class Walker:
                 self.stand_up()
                 time.sleep(2.0)                           # сначала встаёт, потом идёт/садится
             if what.startswith(("сес", "сид", "сяд")) or what == "sit":
+                self._cmd_until = time.monotonic() + 5 * 60
                 self.sit(5, by_command=True)
+                self._cmd_until = time.monotonic() + 10
             elif what.startswith("стоп") or what == "stop":
                 self.stop()
             elif what.startswith("леч") or what.startswith("лож") or what == "lie":

@@ -634,14 +634,18 @@ function pose(t) {
     P.headX += Math.max(0, Math.sin(at * 8)) * 0.18 * Math.max(0, 1 - at / 1.4);
   } else if (a === 'act-stretch') {
     const k = bell(at, 2.4);
-    P.lUpZ = lerp(P.lUpZ, 1.25, k); P.rUpZ = lerp(P.rUpZ, -1.25, k); P.lLoY = lerp(P.lLoY, 0, k); P.rLoY = lerp(P.rLoY, 0, k);
+    const UP = { lUpZ: 1.25, rUpZ: -1.25, lUpY: 0, rUpY: 0, lUpX: 0, rUpX: 0, lLoY: 0, rLoY: 0, lLoZ: 0, rLoZ: 0,
+                 lHandZ: 0, rHandZ: 0, lHandX: 0, rHandX: 0 };     // руки на талии, за спиной — неважно: вверх и прямые
+    for (const f in UP) P[f] = lerp(P[f] ?? 0, UP[f], k);
     P.headX -= 0.2 * k; P.spineX -= 0.1 * k; wantArms = 1;
   } else if (a === 'act-yawn') {
     const k = bell(at, 2.5);
-    P.headX -= 0.25 * k; P.rUpZ = lerp(P.rUpZ, 1.25, k); P.rUpY = lerp(P.rUpY, 0.6, k); P.rLoY = lerp(P.rLoY, 2.5, k); wantArms = 1;
+    P.headX -= 0.25 * k; P.rUpZ = lerp(P.rUpZ, 1.25, k); P.rUpY = lerp(P.rUpY, 0.6, k); P.rLoY = lerp(P.rLoY, 2.5, k);
+    P.rLoZ = lerp(P.rLoZ ?? 0, 0, k); P.rUpX = lerp(P.rUpX ?? 0, 0, k); P.rHandZ = lerp(P.rHandZ ?? 0, 0, k); wantArms = 1;
   } else if (a === 'act-rub') {                     // трёт глаз: кисть у лица, голова чуть вниз
     const k = bell(at, 1.5);
     P.rUpZ = lerp(P.rUpZ, 1.0, k); P.rUpY = lerp(P.rUpY, 0.55, k); P.rLoY = lerp(P.rLoY, 2.65, k);
+    P.rLoZ = lerp(P.rLoZ ?? 0, 0, k); P.rUpX = lerp(P.rUpX ?? 0, 0, k);
     P.rHandZ = lerp(P.rHandZ, Math.sin(at * 11) * 0.22, k); P.headX += 0.12 * k; P.headZ -= 0.06 * k; wantArms = 1;
   }
 
@@ -832,12 +836,17 @@ function avoidBody() {
       if (r) { if (r.side) hitS = Math.max(hitS, r.depth); else hitF = Math.max(hitF, r.depth); }
       else if (intoBody(pl, 0.05)) near = true;
     }
-    let f = sm[kF] || 0, sd = sm[kS] || 0;
-    const up_ = (d) => Math.min(0.8, d * 6 + 2.4 * FRAME_DT);
-    if (hitF) f = Math.min(0.8, f + up_(hitF) * FRAME_DT * 10);
-    if (hitS) sd = Math.min(0.6, sd + up_(hitS) * FRAME_DT * 10);
-    if (!hitF && !near) f = Math.max(0, f - 0.7 * FRAME_DT);        // свободно — медленно возвращаем
-    if (!hitS && !near) sd = Math.max(0, sd - 0.7 * FRAME_DT);
+    // цель толчка растёт, пока рука в теле, и сбрасывается только когда рука далеко (гистерезис) —
+    // иначе на границе «в теле / рядом» рука ходила туда-сюда (дрожь)
+    const tF = 'pushTF_' + side, tS = 'pushTS_' + side;
+    if (hitF) sm[tF] = Math.min(0.8, (sm[tF] || 0) + hitF * 6 * FRAME_DT * 10 + 0.02);
+    else if (!near) sm[tF] = Math.max(0, (sm[tF] || 0) - 0.5 * FRAME_DT);
+    if (hitS) sm[tS] = Math.min(0.6, (sm[tS] || 0) + hitS * 6 * FRAME_DT * 10 + 0.02);
+    else if (!near) sm[tS] = Math.max(0, (sm[tS] || 0) - 0.5 * FRAME_DT);
+    let f = hitF ? Math.max(sm[kF] || 0, sm[tF]) : spring(kF + 'v', sm[tF] || 0, 3, 1.0);
+    let sd = hitS ? Math.max(sm[kS] || 0, sm[tS]) : spring(kS + 'v', sm[tS] || 0, 3, 1.0);
+    if (hitF) { sm[kF + 'v'] = f; smv[kF + 'v'] = 0; }
+    if (hitS) { sm[kS + 'v'] = sd; smv[kS + 'v'] = 0; }
     if (INSTANT && (hitF || hitS)) { f = Math.min(0.8, f + 0.3); sd = Math.min(0.6, sd + 0.2); }
     // сразу применяем новое значение в этом же кадре — рука не успевает «мелькнуть» внутри
     up.rotation.x -= f - (sm[kF] || 0);
@@ -1063,6 +1072,30 @@ function tick(dt, t) {
   placeCamera();
   vrm.update(dt);
 }
+// замер плавности: раз в 10 с — сколько кадров нарисовано против желаемого, самый долгий промежуток,
+// сколько мс считается кадр (среднее/максимум) и сколько занимает отрисовка. Пишется в журнал Python ([кадры]).
+const CALLS = [];                                   // последние вызовы из Python — чтобы понять, что было перед паузой
+const PERF = { t0: 0, n: 0, gapMax: 0, last: 0, tick: 0, tickMax: 0, draw: 0, drawMax: 0, want: {} };
+function perfNote(now, tickMs, fps) {
+  const P = PERF;
+  if (!P.t0) P.t0 = now;
+  if (P.last) {
+    const gap = now - P.last;
+    P.gapMax = Math.max(P.gapMax, gap);
+    if (gap > 400) pyCall('perf', `пауза ${gap.toFixed(0)} мс (хотела ${fps} к/с, скрыта: ${document.hidden}), перед ней: ` +
+      CALLS.slice(-6).map(([n, t]) => `${n} ${(now - t).toFixed(0)}мс назад`).join(', '));
+  }
+  P.last = now; P.n++; P.tick += tickMs; P.tickMax = Math.max(P.tickMax, tickMs);
+  P.want[fps] = (P.want[fps] || 0) + 1;
+  if (now - P.t0 > 10000) {
+    const sec = (now - P.t0) / 1000;
+    const what = S.sitting || S.sitKind ? 'сидит' : S.lieRaw > 0 ? 'лежит' : (S.goal || S.v > 0) ? 'идёт' : S.jump ? 'прыгает' : 'стоит';
+    pyCall('perf', `${what}: ${(P.n / sec).toFixed(1)} к/с (хотела ${Object.entries(P.want).map(([k, v]) => k + '×' + v).join(' ')}), ` +
+      `дольше всего между кадрами ${P.gapMax.toFixed(0)} мс, расчёт ${(P.tick / P.n).toFixed(1)}/${P.tickMax.toFixed(1)} мс, ` +
+      `рисование ${(P.draw / P.n).toFixed(1)}/${P.drawMax.toFixed(1)} мс`);
+    Object.assign(P, { t0: now, n: 0, gapMax: 0, tick: 0, tickMax: 0, draw: 0, drawMax: 0, want: {} });
+  }
+}
 function loop(now) {
   if (FROZEN) { requestAnimationFrame(loop); return; }
   const fps = wantFps();
@@ -1081,10 +1114,14 @@ function loop(now) {
       const fk = sm.fullK || 0, want = (mini || S.full) ? 1 : 0;
       if (Math.abs(fk - want) > 0.002) { sm.fullK = lerp(fk, want, 1 - Math.pow(0.04, dt)); fitCamera(VIEW.w, VIEW.h); }
     }
+    const t0 = performance.now();
     tick(dt || 1 / 60, t);
+    perfNote(now, performance.now() - t0, fps);
     if (now - boxT > (S.goal || S.dragging ? 100 : 250)) { boxT = now; reportBox(); }
   }
+  const r0 = performance.now();
   renderer.render(scene, camera);
+  const rd = performance.now() - r0; PERF.draw += rd; PERF.drawMax = Math.max(PERF.drawMax, rd);
 }
 
 async function init(url) {
@@ -1132,7 +1169,7 @@ async function init(url) {
   return true;
 }
 
-window.VRM3D = {
+const VRM3D_API = {
   ready: false,
   async start(url) {
     try { await init(url); if (window.PERSONA) setPersona(window.PERSONA); this.ready = true; console.log('[3D] модель загружена'); return true; }
@@ -1305,3 +1342,10 @@ window.VRM3D = {
     S.dragging = !!opts.drag; S.full = true; sm.fullK = 1; if (camera) fitCamera(VIEW.w, VIEW.h);
   },
 };
+// каждый вызов из Python отмечаем (для замера пауз); тестовые хуки (_…) — без отметок
+for (const [k, fn] of Object.entries(VRM3D_API)) {
+  if (typeof fn !== 'function' || k.startsWith('_') || k === 'start') continue;
+  VRM3D_API[k] = function (...a) { CALLS.push([k, performance.now()]); if (CALLS.length > 20) CALLS.shift(); return fn.apply(this, a); };
+}
+window.VRM3D = VRM3D_API;
+

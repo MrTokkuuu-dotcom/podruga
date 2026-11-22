@@ -132,6 +132,10 @@ class Api:
         if wk:
             wk.arrived()
 
+    def perf(self, line):
+        """Замер плавности из 3D-страницы (кадры в секунду, время расчёта кадра) — в журнал."""
+        print(f"[кадры] {str(line)[:300]}")
+
     def landed(self, support=None):
         """Приземлилась после прыжка: support — id края окна или None (пол)."""
         wk = self._companion and getattr(self._companion, "walker", None)
