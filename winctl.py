@@ -67,6 +67,21 @@ def make_overlay():
         # canJoinAllSpaces | stationary | fullScreenAuxiliary
         win.setCollectionBehavior_((1 << 0) | (1 << 4) | (1 << 8))
         win.setLevel_(25)                        # NSStatusWindowLevel: выше Dock и полноэкранных окон
+        # WebKit перестаёт рисовать, когда macOS считает окно закрытым (например, рядом программа на весь экран),
+        # хотя она поверх и видна — анимация «замирала» на секунды. Просим WebKit не следить за этим.
+        wv = _webview()
+        sel = "_setWindowOcclusionDetectionEnabled:"
+        if wv is not None and wv.respondsToSelector_(sel):
+            wv._setWindowOcclusionDetectionEnabled_(False)
+            try:                                          # и не тормозит таймеры «скрытой» страницы
+                pr = wv.configuration().preferences()
+                pr._setHiddenPageDOMTimerThrottlingEnabled_(False)
+                pr._setDOMTimersThrottlingEnabled_(False)
+            except Exception:
+                pass
+            print("[окно] WebKit рисует всегда, даже если macOS считает окно закрытым")
+        else:
+            print("[окно] не получилось отключить «засыпание» WebKit — анимация может замирать за полноэкранными")
     main(f)
 
 
@@ -136,3 +151,48 @@ class ClickThrough:
 
     def start(self):
         threading.Thread(target=self.loop, name="clickthrough", daemon=True).start()
+
+
+def _webview():
+    """WKWebView внутри нашего окна (или None)."""
+    win = window()
+    if not win:
+        return None
+    stack = [win.contentView()]
+    while stack:
+        v = stack.pop()
+        if v is None:
+            continue
+        try:
+            from WebKit import WKWebView
+            if v.isKindOfClass_(WKWebView):              # у pywebview свой подкласс (WebKitHost) — ищем по типу
+                return v
+        except Exception:
+            if "WKWebView" in str(v.className()) or "WebKitHost" in str(v.className()):
+                return v
+        stack.extend(list(v.subviews() or []))
+    return None
+
+
+def watch_visibility():
+    """Раз в секунду: видит ли macOS наше окно (occlusionState). Если система решит, что окно закрыто
+    другими, WebKit перестаёт рисовать страницу — она «замирает». Пишем каждое изменение в журнал."""
+    if getattr(watch_visibility, "on", False):
+        return
+    watch_visibility.on = True
+
+    def loop():
+        last = None
+        while True:
+            time.sleep(1.0)
+            try:
+                st = main(lambda: (int(window().occlusionState()) if window() else -1,
+                                   bool(window().isVisible()) if window() else False,
+                                   bool(window().isOnActiveSpace()) if window() else False), timeout=0.5)
+            except Exception:
+                continue
+            if st and st != last:
+                vis = "видно" if st[0] & 2 else "НЕ видно (macOS считает окно закрытым)"
+                print(f"[окно] {vis}; показано: {st[1]}; на этом рабочем столе: {st[2]}")
+                last = st
+    threading.Thread(target=loop, name="win-visibility", daemon=True).start()

@@ -441,6 +441,7 @@ class AppUI:
         winctl.set_frame(*fr)
         try:
             winctl.make_overlay()
+            winctl.watch_visibility()
         except Exception as e:
             print(f"[окно] поверх полноэкранных: {e}")
         self.her_pos = (hx, hy)
