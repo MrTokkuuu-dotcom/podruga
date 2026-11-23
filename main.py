@@ -1422,9 +1422,11 @@ class Companion:
             bundle = os.environ.get("PODRUGA_APP")
             if bundle:
                 import subprocess
-                # -n: новый экземпляр, даже если старый ещё не до конца закрылся
-                subprocess.Popen(["/bin/sh", "-c", f'sleep 1; open -n "{bundle}"'],
-                                 start_new_session=True)
+                # -n: новый экземпляр, даже если старый ещё не до конца закрылся. macOS иногда не открывает
+                # приложение, пока старое закрывается (24.11 так и осталась закрытой) — до 3 попыток.
+                script = (f'sleep 1; for i in 1 2 3; do open -n "{bundle}"; sleep 8; '
+                          f'pgrep -f "venv/bin/python main.py" >/dev/null && exit 0; done')
+                subprocess.Popen(["/bin/sh", "-c", script], start_new_session=True)
                 os._exit(0)
             os.execv(sys.executable, [sys.executable] + sys.argv)
 
