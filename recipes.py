@@ -13,8 +13,8 @@ from intents import norm
 PLAY_WORDS = ("воспроизвести", "play", "재생", "слушать")
 VERBS = {"включи", "включай", "включить", "поставь", "поставить", "найди", "найти", "покажи", "запусти", "сыграй",
          "играй", "поищи", "открой", "play", "find", "search", "put", "show", "загугли", "погугли"}
-FILLER = {"песню", "песня", "трек", "пожалуйста", "мне", "плиз", "please", "on", "in", "аня", "алиса", "таня",
-          "подруга", "можешь", "давай", "а", "ну", "the", "song", "me"}
+FILLER = {"песню", "песня", "трек", "пожалуйста", "мне", "плиз", "please", "аня", "алиса", "таня",
+          "подруга", "можешь", "давай", "а", "ну"}    # только по краям запроса: «Hate Me», «In the End» — целиком
 KO_VERBS = ("틀어", "찾아", "재생", "보여", "켜줘", "검색", "들려")
 PRE = r"(?:\b(?:в|на|on|in)\s+)?"
 
@@ -24,11 +24,17 @@ class Recipe:
     name: str
     url: str
     target: Callable | None = None
+    query: str = ""
+    verify: bool = False        # проверить, что заиграло (в плеере появилась «Пауза»)
 
 
 def _is_play(el) -> bool:
+    """Кнопка «Воспроизвести <название>» у результата. Голая «Воспроизвести» — это плеер внизу, не она."""
     lab = norm(el.label)
-    return el.role == "AXButton" and lab.startswith(PLAY_WORDS)
+    if el.role != "AXButton" or not lab.startswith(PLAY_WORDS):
+        return False
+    rest = lab.split(" ", 1)[1] if " " in lab else ""
+    return len(rest) >= 2
 
 
 def _is_video(el) -> bool:
@@ -49,8 +55,16 @@ SITES = [   # (имя, шаблон, ссылка, цель, нужен ли г�
 ]
 
 
+def _skip(w: str) -> bool:
+    return w in VERBS or w in FILLER or any(k in w for k in KO_VERBS)
+
+
 def _query(rest: str) -> str:
-    words = [w for w in rest.split() if w not in VERBS and w not in FILLER and not any(k in w for k in KO_VERBS)]
+    words = rest.split()
+    while words and _skip(words[0]):
+        words.pop(0)
+    while words and _skip(words[-1]):
+        words.pop()
     return " ".join(words).strip()
 
 
@@ -69,13 +83,31 @@ def find(goal: str) -> Recipe | None:
         q = _query((t[:m.start()] + " " + t[m.end():]).strip())
         if not q:
             return None
-        return Recipe(name, url + quote(q), target)
+        return Recipe(name, url + quote(q), target, q, name == "ytmusic")
     return None
+
+
+def _best(snap, r: Recipe):
+    """Подходящая кнопка, в подписи которой больше всего слов из запроса (при равенстве — первая)."""
+    cands = [e for e in snap.elements if r.target(e)]
+    if not cands:
+        return None
+    words = set(norm(r.query).split())
+    return max(cands, key=lambda e: (len(words & set(norm(e.label).split())), -cands.index(e)))
+
+
+def _wait_playing(eyes_mod, sleep, clock, secs: float = 3.0) -> bool:
+    end = clock() + secs
+    while clock() < end:
+        sleep(0.5)
+        if eyes_mod.is_playing(eyes_mod.snapshot()):
+            return True
+    return False
 
 
 def run(r: Recipe, eyes_mod, hands_mod, open_fn, timeout: float = 8.0, sleep=time.sleep,
         clock=time.monotonic) -> bool:
-    """Открыть и (если есть цель) нажать её. True — получилось."""
+    """Открыть и (если есть цель) нажать её. True — получилось (для музыки — правда заиграло)."""
     open_fn(r.url)
     if r.target is None:
         return True
@@ -83,9 +115,17 @@ def run(r: Recipe, eyes_mod, hands_mod, open_fn, timeout: float = 8.0, sleep=tim
     sleep(1.0)                                   # страница начинает грузиться
     while clock() < end:
         snap = eyes_mod.snapshot()
-        el = next((e for e in snap.elements if r.target(e)), None)
-        if el is not None:
-            hands_mod.press(el, snap.app, snap.bundle_id)
+        el = _best(snap, r)
+        if el is None:
+            sleep(0.5)
+            continue
+        was_playing = r.verify and eyes_mod.is_playing(snap)
+        hands_mod.press(el, snap.app, snap.bundle_id)
+        if not r.verify or was_playing:           # уже что-то играло — по «Паузе» не отличить, верим нажатию
             return True
-        sleep(0.5)
+        if _wait_playing(eyes_mod, sleep, clock):
+            return True
+        print(f"[руки] «{el.label}» не заиграло — нажимаю мышью")
+        hands_mod.press(el, snap.app, snap.bundle_id, mouse=True)
+        return _wait_playing(eyes_mod, sleep, clock)
     return False

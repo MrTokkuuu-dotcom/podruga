@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import eyes  # noqa: E402
 import recipes  # noqa: E402
 from eyes import Element, Snapshot  # noqa: E402
 
@@ -17,6 +18,8 @@ for text, name, url in [
     ("включи на ютуб музыке песню звезда по имени солнце", "ytmusic", YTM + quote("звезда по имени солнце")),
     ("유튜브 뮤직에서 아이유 틀어줘", "ytmusic", YTM + quote("아이유")),
     ("play blackpink on youtube music", "ytmusic", YTM + quote("blackpink")),
+    ("включи песню Hate Me в YouTube Music", "ytmusic", YTM + quote("hate me")),
+    ("play In the End on youtube music", "ytmusic", YTM + quote("in the end")),
     ("найди на ютубе как варить рамен", "youtube", YT + quote("как варить рамен")),
     ("включи на youtube котиков", "youtube", YT + quote("котиков")),
     ("유튜브에서 고양이 영상 찾아줘", "youtube", YT + quote("고양이 영상")),
@@ -35,24 +38,32 @@ if recipes.find("найди наушники на купанге").target is not
 
 
 class Eyes:
-    def __init__(self, appear_at):
-        self.n, self.at = 0, appear_at
+    """Страница YouTube Music: кнопки появляются на снимке appear_at; играет ли — общий флаг state."""
+
+    def __init__(self, appear_at, state=None, labels=("Воспроизвести «Группа крови»", "Play")):
+        self.n, self.at, self.state, self.labels = 0, appear_at, state or {"playing": False}, labels
 
     def snapshot(self):
         self.n += 1
         els = [Element(1, "AXButton", "Поиск", (0, 0, 9, 9), ref="s")]
         if self.at and self.n >= self.at:
-            els.append(Element(2, "AXButton", "Воспроизвести «Группа крови»", (0, 0, 9, 9), ref="p"))
-            els.append(Element(3, "AXButton", "Play", (0, 0, 9, 9), ref="p2"))
+            for i, lab in enumerate(self.labels):
+                els.append(Element(2 + i, "AXButton", lab, (0, 0, 9, 9), ref=f"p{i}"))
+        els.append(Element(9, "AXButton", "Пауза" if self.state["playing"] else "Воспроизвести", (0, 900, 9, 9),
+                           ref="bar"))
         return Snapshot("Google Chrome", "com.google.Chrome", "YouTube Music", els, [], 1)
+
+    is_playing = staticmethod(eyes.is_playing)
 
 
 class Hands:
-    def __init__(self):
-        self.pressed = []
+    def __init__(self, state, works=("ax", "mouse")):
+        self.pressed, self.state, self.works = [], state, works
 
-    def press(self, el, app, bid, confirmed=False):
-        self.pressed.append(el.ref)
+    def press(self, el, app, bid, confirmed=False, mouse=False):
+        self.pressed.append((el.ref, mouse))
+        if ("mouse" if mouse else "ax") in self.works:
+            self.state["playing"] = True
         return "нажала"
 
 
@@ -69,17 +80,44 @@ def sleep(s):
     t[0] += s
 
 
-h = Hands()
-ok = recipes.run(r, Eyes(3), h, opened.append, timeout=8, sleep=sleep, clock=clock)
-if not ok or h.pressed != ["p"] or opened != [r.url]:
-    bad.append(f"кнопка на 3-м снимке: ok={ok} pressed={h.pressed} opened={opened}")
-t[0] = 0.0
-h = Hands()
-ok = recipes.run(r, Eyes(None), h, opened.append, timeout=8, sleep=sleep, clock=clock)
+def go(recipe, eyes_, hands_, timeout=8):
+    t[0] = 0.0
+    return recipes.run(recipe, eyes_, hands_, opened.append, timeout=timeout, sleep=sleep, clock=clock)
+
+
+st = {"playing": False}
+h = Hands(st)
+ok = go(r, Eyes(3, st), h)
+if not ok or h.pressed != [("p0", False)] or opened[-1] != r.url:
+    bad.append(f"кнопка на 3-м снимке: ok={ok} pressed={h.pressed}")
+st = {"playing": False}
+h = Hands(st, works=("mouse",))
+ok = go(r, Eyes(2, st), h)
+if not ok or h.pressed != [("p0", False), ("p0", True)]:
+    bad.append(f"не заиграло — мышью: ok={ok} pressed={h.pressed}")
+st = {"playing": False}
+h = Hands(st, works=())
+ok = go(r, Eyes(2, st), h)
+if ok:
+    bad.append("не заиграло ни так, ни мышью — а сказала «получилось»")
+st = {"playing": True}
+h = Hands(st, works=())
+ok = go(r, Eyes(2, st), h)
+if not ok or len(h.pressed) != 1:
+    bad.append(f"уже что-то играло — одного нажатия хватит: ok={ok} pressed={h.pressed}")
+st = {"playing": False}
+h = Hands(st)
+ok = go(recipes.find("включи новый мерин в ютуб музыке"),
+        Eyes(2, st, labels=("Play MORGENSHTERN", "Play Новый Мерин - MORGENSHTERN")), h)
+if h.pressed[:1] != [("p1", False)]:
+    bad.append(f"выбрана не та кнопка: {h.pressed}")
+st = {"playing": False}
+h = Hands(st)
+ok = go(r, Eyes(None, st), h)
 if ok or h.pressed or t[0] < 8:
     bad.append(f"кнопка не появилась: ok={ok} pressed={h.pressed} t={t[0]}")
-h = Hands()
-ok = recipes.run(recipes.find("найди наушники на купанге"), Eyes(None), h, opened.append, sleep=sleep, clock=clock)
+h = Hands(st)
+ok = go(recipes.find("найди наушники на купанге"), Eyes(None, st), h)
 if not ok or h.pressed:
     bad.append("купанг: только открыть")
 

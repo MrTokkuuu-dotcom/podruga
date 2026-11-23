@@ -5,10 +5,11 @@
 import re
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import guard
 from eyes import Element
+from intents import norm
 
 KINDS = ("НАЖАТЬ", "ПЕЧАТАТЬ", "КЛАВИША", "ЛИСТАТЬ", "ОТКРЫТЬ", "ГОТОВО", "НЕ МОГУ", "НЕ_МОГУ")
 _CMD = re.compile(r"<<\s*(НАЖАТЬ|ПЕЧАТАТЬ|КЛАВИША|ЛИСТАТЬ|ОТКРЫТЬ|ГОТОВО|НЕ[ _]?МОГУ)\b\s*(.*?)\s*(?:>>|$)",
@@ -74,13 +75,28 @@ def build_prompt(goal: str, done: list, screen: str) -> str:
 
 class Task:
     def __init__(self, goal, think, eyes_mod, hands_mod, ask_yes, say, look_google=None, stop=None,
-                 clock=time.monotonic, sleep=time.sleep, open_fn=None, on_step=None):
+                 clock=time.monotonic, sleep=time.sleep, open_fn=None, on_step=None, ignore=None):
         self.goal, self.think, self.eyes, self.hands = goal, think, eyes_mod, hands_mod
         self.ask_yes, self.say, self.look_google = ask_yes, say, look_google
         self.stop = stop or threading.Event()
         self.clock, self.sleep, self.open_fn = clock, sleep, open_fn
-        self.on_step = on_step or (lambda text, el=None: None)
+        self._on_step = on_step or (lambda text, el=None: None)
+        self.ignore = ignore or (lambda: [])     # строки её чата — распознавание текста их тоже видит
+        self.shown: list[str] = []
         self.done: list[str] = []
+        self._last = None          # (подпись, вид экрана) прошлого нажатия
+        self._repeats = 0
+
+    def on_step(self, text: str, el=None) -> None:
+        self.shown.append(text)
+        self._on_step(text, el)
+
+    def _own(self, line: str) -> bool:
+        """Это её собственное сообщение в чате, а не кнопка на экране."""
+        n = norm(line)
+        if len(n) < 6:
+            return False
+        return any(n in norm(s) for s in self.shown + list(self.ignore()))
 
     # --- один шаг ---
     def _confirmed(self, fn, *a, **k) -> str | None:
@@ -103,8 +119,9 @@ class Task:
                 return Element(e.id, e.role, e.label, e.frame, e.enabled, e.secure, None)
         return Element(0, "TEXT", f"точка {x},{y}", (x - 1, y - 1, 2, 2))
 
-    def _act(self, step: Step, snap) -> bool:
-        """True — что-то сделано (или осознанно не сделано); пишет в self.done."""
+    def _act(self, step: Step, snap) -> bool | None:
+        """True — что-то сделано (или осознанно не сделано), False — шаг мимо, None — застряла
+        (жмёт одно и то же, а экран не меняется). Пишет в self.done."""
         app, bid = snap.app, snap.bundle_id
         h = self.hands
         if step.kind == "НАЖАТЬ":
@@ -112,8 +129,16 @@ class Task:
             if el is None:
                 self.done.append(f"нет элемента {step.target or step.arg}")
                 return False
-            self.on_step(f"нажимаю «{el.label}»", el)
-            r = self._confirmed(h.press, el, app, bid)
+            sig = tuple(e.label for e in snap.elements)
+            same = self._last == (el.label, sig)
+            self._repeats = self._repeats + 1 if same else 0
+            self._last = (el.label, sig)
+            if self._repeats >= 2:
+                self.done.append(f"«{el.label}» уже жала дважды — ничего не меняется; выбери другое или <<НЕ МОГУ>>")
+                return None
+            mouse = self._repeats == 1          # первый раз на экране ничего не поменялось — теперь мышью
+            self.on_step(f"нажимаю «{el.label}»" + (" мышью" if mouse else ""), el)
+            r = self._confirmed(h.press, el, app, bid, mouse=mouse)
             self.done.append(r or f"он не разрешил нажать «{el.label}»")
             return True
         if step.kind == "ПЕЧАТАТЬ":
@@ -145,8 +170,12 @@ class Task:
         snap = self.eyes.snapshot()
         if len(snap.elements) < 5:          # бедное дерево — добавим распознанный текст (жать мышью)
             n = len(snap.elements)
-            for i, (text, frame) in enumerate(self.eyes.read_text()[:60]):
-                snap.elements.append(Element(n + i + 1, "TEXT", text, frame))
+            lines = [(t, f) for t, f in self.eyes.read_text() if not self._own(t)][:60]
+            snap = replace(snap, elements=list(snap.elements) + [Element(n + i + 1, "TEXT", text, frame)
+                                                    for i, (text, frame) in enumerate(lines)])
+            print(f"[глаза] {snap.app}: {n} элементов + {len(lines)} строк текста с экрана")
+        else:
+            print(f"[глаза] {snap.app}: {len(snap.elements)} элементов")
         return snap
 
     # --- вся задача ---
@@ -183,8 +212,13 @@ class Task:
                     continue
                 if step.kind == "ГОТОВО":
                     return Result(True, step.arg or "готово", steps)
-                if self._act(step, snap):
+                acted = self._act(step, snap)
+                if acted:
                     cant = 0
+                elif acted is None:
+                    cant += 1
+                    if cant >= 2 and (google_used or not self.look_google):
+                        return Result(False, "Не получилось: нажимаю, а ничего не меняется.", steps)
                 self.sleep(PAUSE)
         except guard.Blocked as b:
             self.say(b.reason)

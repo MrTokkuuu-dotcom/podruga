@@ -90,10 +90,11 @@ def _click_center(el) -> None:
 
 
 # --- действия ---
-def press(el, app: str, bundle_id: str, confirmed: bool = False) -> str:
+def press(el, app: str, bundle_id: str, confirmed: bool = False, mouse: bool = False) -> str:
+    """mouse=True — сразу мышью (кнопка видна только при наведении и на AXPress не реагирует)."""
     guard.check_app(app, bundle_id)
     guard.check_press(el.label, confirmed)
-    if not _ax_press(el.ref):
+    if mouse or not _ax_press(el.ref):
         _click_center(el)
         return f"кликнула «{el.label}»"
     return f"нажала «{el.label}»"

@@ -86,6 +86,15 @@ eyes._prepare_app(object(), "com.apple.Safari", 1235, sleep=lambda s: None)
 if calls:
     bad.append("Safari трогать не нужно")
 
+def snap_of(*labels):
+    return Snapshot("Chrome", "", "", [Element(i, "AXButton", lab, (0, 0, 9, 9)) for i, lab in enumerate(labels)], [], 1)
+
+
+if not all(eyes.is_playing(snap_of(x)) for x in ("Пауза", "Pause", "Приостановить", "일시정지")):
+    bad.append("is_playing не видит «Пауза»")
+if eyes.is_playing(snap_of("Воспроизвести", "Play", "Поиск")):
+    bad.append("is_playing без паузы")
+
 if bad:
     print("\n".join(bad))
     sys.exit(1)

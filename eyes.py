@@ -22,6 +22,7 @@ FIELDS = {"AXTextField", "AXSearchField", "AXTextArea", "AXComboBox"}
 # Chromium-браузеры и Electron отдают страницу в дерево, только если их об этом попросить
 CHROMIUM = {"com.google.Chrome", "com.google.Chrome.canary", "com.microsoft.edgemac", "com.brave.Browser",
             "company.thebrowser.Browser", "com.naver.Whale", "com.operasoftware.Opera", "com.vivaldi.Vivaldi"}
+PAUSE_WORDS = ("пауза", "pause", "приостановить", "поставить на паузу", "일시정지", "일시 중지")
 MAX_DEPTH = 25
 MAX_NODES = 4000
 
@@ -159,6 +160,12 @@ def _collect(root, attr, win) -> tuple:
             kids = attr(el, "AXChildren") or []
             stack.extend((k, depth + 1) for k in reversed(kids))
     return els, texts[:40]
+
+
+def is_playing(snap: Snapshot) -> bool:
+    """Играет ли что-то: в плеере есть кнопка «Пауза»."""
+    from intents import norm
+    return any(e.role == "AXButton" and norm(e.label).startswith(PAUSE_WORDS) for e in snap.elements)
 
 
 def format_for_brain(snap: Snapshot, max_items: int = 80) -> str:

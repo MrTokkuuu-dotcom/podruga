@@ -159,7 +159,8 @@ class TaskRunner:
             spoken.append(text)
             c.say(text, emotion)
         res = agent.Task(goal, self._think, eyes, hands, self.ask_yes, say, look_google=look, stop=self.stop,
-                         open_fn=actions.open_thing, on_step=self._on_step).run()
+                         open_fn=actions.open_thing, on_step=self._on_step,
+                         ignore=lambda: spoken + [h.get("text", "") for h in list(getattr(c, "history", []))[-12:]]).run()
         print(f"[руки] итог: {res}")
         c.journal.log("action", what=f"задача «{goal}»: {'да' if res.ok else 'нет'} за {res.steps} шагов")
         if self.stop.is_set():
