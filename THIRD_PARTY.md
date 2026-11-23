@@ -27,6 +27,7 @@
 | Qwen3-TTS 0.6B Base (Alibaba), сборка `mlx-community/Qwen3-TTS-12Hz-0.6B-Base-8bit` | живой голос (`voice_qwen.py`) | Apache 2.0 (карточка модели и технический отчёт Qwen) |
 | Голоса девочек `voice_refs/*.wav` | образцы голоса | синтетические, созданы Qwen3-TTS 1.7B VoiceDesign (Apache 2.0) по описанию — человек их не записывал |
 | mlx-audio, miniaudio | движок живого голоса | MIT |
+| pyobjc-framework-Vision, -CoreML, -ApplicationServices, -Quartz 13.0 | «глаза и руки»: распознавание текста, дерево доступности, клики (сами Vision/Accessibility — часть macOS) | MIT (метаданные пакета, 24.11.2026) |
 | mlx, mlx-lm, mlx-whisper (Apple) | мозг и слух | MIT |
 | Whisper large-v3-turbo / small (OpenAI, Systran) | слух | MIT |
 | faster-whisper, ctranslate2 | запасной слух | MIT |
