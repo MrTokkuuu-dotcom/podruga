@@ -232,6 +232,8 @@
   /* во сне эмоций нет */
   .sleep .eye-happy, .sleep #sparkle, .sleep #heart, .sleep #excl, .sleep #sweat, .sleep #tear { display: none !important; }
 
+#hl { position: fixed; display: none; border: 3px solid #ff7eb6; border-radius: 8px; box-shadow: 0 0 14px #ff7eb6;
+  pointer-events: none; z-index: 9999; }
 </style>
 </head>
 <body class="mini">
@@ -438,6 +440,15 @@
     <p style="margin-top:4px; opacity:.75" id="brainState"></p>
     <p style="margin-top:4px; opacity:.6; font-size:11px">Свой мозг — Gemma 4 (Google, Apache 2.0). Погода — MET Norway
       (CC BY 4.0), города — GeoNames (CC BY 4.0), справки — Википедия (CC BY-SA 4.0).</p>
+    <p style="margin-top:10px"><b>Глаза и руки</b> — по просьбе сама нажимает и печатает на экране. Пароли не вводит
+      никогда, перед «купить / отправить / удалить» спрашивает тебя.</p>
+    <label><input type="checkbox" id="sHands"> Включено</label>
+    <div class="row">Универсальный доступ: <span id="permAcc">—</span>
+      <button class="btn" onclick="api('ask_permission', 'accessibility')">Разрешить</button></div>
+    <div class="row">Запись экрана: <span id="permScr">—</span>
+      <button class="btn" onclick="api('ask_permission', 'screen')">Разрешить</button></div>
+    <label id="handsGoogleRow"><input type="checkbox" id="sHandsGoogle"> Если сама не справлюсь — смотреть через Google
+      (снимок экрана уйдёт в Google)</label>
     <p style="margin-top:8px">Ключ Gemini: <span id="keyState">—</span></p>
     <div class="row"><button class="btn" onclick="showKey()">Сменить ключ</button>
       <button class="btn" onclick="api('open_data')">Папка с памятью</button></div>
@@ -533,6 +544,14 @@ const ui = {
     if (holdMs) ui._emoTimer = setTimeout(() => { ui._emo = 'calm'; ui._paint(); }, holdMs);
   },
   level(v) { $('lvl').style.width = Math.min(100, v / 30) + '%'; },
+  highlight(r) {          // «руки»: рамка вокруг того, что она сейчас нажимает
+    let b = $('hl'); if (!b) { b = document.createElement('div'); b.id = 'hl'; document.body.appendChild(b); }
+    clearTimeout(ui._hlT);
+    if (!r) { b.style.display = 'none'; return; }
+    Object.assign(b.style, { display: 'block', left: (r[0] - 4) + 'px', top: (r[1] - 4) + 'px',
+                             width: (r[2] + 8) + 'px', height: (r[3] + 8) + 'px' });
+    ui._hlT = setTimeout(() => { b.style.display = 'none'; }, 4000);
+  },
   title(name) { $('title').textContent = name; document.title = name; },
   needKey(msg) { setMini(false); showKey(); if (msg) note('keyNote', msg, false); },
   keyOk() { closePanels(); },
@@ -566,6 +585,10 @@ async function openSettings() {
   $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
   $('sBrain').value = s.brain || 'local'; $('brainState').textContent = s.brain_state || '';
   $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
+  $('sHands').checked = s.hands !== false; $('sHandsGoogle').checked = s.hands_google !== false;
+  $('handsGoogleRow').style.display = s.has_key ? '' : 'none';
+  $('permAcc').textContent = s.perm && s.perm.accessibility ? 'есть ✓' : 'нет';
+  $('permScr').textContent = s.perm && s.perm.screen ? 'есть ✓' : 'нет';
   fillAvatars(s.avatars);
   $('tBold').value = s.traits.trait_bold ?? 20; $('tPlay').value = s.traits.trait_play ?? 55; $('tTalk').value = s.traits.trait_talk ?? 30;
   closePanels(); $('setPanel').classList.add('show');
@@ -596,7 +619,7 @@ async function applyAvatar() {
 async function saveSettings() {
   const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
     trait_bold: $('tBold').value, trait_play: $('tPlay').value, trait_talk: $('tTalk').value,
-    brain: $('sBrain').value });
+    brain: $('sBrain').value, hands: $('sHands').checked ? '1' : '0', hands_google: $('sHandsGoogle').checked ? '1' : '0' });
   note('setNote', r && r.ok ? 'Сохранено ✓' : 'Не сохранилось', r && r.ok);
 }
 window.addEventListener('pywebviewready', () => api('ui_ready'));

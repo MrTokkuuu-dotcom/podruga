@@ -42,6 +42,13 @@ bad = [(t, device_command(t), want) for t, want in CASES.items() if device_comma
 for t, got, want in bad:
     print(f"✗ {t!r}: {got!r}, ждали {want!r}")
 assert not bad, f"{len(bad)} ошибок"
+# «глаза и руки»: просьбы, которые она делает сама на экране
+from intents import task_command  # noqa: E402
+for t, want in [("включи цоя в ютуб музыке", "СДЕЛАТЬ включи цоя в ютуб музыке"),
+                ("найди на ютубе как варить рамен", "СДЕЛАТЬ найди на ютубе как варить рамен"),
+                ("включи музыку", None), ("как дела?", None), ("я вчера смотрел ютуб", None)]:
+    assert task_command(t) == want, (t, task_command(t))
+assert device_command("включи музыку") == "МУЗЫКА play"
 # старое поведение телу не изменилось
 assert body_command("присядь") == "sit" and body_command("включи музыку") is None
 print("OK")

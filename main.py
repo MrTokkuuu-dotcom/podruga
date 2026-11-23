@@ -19,6 +19,7 @@ import logsetup
 from autopause import AutoPause
 from brain import FORMAT_RULES, GeminiBrain, NullModel
 import intents
+import tasks
 from config import (HOME, ROOT, has_key, load_config, save_key, save_user_settings)
 from journal import Journal, LastSeen, now
 from memory import Memory, extract_facts
@@ -100,6 +101,7 @@ class Companion:
         if self.ui.enabled:
             self.ui.api._companion = self
         self.listener = None
+        self.tasks = tasks.TaskRunner(self)   # «глаза и руки»: одна задача на экране за раз
         self.speaker = _PrintSpeaker() if text_mode else None
 
         self.wake = None
@@ -625,6 +627,8 @@ class Companion:
                     self.initiative.add_from_command(f"НАПОМНИТЬ +{m.group(1)} | Таймер: {label}")
             elif kind in ("ОТКРЫТЬ", "МУЗЫКА", "ГРОМКОСТЬ"):
                 threading.Thread(target=self._do_action, args=(kind, arg), daemon=True).start()
+            elif kind == "СДЕЛАТЬ":
+                self.tasks.start(arg.strip())
             elif kind == "ПОИСК":
                 threading.Thread(target=self._do_search, args=(arg,), daemon=True).start()
             elif kind == "ПОКАЗАТЬ":
@@ -762,6 +766,27 @@ class Companion:
         self._history_add(line)
         return True
 
+    TASK_LINES = {"ru": ["Сейчас!", "Секунду.", "Сейчас сделаю."], "en": ["On it!", "One sec."],
+                  "ko": ["잠깐만!", "지금 할게."]}
+
+    def task_now(self, text: str, spoken: bool = True) -> bool:
+        """«Включи <песня> в ютуб музыке», «найди на ютубе …» — сама на экране, без мозга. True — взялась."""
+        cmd = intents.task_command(text)
+        if not cmd:
+            return False
+        print(f"⚡ сразу: «{text}» → {cmd}")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        busy = self.tasks.running
+        self.tasks.start(text.strip())
+        if not busy:
+            line = random.choice(self.TASK_LINES.get(self._phrase_lang, self.TASK_LINES["ru"]))
+            self.say(line, "joy")
+            self._history_add(line)
+        return True
+
     def device_now(self, text: str, spoken: bool = True) -> bool:
         """«Включи музыку», «громче», «таймер на 5 минут» — сразу, без мозга. True — сделано."""
         cmd = intents.device_command(text)
@@ -791,6 +816,10 @@ class Companion:
             self.awake = True
         from wake import LOOK_PHRASES, _norm
         look = any(p in _norm(text) for p in LOOK_PHRASES)
+        if self.tasks.intercept(text):                    # «стоп» / «да» / «нет» посреди задачи на экране
+            return
+        if not look and self.task_now(text, spoken=False):
+            return
         if not look and self.repeat_now(text, spoken=False):
             return
         if not look and self.device_now(text, spoken=False):
@@ -1089,6 +1118,10 @@ class Companion:
         if text:
             self._phrase_lang = getattr(self.stt, "last_lang", "ru") or "ru"
             self._prepare_voice(self._phrase_lang)
+            if self.tasks.intercept(text):                # «стоп» / «да» / «нет» посреди задачи на экране
+                print(f"⚡ задача: «{text}»")
+                self.ui.add("me", text)
+                return
             if not self.addressed_to_me(text):
                 return
             if intents.is_sleep(text):                   # «спокойной ночи» — сразу, без Google
@@ -1116,6 +1149,9 @@ class Companion:
                 self.walker.command(body)
                 self.say(line, "joy" if body in ("pace", "stand") else "calm")
                 self._history_add(line)
+                return
+            if not h.look and self.task_now(text):       # «включи … в ютуб музыке» — сама на экране
+                tm["path"] = "сразу"
                 return
             if not h.look and self.repeat_now(text):     # «повтори за мной …» — слово в слово
                 tm["path"] = "сразу"
@@ -1260,6 +1296,8 @@ class Companion:
                 from winctl import ClickThrough
                 self.ui.clickthrough = ClickThrough(self.ui)
                 self.ui.clickthrough.start()
+                import hands
+                hands.set_overlay_hook(self.ui.clickthrough.pass_all)
             except Exception as e:
                 print(f"[окно] клики насквозь недоступны: {e}")
             import menubar

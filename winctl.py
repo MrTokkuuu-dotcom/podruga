@@ -112,11 +112,19 @@ class ClickThrough:
         self.btn = None             # левый верхний угол кнопки переписки, когда окно на весь экран
         self._fr = None
         self._fr_t = 0.0
+        self.force_through = False  # «руки» кликают мышью — окно целиком пропускает мышь
 
     def _set(self, ignore: bool):
         if ignore != self.ignoring:
             self.ignoring = ignore
             main(lambda: window().setIgnoresMouseEvents_(ignore), timeout=0.3)
+
+    def pass_all(self, on: bool) -> None:
+        """Вызывают «руки» (hands.py) перед кликом мышью и после."""
+        self.force_through = on
+        if on:
+            self._set(True)
+            time.sleep(0.05)
 
     def loop(self):
         if sys.platform != "darwin":
@@ -125,6 +133,9 @@ class ClickThrough:
         while True:
             time.sleep(0.05)
             try:
+                if self.force_through:
+                    self._set(True)
+                    continue
                 if not getattr(self.ui, "mini", True) or not self.box or window() is None:
                     self._set(False)
                     continue

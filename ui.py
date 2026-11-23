@@ -42,6 +42,7 @@ class NullUI:
     def idle(self, name, sec=4): pass
     def outfit(self, o): pass
     def show_chat(self): pass
+    def highlight(self, frame): pass
     def reload_model(self): pass
     def persona(self, motion): pass
     def hide_now(self): pass
@@ -160,7 +161,16 @@ class Api:
                 "traits": c.get("traits", {}),
                 "brain": c["brain"].get("engine", "local"), "brain_state": self._companion.brain_state(),
                 "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active),
+                "hands": bool(c.get("hands", {}).get("enabled", True)),
+                "hands_google": bool(c.get("hands", {}).get("google_fallback", True)),
+                "perm": __import__("eyes").permissions(),
                 "avatars": self._companion.avatars.listing(c.get("avatar_choice", "")) if getattr(self._companion, "avatars", None) else None}
+
+    def ask_permission(self, which):
+        """«Глаза и руки»: показать запрос macOS и открыть нужную страницу настроек."""
+        if which in ("accessibility", "screen"):
+            self._bg(__import__("eyes").ask_permissions, which)
+        return {"ok": True}
 
     def save_settings(self, values):
         if not self._companion:
@@ -377,6 +387,21 @@ class AppUI:
             self._outbox.put(js)
 
     def level(self, v): self._fast(f"ui.level({int(v)})")
+
+    def highlight(self, frame):
+        """Рамка вокруг того, что «руки» сейчас нажимают. frame — (x, y, w, h) экрана сверху-слева; None — убрать."""
+        if frame is None or not getattr(self, "stage_on", False):
+            self._call("highlight", None)
+            return
+        try:
+            import winctl
+            from AppKit import NSScreen
+            fx, fy, fw, fh = winctl.frame()
+            top = NSScreen.screens()[0].frame().size.height - (fy + fh)     # верх окна в координатах «сверху»
+            x, y, w, h = frame
+            self._call("highlight", [x - fx, y - top, w, h])
+        except Exception as e:
+            print(f"[руки] рамка: {e}")
     def look(self, dx, dy): self._fast(f"ui.look({dx:.2f},{dy:.2f})")
     def mouth(self, v, shape=None):
         self._fast(f"ui.mouth({v:.2f},'{shape or ''}')")

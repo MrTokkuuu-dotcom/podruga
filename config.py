@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent
 HOME = Path(os.environ.get("PODRUGA_HOME", ROOT))
 
 USER_KEYS = {"companion_name", "user_name",
-             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar", "brain"}   # что меняется из окна настроек
+             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar", "brain", "hands", "hands_google"}   # что меняется из окна настроек
 TRAITS_DEFAULT = {"trait_bold": "20", "trait_play": "55", "trait_talk": "30"}
 SILERO_SPEAKERS = {"xenia", "kseniya", "baya"}
 QWEN_VOICES = {"anya", "alisa", "tanya"}                 # живые голоса (voice_qwen.py), можно продавать
@@ -94,6 +94,9 @@ def apply_user_settings(cfg: dict) -> None:
     cfg["traits"] = {k: int(s.get(k, v)) for k, v in TRAITS_DEFAULT.items()}
     if s.get("avatar"):
         cfg["avatar_choice"] = s["avatar"]
+    for key, name in (("hands", "enabled"), ("hands_google", "google_fallback")):
+        if s.get(key) in ("0", "1"):
+            cfg.setdefault("hands", {})[name] = s[key] == "1"
     if s.get("walk") in ("0", "1"):
         cfg.setdefault("walk", {})["enabled"] = s["walk"] == "1"
 
