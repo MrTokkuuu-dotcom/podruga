@@ -65,6 +65,12 @@ for t, want in [("да", True), ("Да!", True), ("давай", True), ("жми"
     if got is not want:
         bad.append(f"yes_no({t!r}) = {got}, ждал {want}")
 
+expect(NeedYes, guard.check_key, "enter", "Telegram", "ru.keepcoder.Telegram")
+expect(NeedYes, guard.check_key, "enter", "KakaoTalk", "")
+expect(None, guard.check_key, "enter", "Telegram", "ru.keepcoder.Telegram", confirmed=True)
+expect(None, guard.check_key, "enter", "Google Chrome", "com.google.Chrome")
+expect(None, guard.check_key, "tab", "Telegram", "ru.keepcoder.Telegram")
+
 assert guard.MAX_STEPS == 12 and guard.MAX_SECONDS == 90 and guard.CONFIRM_TIMEOUT == 20
 
 if bad:

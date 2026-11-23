@@ -40,6 +40,13 @@ BLOCKED_NAMES = ("keychain", "связка ключей", "системные н
                  "terminal", "терминал", "iterm", "1password", "bitwarden", "lastpass", "dashlane", "пароли",
                  "passwords")
 
+# здесь Enter = отправить сообщение
+MESSENGERS = {"ru.keepcoder.Telegram", "org.telegram.desktop", "com.kakao.KakaoTalkMac", "com.apple.MobileSMS",
+              "com.hnc.Discord", "com.tinyspeck.slackmacgap", "com.apple.mail", "net.whatsapp.WhatsApp",
+              "com.facebook.archon", "jp.naver.line.mac"}
+MESSENGER_NAMES = ("telegram", "телеграм", "kakaotalk", "messages", "сообщения", "discord", "slack", "mail",
+                   "почта", "whatsapp", "messenger", "line")
+
 SECRET_WORDS = re.compile(r"\b(пароль|пароля|паролем|парол\w*|password\w*|passwd|cvc|cvv|비밀번호)\b|비밀번호")
 CODE_WITH_DIGITS = re.compile(r"\b(код|code|pin|пин|otp)\b\D{0,12}\d{3,}")
 LONG_NUMBER = re.compile(r"(?:\d[\s-]?){12,}")
@@ -65,6 +72,15 @@ def check_press(label: str, confirmed: bool = False) -> None:
     words = t.split()
     if any(w.startswith(RISKY_STEMS) for w in words) or any(k in t for k in RISKY_KO):
         raise NeedYes(f"Нажать «{label.strip()}»?")
+
+
+def check_key(name: str, app_name: str = "", bundle_id: str = "", confirmed: bool = False) -> None:
+    """Enter в мессенджере или почте отправляет сообщение — только после «да»."""
+    if confirmed or name != "enter":
+        return
+    low = (app_name or "").lower()
+    if bundle_id in MESSENGERS or any(n == low or low.startswith(n) for n in MESSENGER_NAMES):
+        raise NeedYes(f"Отправить сообщение в «{app_name}»?")
 
 
 def check_type(text: str, secure: bool) -> None:
