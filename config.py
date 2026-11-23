@@ -5,6 +5,7 @@
   при запуске из папки — сама папка программы (как раньше)."""
 import json
 import os
+import sys
 from pathlib import Path
 
 import yaml
@@ -12,10 +13,12 @@ import yaml
 ROOT = Path(__file__).resolve().parent
 HOME = Path(os.environ.get("PODRUGA_HOME", ROOT))
 
-USER_KEYS = {"companion_name", "user_name", "voice", "style", "pitch",
-             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar"}   # что меняется из окна настроек
+USER_KEYS = {"companion_name", "user_name",
+             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar", "brain"}   # что меняется из окна настроек
 TRAITS_DEFAULT = {"trait_bold": "20", "trait_play": "55", "trait_talk": "30"}
 SILERO_SPEAKERS = {"xenia", "kseniya", "baya"}
+QWEN_VOICES = {"anya", "alisa", "tanya"}                 # живые голоса (voice_qwen.py), можно продавать
+QWEN_TO_SILERO = {"anya": "xenia", "alisa": "kseniya", "tanya": "baya"}  # запасной (Intel), Silero продавать нельзя
 
 
 def env_path() -> Path:
@@ -63,6 +66,11 @@ def settings_path(cfg: dict) -> Path:
     return cfg["_data_dir"] / "settings.json"
 
 
+def _qwen_possible() -> bool:
+    import platform
+    return sys.platform == "darwin" and platform.machine() == "arm64"
+
+
 def apply_user_settings(cfg: dict) -> None:
     try:
         s = json.loads(settings_path(cfg).read_text(encoding="utf-8"))
@@ -72,19 +80,17 @@ def apply_user_settings(cfg: dict) -> None:
         cfg["companion_name"] = s["companion_name"]
     if s.get("user_name"):
         cfg["user_name"] = s["user_name"]
-    if s.get("voice"):
-        if s["voice"] == "chatterbox":
-            cfg["voice"]["engine"] = "chatterbox"
-        elif s["voice"] in SILERO_SPEAKERS:
-            cfg["voice"]["engine"] = "silero"
-            cfg["voice"]["silero_speaker"] = s["voice"]
-        else:
-            cfg["voice"]["engine"] = "gemini"
-            cfg["voice"]["gemini_voice"] = s["voice"]
-    if s.get("pitch"):
-        cfg["voice"]["silero_pitch"] = s["pitch"]
-    if s.get("style"):
-        cfg["voice"]["style"] = s["style"]
+    # Голос — у каждой девочки свой (voice_refs/<девочка>.wav); выбирать его отдельно не нужно.
+    girl = (s.get("avatar") or "anya/default").split("/")[0]
+    voice = girl if girl in QWEN_VOICES else "anya"
+    if _qwen_possible():
+        cfg["voice"]["engine"] = "qwen"
+        cfg["voice"]["qwen_voice"] = voice
+    else:
+        cfg["voice"]["engine"] = "silero"
+        cfg["voice"]["silero_speaker"] = QWEN_TO_SILERO[voice]
+    if s.get("brain") in ("local", "google"):
+        cfg["brain"]["engine"] = s["brain"]
     cfg["traits"] = {k: int(s.get(k, v)) for k, v in TRAITS_DEFAULT.items()}
     if s.get("avatar"):
         cfg["avatar_choice"] = s["avatar"]

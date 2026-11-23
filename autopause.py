@@ -7,6 +7,7 @@ import time
 
 import psutil
 
+import gpu
 from gpu import gpu_total_mac, gpu_usage_by_pid
 from journal import now
 
@@ -43,8 +44,10 @@ class AutoPause:
     def _external_gpu(self) -> tuple[float, str | None]:
         """Загрузка видеокарты всеми, кроме нас самих, Ollama и рабочего стола."""
         if sys.platform == "darwin":
-            # На Mac видна только общая загрузка. В простой версии мозг в облаке,
-            # поэтому видеочип грузим не мы — общая цифра подходит.
+            # На Mac видна только общая загрузка. Свой мозг и голос тоже на видеочипе —
+            # пока мы сами недавно работали (gpu.mark_own), общая цифра ничего не значит.
+            if gpu.own_recent():
+                return 0.0, None
             return gpu_total_mac(), "тяжёлая программа"
         total, top_name, top_val = 0.0, None, 0.0
         for pid, value in gpu_usage_by_pid().items():

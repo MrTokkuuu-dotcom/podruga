@@ -6,21 +6,20 @@ character_file: "character.md"
 user_city: "Пусан"         # для погоды и новостей
 
 brain:
-  # Простая версия: мозг в облаке, видеокарта не нужна.
-  # Точное имя модели проверить: python list_models.py
+  engine: "local"          # local — свой мозг (Gemma 4 E4B на видеочипе Mac, без интернета); google — облако, нужен ключ
+  local_unload_min: 60     # спит дольше — свой мозг выгружается из памяти (обратно ~10 с); в игре — сразу
+  # Мозг Google (запасной, если выбран или свой ещё качается). Точное имя модели: python list_models.py
   model: "gemini-3.5-flash-lite"
   thinking_budget: 0       # 0 = без «раздумий»: быстрее и дешевле
   history_turns: 10        # сколько последних реплик она держит в голове
   filler_after: 1.0        # если Google молчит дольше (сек) — она говорит «Хм, сейчас подумаю»
 
 voice:
-  engine: "silero"         # silero = бесплатно на Mac (по умолчанию); gemini = облако (лимиты); piper = простой
+  engine: "qwen"           # живой голос девочки на Mac (можно продавать); silero/piper — только запасные, пока он качается
+  qwen_voice: "anya"       # у каждой девочки свой: anya / alisa / tanya (voice_refs/), выбирается по девочке
   silero_speaker: "xenia"  # xenia (мягкая), kseniya (звонкая), baya (спокойная)
   silero_pitch: "medium"   # тон: medium / high / x-high
   silero_rate: "medium"    # темп: slow / medium / fast
-  gemini_model: "gemini-3.8-flash-lite-tts"
-  gemini_voice: "Sulafat"
-  style: "милый, тёплый и живой голос молодой девушки; говорит ласково и немного игриво, с улыбкой, естественно, как с близким другом"
   # запасной голос:
   model: "voices/ru_RU-irina-medium.onnx"
   speed: 1.05

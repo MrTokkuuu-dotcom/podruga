@@ -20,3 +20,8 @@ keyboard>=0.13; sys_platform == "win32"
 # распознавание речи прямо на Mac (только Apple Silicon)
 faster-whisper==1.2.1 ; sys_platform == "darwin" and platform_machine == "arm64"
 av==13.1.0 ; sys_platform == "darwin" and platform_machine == "arm64"
+# свой мозг (Gemma 4 на видеочипе Mac)
+mlx==0.32.4 ; sys_platform == "darwin" and platform_machine == "arm64"
+mlx-lm==0.32.2 ; sys_platform == "darwin" and platform_machine == "arm64"
+transformers==5.24.0 ; sys_platform == "darwin" and platform_machine == "arm64"
+mlx-audio==0.6.7 ; sys_platform == "darwin" and platform_machine == "arm64"

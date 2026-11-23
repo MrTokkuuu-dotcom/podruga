@@ -176,19 +176,16 @@
     <h2>Настройки</h2>
     <label>Как меня зовут<input id="sName"></label>
     <label>Как мне тебя называть<input id="sUser"></label>
-    <label>Голос
-      <div class="row"><select id="sVoice" style="flex:1"></select>
-      <button class="btn" onclick="api('preview_voice', document.getElementById('sVoice').value, document.getElementById('sPitch').value)">▶︎</button></div>
-    </label>
-    <label>Тон голоса<select id="sPitch"></select></label>
     <div class="traits">
       <div class="trait"><span>нежная</span><input type="range" id="tBold" min="0" max="100"><span>дерзкая</span></div>
       <div class="trait"><span>серьёзная</span><input type="range" id="tPlay" min="0" max="100"><span>игривая</span></div>
       <div class="trait"><span>краткая</span><input type="range" id="tTalk" min="0" max="100"><span>болтливая</span></div>
     </div>
-    <label>Манера речи (для облачного голоса)<textarea id="sStyle"></textarea></label>
     <h3 style="margin:10px 0 2px">Кастомизация</h3>
-    <label>Девочка<select id="sGirl" onchange="fillOutfits()"></select></label>
+    <label>Девочка
+      <div class="row"><select id="sGirl" style="flex:1" onchange="fillOutfits()"></select>
+      <button class="btn" title="Послушать её голос" onclick="api('preview_voice', document.getElementById('sGirl').value)">▶︎</button></div>
+    </label>
     <div class="note" id="girlAbout" style="display:block;color:var(--quiet)"></div>
     <label>Наряд<select id="sOutfit"></select></label>
     <div class="row"><button class="btn primary" onclick="applyAvatar()">Переодеть</button></div>
@@ -201,6 +198,11 @@
     <p style="margin-top:8px">Слушать только мой голос: <span id="vpState">—</span></p>
     <div class="row"><button class="btn" onclick="api('enroll_voice'); closePanels()">Запомнить мой голос</button>
       <button class="btn" onclick="api('forget_voice'); closePanels()">Забыть</button></div>
+    <label>Мозг<select id="sBrain"><option value="local">Свой — думает на этом Mac, без интернета</option>
+      <option value="google">Google — в облаке, нужен ключ</option></select></label>
+    <p style="margin-top:4px; opacity:.75" id="brainState"></p>
+    <p style="margin-top:4px; opacity:.6; font-size:11px">Свой мозг — Gemma 4 (Google, Apache 2.0). Погода — MET Norway
+      (CC BY 4.0), города — GeoNames (CC BY 4.0), справки — Википедия (CC BY-SA 4.0).</p>
     <p style="margin-top:8px">Ключ Gemini: <span id="keyState">—</span></p>
     <div class="row"><button class="btn" onclick="showKey()">Сменить ключ</button>
       <button class="btn" onclick="api('open_data')">Папка с памятью</button></div>
@@ -325,10 +327,9 @@ async function saveKey() {
 async function openSettings() {
   setMini(false);
   const s = await api('get_settings'); if (!s) return;
-  $('sName').value = s.companion_name; $('sUser').value = s.user_name; $('sStyle').value = s.style;
-  $('sVoice').innerHTML = s.voices.map(v => `<option value="${v[0]}" ${v[0] === s.voice ? 'selected' : ''}>${v[1]}</option>`).join('');
-  $('sPitch').innerHTML = s.pitches.map(p => `<option value="${p[0]}" ${p[0] === s.pitch ? 'selected' : ''}>${p[1]}</option>`).join('');
+  $('sName').value = s.companion_name; $('sUser').value = s.user_name;
   $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
+  $('sBrain').value = s.brain || 'local'; $('brainState').textContent = s.brain_state || '';
   $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
   fillAvatars(s.avatars);
   $('tBold').value = s.traits.trait_bold ?? 20; $('tPlay').value = s.traits.trait_play ?? 55; $('tTalk').value = s.traits.trait_talk ?? 30;
@@ -359,8 +360,8 @@ async function applyAvatar() {
 }
 async function saveSettings() {
   const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
-    voice: $('sVoice').value, style: $('sStyle').value.trim(), pitch: $('sPitch').value,
-    trait_bold: $('tBold').value, trait_play: $('tPlay').value, trait_talk: $('tTalk').value });
+    trait_bold: $('tBold').value, trait_play: $('tPlay').value, trait_talk: $('tTalk').value,
+    brain: $('sBrain').value });
   note('setNote', r && r.ok ? 'Сохранено ✓' : 'Не сохранилось', r && r.ok);
 }
 window.addEventListener('pywebviewready', () => api('ui_ready'));

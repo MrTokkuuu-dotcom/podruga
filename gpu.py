@@ -4,6 +4,21 @@ Windows переведены, и Get-Counter с английским путём 
 import re
 import subprocess
 import sys
+import time
+
+# Своя работа на видеочипе (свой мозг, живой голос, слух). На Mac загрузку по процессам не видно, поэтому
+# каждый, кто грузит видеочип, отмечается здесь — автопауза не принимает Подругу за «тяжёлую программу».
+_own_last = 0.0
+OWN_GRACE_S = 20.0
+
+
+def mark_own() -> None:
+    global _own_last
+    _own_last = time.monotonic()
+
+
+def own_recent(sec: float = OWN_GRACE_S) -> bool:
+    return time.monotonic() - _own_last < sec
 
 _PS = (
     "Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine | "

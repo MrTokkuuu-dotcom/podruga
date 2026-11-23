@@ -13,12 +13,6 @@ HTML = Path(__file__).resolve().parent / "avatar" / "app.html"
 FULL = (360, 600)     # с перепиской
 MINI = (250, 520)     # только она (по умолчанию) — во весь рост
 
-VOICES = [("xenia", "Ксения — мягкая (бесплатно, на Mac)"), ("kseniya", "Ксюша — звонкая (бесплатно)"),
-          ("baya", "Бая — спокойная (бесплатно)"),
-          ("Sulafat", "Облако: тёплый (лимиты Google)"), ("Leda", "Облако: юный"),
-          ("Aoede", "Облако: воздушный"), ("Achernar", "Облако: мягкий"),
-          ("chatterbox", "Проба: Chatterbox — живее, но тяжёлый (~3 ГБ)")]
-PITCHES = [("medium", "обычный"), ("high", "повыше"), ("x-high", "высокий")]
 
 
 class NullUI:
@@ -161,14 +155,10 @@ class Api:
         if not self._companion:
             return None
         c = self._companion.cfg
-        v = c["voice"]
-        eng = v.get("engine")
-        cur = ("chatterbox" if eng == "chatterbox" else
-               v.get("silero_speaker", "xenia") if eng == "silero" else v["gemini_voice"])
         return {"companion_name": c["companion_name"], "user_name": c["user_name"],
-                "voice": cur, "style": v.get("style", ""), "pitch": v.get("silero_pitch", "medium"),
-                "voices": VOICES, "pitches": PITCHES, "has_key": self._companion.has_key(),
+                "has_key": self._companion.has_key(),
                 "traits": c.get("traits", {}),
+                "brain": c["brain"].get("engine", "local"), "brain_state": self._companion.brain_state(),
                 "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active),
                 "avatars": self._companion.avatars.listing(c.get("avatar_choice", "")) if getattr(self._companion, "avatars", None) else None}
 
@@ -192,7 +182,7 @@ class Api:
         prev = c.cfg.get("avatar_choice", "anya/default").split("/")[0]
         values = {"avatar": f"{girl}/{outfit}"}
         if girl != prev:                                  # другая девочка — её имя, голос и характер
-            values.update({"companion_name": g["name"], "voice": g.get("voice", "xenia")})
+            values.update({"companion_name": g["name"]})          # голос — её собственный (по девочке)
             values.update(self._girl_traits(c, prev, girl))
         c.update_settings(values)
         c.avatars.activate(girl, outfit)
@@ -211,15 +201,13 @@ class Api:
         except (FileNotFoundError, ValueError):
             saved = {}
         t = c.cfg.get("traits", {})
-        saved[prev] = {**{k: int(v) for k, v in t.items()}, "style": c.cfg.get("voice", {}).get("style", "")}
+        saved[prev] = {k: int(v) for k, v in t.items()}
         try:
             path.write_text(json.dumps(saved, ensure_ascii=False, indent=1), encoding="utf-8")
         except OSError:
             pass
         mine = saved.get(girl) or dict(avatars.persona(girl).get("traits", {}))
         out = {k: str(v) for k, v in mine.items() if k.startswith("trait_")}
-        if mine.get("style"):
-            out["style"] = mine["style"]
         return out
 
     def preview_voice(self, voice, pitch="medium"):

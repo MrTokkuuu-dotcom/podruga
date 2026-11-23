@@ -238,6 +238,8 @@ class MlxWhisperSTT:
         return "Названия пишем как есть: " + ", ".join(names[:30]) + "."
 
     def _transcribe_array(self, a: np.ndarray):
+        import gpu
+        gpu.mark_own()                                  # слух тоже на видеочипе — это мы, а не «тяжёлая программа»
         import mlx.nn as nn
         from mlx_whisper import audio, decoding
         mx, m = self._mx, self.model

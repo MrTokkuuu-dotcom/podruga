@@ -1,4 +1,4 @@
-"""Голос. По умолчанию — Silero (бесплатно, на Mac), по желанию — облако Gemini, запасной — Piper.
+"""Голос. Живой голос девочки (Qwen3-TTS, voice_qwen.py); запасные — Silero и Piper, пока живой качается.
 Пока она произносит одно предложение, следующее уже озвучивается."""
 import queue
 import re
@@ -22,7 +22,7 @@ class PiperVoiceOut:
 
 class VoiceRouter:
     """Все голоса в одном месте, переключаются на лету из настроек:
-    silero — бесплатно на Mac (по умолчанию), gemini — облако, piper — простой запасной."""
+    qwen — живой голос девочки (по умолчанию), silero и piper — запасные."""
 
     def __init__(self, cfg: dict, root, home):
         self.cfg, self.home = cfg, home
@@ -36,8 +36,7 @@ class VoiceRouter:
                 print(f"[голос] Piper не загрузился: {e}")
         self.rate = self.piper.rate if self.piper else 24000
         self.silero = None
-        self.gemini = None
-        self.chatterbox = None
+        self.qwen = None
         self.lang = "ru"
         self.piper_en = None
         self.korean = None
@@ -59,6 +58,8 @@ class VoiceRouter:
 
     def prepare(self, lang: str):
         """Услышали фразу на этом языке — готовим голос заранее, пока думает Google (первая фраза без задержки)."""
+        if self._qwen_ready():
+            return                                          # живой голос и так говорит на всех трёх языках
         if lang == "en":
             self.set_lang_voice_en()
         elif lang == "ko" and self.korean is None and not self._korean_failed:
@@ -94,15 +95,18 @@ class VoiceRouter:
     @notify.setter
     def notify(self, fn):
         self._notify = fn
-        for v in (self.silero, self.gemini, getattr(self, "chatterbox", None)):
+        for v in (self.silero, self.qwen):
             if v is not None:
                 v.notify = fn
 
     def apply(self):
         """Применить текущие настройки (движок, голос, тон)."""
         v = self.cfg["voice"]
-        self.engine = v.get("engine", "silero")
-        if self.engine in ("silero", "chatterbox"):
+        self.engine = v.get("engine", "qwen")
+        qwen_on_disk = (self.home / "models" / "tts" / "Qwen3-TTS-12Hz-0.6B-Base-8bit" / "config.json").exists()
+        if self.engine not in ("qwen", "silero", "piper"):
+            self.engine = "qwen"                            # старые облачные/пробные голоса больше не бывают
+        if self.engine == "silero" or (self.engine == "qwen" and not qwen_on_disk):
             try:
                 if self.silero is None:
                     from voice_silero import SileroVoiceOut
@@ -113,28 +117,18 @@ class VoiceRouter:
                 self.silero.speed = v.get("silero_rate", "medium")
             except Exception as e:
                 print(f"[голос] Silero недоступен ({e}), говорю запасным.")
-                self.engine = "piper"
-        if self.engine == "chatterbox":
+                if self.engine == "silero":
+                    self.engine = "piper"
+        if self.engine == "qwen":
             try:
-                if getattr(self, "chatterbox", None) is None:
-                    from voice_chatterbox import ChatterboxVoiceOut
-                    self.chatterbox = ChatterboxVoiceOut(self.home, fallback=self.silero,
-                                                         notify=self._notify)
+                if self.qwen is None:
+                    from voice_qwen import QwenVoiceOut
+                    self.qwen = QwenVoiceOut(self.home, voice=v.get("qwen_voice", "anya"),
+                                             fallback=self.silero or self.piper, notify=self._notify)
+                self.qwen.voice = v.get("qwen_voice", "anya")
             except Exception as e:
-                print(f"[голос] Chatterbox не включился ({e}), говорю Silero.")
-                self.engine = "silero"
-        elif self.engine == "gemini":
-            try:
-                if self.gemini is None:
-                    from voice_gemini import GeminiVoiceOut
-                    self.gemini = GeminiVoiceOut(v["gemini_model"], v["gemini_voice"],
-                                                 v.get("style", ""), self.piper)
-                    self.gemini.notify = self._notify
-                self.gemini.voice_name = v["gemini_voice"]
-                self.gemini.style = v.get("style", "")
-            except Exception as e:
-                print(f"[голос] Gemini TTS не включился ({e}).")
-                self.engine = "piper"
+                print(f"[голос] живой голос не включился ({e}), говорю прежним.")
+                self.engine = "silero" if self.silero is not None else "piper"
         print(f"[голос] движок: {self.engine}")
 
     # --- голос по языку самой фразы: русские буквы — русский, корейские — корейский, только латиница — английский.
@@ -159,7 +153,19 @@ class VoiceRouter:
                 print(f"[голос] корейского голоса нет: {e}")
         return self.korean
 
+    def _qwen_ready(self) -> bool:
+        return self.engine == "qwen" and self.qwen is not None and self.qwen.ready.is_set()
+
+    def synth_stream(self, text: str, emotion: str = "calm"):
+        """По кусочкам — для живого голоса (первый звук ~0,7 с); остальные голоса — одним куском."""
+        if self._qwen_ready():
+            yield from self.qwen.synth_stream(text, emotion)
+        else:
+            yield self.synth(text, emotion)
+
     def synth(self, text: str, emotion: str = "calm"):
+        if self._qwen_ready():                              # один живой голос на всех трёх языках
+            return self.qwen.synth(text, emotion)
         lang = self.script_of(text)
         if lang == "ko":
             ko = self._korean()
@@ -171,12 +177,8 @@ class VoiceRouter:
                 self._en_ready.wait(6 if (self.home / "models" / "en_US-amy-medium.onnx").exists() else 0)
             if self.piper_en is not None:
                 return self.piper_en.synth(text), self.piper_en.rate
-        if self.engine == "chatterbox" and getattr(self, "chatterbox", None) is not None:
-            return self.chatterbox.synth(text, emotion)
         if self.engine == "silero" and self.silero is not None:
             return self.silero.synth(text, emotion)
-        if self.engine == "gemini" and self.gemini is not None:
-            return self.gemini.synth(text)
         if self.piper:
             return self.piper.synth(text), self.piper.rate
         return np.zeros(0, dtype=np.int16), 24000
@@ -255,6 +257,26 @@ class Speaker:
         audio, rate = out if isinstance(out, tuple) else (out, self.voice.rate)
         return smooth(resample(audio, rate))
 
+    def _stream(self, text: str, emotion: str, gen: int) -> None:
+        """Живой голос по кусочкам: первый кусок играет сразу, остальные доозвучиваются, пока она говорит.
+        Мягкий вход у первого куска; после фразы — короткая пауза (голос сам заканчивается тишиной)."""
+        first = True
+        for audio, rate in self.voice.synth_stream(text, emotion):
+            if gen != self._gen:
+                return
+            a = resample(audio, rate)
+            if not len(a):
+                continue
+            if first:
+                f = min(int(OUT_RATE * FADE_MS / 1000), len(a) // 2)
+                a = a.astype(np.float32)
+                a[:f] *= np.linspace(0.0, 1.0, f, dtype=np.float32)
+                a = a.astype(np.int16)
+                first = False
+            self.audio_q.put((gen, a))
+        if not first and gen == self._gen:
+            self.audio_q.put((gen, np.zeros(int(OUT_RATE * GAP_MS / 1000), dtype=np.int16)))
+
     def _synth_loop(self):
         while True:
             first = self.text_q.get()
@@ -276,10 +298,15 @@ class Speaker:
                         else:
                             groups.append((text, emo))
                     for text, emo in groups:
-                        audio = self._synth(text, emo)
+                        if hasattr(self.voice, "synth_stream"):
+                            self._stream(text, emo, gen)
+                        else:
+                            audio = self._synth(text, emo)
+                            if gen != self._gen:
+                                break          # пока озвучивали — её перебили
+                            self.audio_q.put((gen, audio))
                         if gen != self._gen:
-                            break              # пока озвучивали — её перебили
-                        self.audio_q.put((gen, audio))
+                            break
             except Exception as e:
                 print(f"[голос] ошибка озвучки: {e}")
             finally:

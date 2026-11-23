@@ -70,6 +70,100 @@ def body_command(text: str) -> str | None:
     return None
 
 
+# Команды музыке, громкости и таймеру: сразу, без мозга (модель их иногда пропускает).
+DEVICE = [  # порядок важен: громкость раньше музыки («поставь музыку потише»), «выключи музыку» раньше «включи музыку»
+    ("ГРОМКОСТЬ +10", ["громче", "погромче", "прибавь звук", "прибавь громкость", "louder", "turn it up",
+                       "volume up", "소리 키워", "볼륨 올려", "크게 해"]),
+    ("ГРОМКОСТЬ -10", ["тише", "потише", "убавь звук", "убавь громкость", "quieter", "turn it down",
+                       "volume down", "소리 줄여", "볼륨 내려", "작게 해"]),
+    ("ГРОМКОСТЬ mute", ["выключи звук", "без звука", "убери звук", "mute", "음소거"]),
+    ("МУЗЫКА pause", ["поставь на паузу", "на паузу", "пауза", "останови музыку", "выключи музыку", "стоп музыка",
+                      "выключи песню", "pause music", "pause", "stop music", "음악 꺼", "노래 꺼", "일시정지", "음악 멈춰"]),
+    ("МУЗЫКА next", ["следующая песня", "следующий трек", "следующую песню", "следующую", "следующая",
+                     "переключи песню", "переключи трек", "другую песню", "next song", "next track", "skip song",
+                     "skip", "다음 곡", "다음 노래"]),
+    ("МУЗЫКА prev", ["предыдущая песня", "предыдущую песню", "прошлую песню", "предыдущий трек", "верни песню",
+                     "previous song", "previous track", "이전 곡", "이전 노래"]),
+    ("МУЗЫКА play", ["включи музыку", "поставь музыку", "включи песню", "включи музычку", "вруби музыку",
+                     "врубай музыку", "продолжи музыку", "play music", "play some music", "resume music",
+                     "음악 틀어", "노래 틀어", "음악 켜", "노래 켜"]),
+]
+_NO_FUZZY = {"ГРОМКОСТЬ mute", "МУЗЫКА pause"}
+NOT_DEVICE = ["не включай", "не выключай", "не ставь", "не надо", "не делай", "don t", "do not", "하지 마", "틀지 마", "끄지 마"]
+_DEVICE_FILLER = r"\b(пожалуйста|please|подруга|ань|аня|алиса|таня|давай|можешь|сделай|чуть|ещ[её]|немного|немножко|" \
+                 r"а|ну|ка|можно|hey|can you|could you|a bit|little)\b"
+_NUM = {"один": 1, "одну": 1, "две": 2, "два": 2, "три": 3, "четыре": 4, "пять": 5, "шесть": 6, "семь": 7, "восемь": 8,
+        "девять": 9, "десять": 10, "пятнадцать": 15, "двадцать": 20, "тридцать": 30, "минуту": 1, "one": 1, "two": 2,
+        "three": 3, "five": 5, "ten": 10, "fifteen": 15, "twenty": 20, "thirty": 30}
+_TIMER = [r"таймер\w*\s+на\s+(\w+)\s*(?:минут\w*)?", r"(?:set\s+)?(?:a\s+)?timer\s+for\s+(\w+)",
+          r"(\d+)\s*분\s*(?:타이머|뒤|후)"]
+
+
+def device_command(text: str) -> str | None:
+    """Готовая команда для handle_commands: «МУЗЫКА play|pause|next|prev», «ГРОМКОСТЬ +10|-10|mute»,
+    «ТАЙМЕР N | таймер» — или None (длинная фраза, отрицание, разговор о музыке)."""
+    t = norm(text)
+    if not t or len(t.split()) > 7 or any(p in t for p in NOT_DEVICE) or t.startswith("не "):
+        return None
+    for rx in _TIMER:
+        m = re.search(rx, t)
+        if m:
+            n = m.group(1)
+            n = int(n) if n.isdigit() else _NUM.get(n)
+            if n and 0 < n <= 600:
+                return f"ТАЙМЕР {n} | таймер"
+            return None
+    t = " ".join(re.sub(_DEVICE_FILLER, " ", t).split())
+    if not t:
+        return None
+    for fuzzy in (False, True):                          # сначала точно (иначе «включи» ≈ «выключи»), потом с опечатками
+        for cmd, phrases in DEVICE:
+            for p in phrases:
+                if len(t.split()) > len(p.split()) + 2:  # «тише едешь — дальше будешь» — не команда
+                    continue
+                if cmd.startswith("МУЗЫКА") and " " not in p and t != p:
+                    continue                             # «skip», «следующая» — только сами по себе («а какая следующая?» — вопрос)
+                if fuzzy and cmd in _NO_FUZZY:
+                    continue                             # «включи звук» ≈ «выключи звук» — наоборот, не гадаем
+                if (re.search(rf"(^|\s){re.escape(p)}", t) if not fuzzy else len(p) > 8 and _near(p, t, 0.88)):
+                    return cmd
+    return None
+
+
+# «Повтори за мной …» — сразу, без мозга: модель отказывается повторять ругательства и путается.
+_REP_OFF = re.compile(r"(хватит|перестань|прекрати|стоп|не надо|больше не)\s+(повторять|повторяй)|stop repeating|"
+                      r"그만 따라", re.I)
+_REP_ON = re.compile(r"(начни|начинай|можешь начать|давай|будешь)\s+(ты\s+)?(повторять|повторяй)|^повторяй\b|"
+                     r"(повторяй|повторять)\s+(за мной|вс[её]|то,? что я)|keep repeating|repeat everything", re.I)
+_REP_AGAIN = re.compile(r"^(а\s+)?повтори\s*(ещ[её] раз|снова|что ты сказала|последнее)?\s*[.!?]?$|"
+                        r"^повтори\s+(ещ[её] раз|что ты сказала)", re.I)
+_REP_SAY = re.compile(r"(?:повтори|скажи)\s+за\s+мной[\s:,.\-—]*(.+)|^повтори[\s:,\-—]+(?!ещ[её]|что ты|это\b)(.+)|"
+                      r"repeat after me[\s:,]*(.+)|^repeat[\s:,]+(.+)", re.I)
+_REP_BEFORE = re.compile(r"^(.+?)[\s,.\-—]+(?:повтори|скажи)\s*(это|за мной)?\s*[.!?]*$|^(.+?)\s*따라\s*(해|말해)", re.I)
+
+
+def repeat_command(text: str):
+    """('say', слова) | ('on', '') | ('off', '') | ('again', '') | None."""
+    t = (text or "").strip()
+    low = t.lower().replace("ё", "е")
+    if not low:
+        return None
+    if _REP_OFF.search(low):
+        return ("off", "")
+    if _REP_ON.search(low):
+        return ("on", "")
+    if _REP_AGAIN.search(low):
+        return ("again", "")
+    for rx in (_REP_SAY, _REP_BEFORE):
+        m = rx.search(t)
+        if m:
+            words = next((g for g in m.groups() if g and g.lower() not in ("это", "за мной", "해", "말해")), "")
+            words = words.strip(" \t,.:;!?—-«»\"")
+            if words and not re.fullmatch(r"(это|за мной)", words.lower()):
+                return ("say", words)
+    return None
+
+
 if __name__ == "__main__":
     for s in ["Можешь присесть?", "Присядь, пожалуйста", "Ляг", "Аня, походи туда-обратно", "Встань", "Как дела?",
               "Сядь на поезд и приезжай ко мне завтра утром", "Не садись", "sit down please", "앉아봐", "стой", "Ты устала?"]:

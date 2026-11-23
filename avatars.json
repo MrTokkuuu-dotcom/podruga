@@ -4,7 +4,7 @@
   {
    "id": "anya",
    "name": "Аня",
-   "voice": "xenia",
+   "voice": "anya",
    "about": "Синие волосы, спокойная и нежная",
    "outfits": [
     {
@@ -74,7 +74,7 @@
   {
    "id": "alisa",
    "name": "Алиса",
-   "voice": "kseniya",
+   "voice": "alisa",
    "about": "Светлые волосы, бойкая и весёлая, стройная",
    "outfits": [
     {
@@ -139,7 +139,7 @@
   {
    "id": "tanya",
    "name": "Таня",
-   "voice": "baya",
+   "voice": "tanya",
    "about": "Тёмные волосы, мягкая и заботливая, пышнее",
    "outfits": [
     {

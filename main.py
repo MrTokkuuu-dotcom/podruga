@@ -50,6 +50,26 @@ BODY_LINES = {
            "stop": ["멈췄어.", "여기 있을게."]},
 }
 
+DEVICE_LINES = {  # короткие фразы к мгновенным командам музыке, громкости, таймеру
+    "ru": {"play": ["Включаю!", "Ага, включаю музыку."], "pause": ["Ставлю на паузу.", "Пауза."],
+           "next": ["Следующая!", "Переключаю."], "prev": ["Возвращаю прошлую.", "Назад."],
+           "+10": ["Погромче.", "Делаю громче."], "-10": ["Потише.", "Делаю тише."], "mute": ["Выключила звук."],
+           "timer": ["Поставила таймер на {n} мин.", "Засекла {n} мин."]},
+    "en": {"play": ["Playing!", "Sure, music on."], "pause": ["Paused."], "next": ["Next one!", "Skipping."],
+           "prev": ["Going back."], "+10": ["Louder."], "-10": ["Quieter."], "mute": ["Sound off."],
+           "timer": ["Timer set for {n} minutes."]},
+    "ko": {"play": ["음악 틀게!", "틀어줄게."], "pause": ["멈출게."], "next": ["다음 곡!", "넘길게."], "prev": ["이전 곡으로."],
+           "+10": ["크게 할게."], "-10": ["작게 할게."], "mute": ["소리 껐어."], "timer": ["{n}분 타이머 맞췄어."]},
+}
+
+class NotReady(RuntimeError):
+    """Мозг ещё качается / не встал, а ключа Google нет. Текст — почему: image, downloading, failed, nokey."""
+
+
+class _Unheard(Exception):
+    """Голос без слов, а свой мозг понимает только текст — молчим."""
+
+
 class Companion:
     def __init__(self, cfg: dict, text_mode: bool = False):
         self.cfg = cfg
@@ -59,7 +79,9 @@ class Companion:
         self.memory.backup_daily()
         self.last_seen = LastSeen(data / "last_seen.txt")
 
-        self.brain = None                 # создаётся, когда есть ключ
+        self.google = None                # мозг Google — когда есть ключ
+        self.local = None                 # свой мозг на Mac (Gemma) — по умолчанию
+        self._asleep_since = time.monotonic()   # с какого момента спит (в этом запуске) — для выгрузки мозга
         self.history: deque[dict] = deque(maxlen=cfg["brain"]["history_turns"] * 2)
         self.unsaved: list[str] = []
         self.last_talk = time.monotonic()
@@ -132,9 +154,104 @@ class Companion:
     def update_settings(self, values: dict):
         save_user_settings(self.cfg, values)
         self.load_character()
+        if self.ready.is_set():
+            if self._local_wanted():
+                self._start_local()
+                return
+            self._stop_local()
+            if not has_key():
+                self.ui.need_key()                       # выбрал Google — без ключа он не заработает
+            elif self.google is None:
+                b = self.cfg["brain"]
+                self.google = GeminiBrain(b["model"], thinking_budget=b.get("thinking_budget"))
+        self._sync_local()
         voice = getattr(self.speaker, "voice", None)
         if voice is not None and hasattr(voice, "apply"):
             voice.apply()              # новый голос/тон сразу, без перезапуска
+
+    # --- какой мозг думает ---
+    @property
+    def brain(self):
+        """Свой мозг, если выбран и хоть раз загрузился; иначе Google (если есть ключ); иначе None."""
+        loc, g = self.local, self.google
+        local_ok = loc is not None and not loc.failed and loc.ever
+        if self.cfg["brain"].get("engine", "local") == "google":
+            return g or (loc if local_ok else None)
+        return loc if local_ok else g
+
+    def _plan(self, wav=None, text=None, image=None):
+        """(мозг, почему): кто ответит. Свой мозг понимает только текст: голос без расшифровки и скриншот — Google.
+        Нет мозга — почему: unheard (не расслышала — молчим), image, downloading, failed, nokey."""
+        b, loc = self.brain, self.local
+        if b is not None and b is loc and ((wav and not text) or image):
+            if self.google is not None:
+                return self.google, "ok"
+            return None, ("image" if image else "unheard")
+        if b is not None and b is loc and not loc.ready.is_set() and self.google is not None:
+            return self.google, "ok"                     # свой ещё грузится после сна (~10 с) — не ждём, отвечает Google
+        if b is not None:
+            return b, "ok"
+        if loc is not None and loc.failed:
+            return None, "failed"
+        if loc is not None and not loc.ever:
+            return None, "downloading"
+        return None, "nokey"
+
+    def _wake_local(self, sync: bool = True) -> None:
+        """Проснулась: сначала свежий характер (за ночь «вчера/сегодня» в памяти сдвигаются), потом загрузка —
+        иначе модель считает характер дважды (~9 с, и всё это время она «глухая»)."""
+        if sync:
+            self._sync_local()
+        self.local.preload()
+
+    def _local_wanted(self) -> bool:
+        return self.cfg["brain"].get("engine", "local") == "local"
+
+    def _stop_local(self) -> None:
+        """Выбрал Google: своя модель не держится в памяти и не грузится после игры."""
+        if self.local is not None:
+            threading.Thread(target=self.local.unload, daemon=True).start()
+        self.pauser.ollama = NullModel()
+
+    def _sync_local(self) -> None:
+        """Новая память / девочка / ползунки → новый характер в кэше своего мозга (пересчёт в фоне)."""
+        if self.local is not None and not self.local.failed and self._local_wanted():
+            try:
+                self.local.set_system(self.local_stable())
+            except Exception as e:
+                print(f"[мозг] свой: подсказка не обновилась: {e}")
+
+    def _start_local(self) -> None:
+        if self.local is not None:
+            self.pauser.ollama = self.local
+            self._sync_local()
+            return
+        from local_brain import LocalBrain, can_run
+        ok, why = can_run(HOME)
+        if not ok:
+            print(f"[мозг] свой мозг на этом Mac не включаю: {why}")
+            return
+        self.local = LocalBrain(HOME, notify=lambda m: (print(m), self.ui.add("sys", m)))
+        self.local.lang_of = lambda: self._phrase_lang
+        self.local.history_max = self.history.maxlen or 20
+        self._sync_local()
+        self.pauser.ollama = self.local                 # пауза в игре — выгрузить модель из памяти
+
+    def brain_state(self) -> str:
+        """Строчка для настроек: кто сейчас думает."""
+        loc, b = self.local, self.brain
+        if b is not None and b is loc:
+            return "Сейчас думает свой мозг (Gemma 4)." + ("" if loc.ready.is_set() else " Спит — проснётся за пару секунд.")
+        if loc is not None and loc.failed:
+            return "Свой мозг не включился на этом Mac — думает Google." if b else "Свой мозг не включился, а ключа Google нет."
+        if loc is not None and not loc.ever:
+            return "Свой мозг ещё скачивается или загружается." + (" Пока думает Google." if b else "")
+        return "Сейчас думает Google." if b else "Мозг ещё не готов."
+
+    def wants_key(self) -> bool:
+        """Ключ Google нужен, только если выбран Google (или свой мозг на этом Mac невозможен)."""
+        from local_brain import can_run
+        return not has_key() and (not self._local_wanted() or not can_run(HOME)[0])
 
     # --- ключ и запуск мозга ---
     def has_key(self) -> bool:
@@ -155,15 +272,30 @@ class Companion:
             return {"ok": False, "msg": "Нет связи с Google. Проверь интернет и попробуй снова."}
         save_key(key)
         self.ui.key_ok()
-        threading.Thread(target=self.start_brain, daemon=True).start()
+        if self.ready.is_set():                          # уже работает своим мозгом — просто добавляем Google
+            b = self.cfg["brain"]
+            self.google = GeminiBrain(b["model"], thinking_budget=b.get("thinking_budget"))
+        else:
+            threading.Thread(target=self.start_brain, daemon=True).start()
         return {"ok": True}
 
     def start_brain(self):
         if self.ready.is_set():
             return
         b = self.cfg["brain"]
-        self.brain = GeminiBrain(b["model"], thinking_budget=b.get("thinking_budget"))
+        if has_key() and self.google is None:
+            try:
+                self.google = GeminiBrain(b["model"], thinking_budget=b.get("thinking_budget"))
+            except Exception as e:
+                print(f"[мозг] Google не включился: {e}")
+        if b.get("engine", "local") == "local":
+            self._start_local()
+            loc = self.local
+            if loc is not None and (loc.dir / "config.json").exists():
+                loc.ready.wait(25)                       # модель уже скачана: ~5 с, чтобы поздороваться своей
         def _migrate():
+            while not self.brain:
+                time.sleep(2)
             try:
                 self.memory.migrate(self.brain)
             except Exception as e:
@@ -190,9 +322,9 @@ class Companion:
             if tm:
                 v = time.monotonic()
                 parts = [f"распознавание {tm['text'] - tm['end']:.2f}" if "text" in tm else None,
-                         f"Google {tm['brain'] - tm['text']:.2f}" if "brain" in tm and "text" in tm else None,
+                         f"{tm.get('who', 'Google')} {tm['brain'] - tm['text']:.2f}" if "brain" in tm and "text" in tm else None,
                          f"до голоса {v - tm.get('brain', tm.get('text', tm['end'])):.2f}"]
-                print(f"[время] {tm.get('path', 'Google')}: " + ", ".join(p for p in parts if p)
+                print(f"[время] {tm.get('path', tm.get('who', 'Google'))}: " + ", ".join(p for p in parts if p)
                       + f" | всего от конца фразы {v - tm['end']:.2f} с")
         else:
             self._spoke_end = time.monotonic()
@@ -234,6 +366,17 @@ class Companion:
     def system(self, wake: str | None = None) -> str:
         """Подсказка для Gemini. Сначала то, что почти не меняется (характер, правила, память), потом
         свежее (время, события). Одинаковое начало Google кэширует — ответ начинается быстрее."""
+        stable, fresh = self.system_parts(wake)
+        return stable + "\n" + fresh
+
+    def local_stable(self) -> str:
+        """Стабильная часть подсказки для своего мозга (лежит в кэше модели)."""
+        from local_prompt import stable_system
+        return stable_system(self.character, traits_text(self.cfg.get("traits", {})),
+                             self.memory.read() or "", self.user)
+
+    def system_parts(self, wake: str | None = None) -> tuple[str, str]:
+        """(стабильное, свежее): характер+правила+память для Google и время/события/режим/возвращение."""
         from wake_context import WEEKDAYS
         t = now()
         reminders = "; ".join(f"{r['at'][11:16]} — {r['text']}" for r in self.initiative.pending())
@@ -247,8 +390,9 @@ class Companion:
                  "по-русски, на английскую — по-английски, на корейскую — по-корейски (просто и естественно, "
                  "как подруга). Одна фраза — один язык: не смешивай русские и корейские слова в одном "
                  "предложении. Эмоции в {} и команды << >> всегда пиши по-русски.", "",
-                 "## Память о " + self.user, self.memory.read() or "(пока пусто)", "",
-                 f"## Сейчас\n{WEEKDAYS[t.weekday()]}, {t.strftime('%d.%m.%Y %H:%M')}"
+                 "## Память о " + self.user, self.memory.read() or "(пока пусто)", ""]
+        stable = "\n".join(parts)
+        parts = [f"## Сейчас\n{WEEKDAYS[t.weekday()]}, {t.strftime('%d.%m.%Y %H:%M')}"
                  + (f"\nУже стоят напоминания: {reminders}" if reminders else ""), "",
                  "## Последние события", self.journal.render(5) or "(пусто)"]
         doing = self.activity.describe() if hasattr(self, "activity") else None
@@ -266,7 +410,7 @@ class Companion:
         if wake:
             parts += ["", "## Ты только что вернулась", wake]
         parts += ["", "(Отвечай строго в формате из правил выше.)"]
-        return "\n".join(parts)
+        return stable, "\n".join(parts)
 
     # --- речь ---
     def _mute(self):
@@ -309,8 +453,12 @@ class Companion:
         fallback=None — если Google не ответил, просто промолчать."""
         self._work_t = time.monotonic()
         self.ui.state("think")
+        self._sync_local()
         try:
-            raw = self.brain.say_once(system, instruction + " Начни с эмоции в фигурных скобках, "
+            b, _ = self._plan(text=instruction)
+            if b is None:
+                raise RuntimeError("мозг ещё не готов")
+            raw = b.say_once(system, instruction + " Начни с эмоции в фигурных скобках, "
                                       "например {радость}. Без скобок [[ ]].")
         except Exception as e:
             print(f"[мозг] {e}")
@@ -320,8 +468,8 @@ class Companion:
             self.ui.state(self._idle_state())
             return
         p = ReplyParser()
-        p.feed(raw)
-        text = " ".join(p.finish()) or p.reply or fallback
+        first = p.feed(raw)                             # feed уже отдаёт готовые предложения — их тоже говорим
+        text = " ".join(first + p.finish()) or p.reply or fallback
         if not text or p.skip:
             self._work_t = None
             self.ui.state(self._idle_state())
@@ -368,15 +516,29 @@ class Companion:
                     f = self.quick.service("думаю", self._phrase_lang)
                     if f:
                         self.speaker.speak(f[0], f[1])
-            timer = threading.Timer(self.cfg.get("brain", {}).get("filler_after", 1.6), filler)
+            bc = self.cfg.get("brain", {})
+            # свой мозг обычно начинает за ~0,7 с; ранняя «Хм…» занимала бы видеочип голосом и тормозила мозг
+            wait = bc.get("filler_after_local", 2.5) if self.brain is not None and self.brain is self.local \
+                else bc.get("filler_after", 1.6)
+            timer = threading.Timer(wait, filler)
             timer.daemon = True
             timer.start()
             try:
                 shown = False
                 extra = ("" if wav else "\nЕго слова уже расшифрованы — [[...]] не пиши. Первое предложение "
                          "сделай коротким (2–6 слов), чтобы ты начала говорить сразу.")
-                for chunk in self.brain.stream_reply(self.system() + extra, list(self.history),
-                                                     wav=wav, text=text, image=image):
+                self._sync_local()
+                b, why = self._plan(wav, text, image)
+                if why == "unheard":                     # кашель/шум без слов, а голос понимает только Google
+                    print("   (не расслышала слов — свой мозг понимает только текст)")
+                    raise _Unheard()
+                if b is None:
+                    raise NotReady(why)
+                tm = getattr(self, "_tm", None)
+                if tm is not None:
+                    tm["who"] = "свой мозг" if b is self.local else "Google"
+                for chunk in b.stream_reply(self.system() + ("" if b is self.local else extra), list(self.history),
+                                            wav=wav, text=text, image=image):
                     if self._cancel:
                         break                          # её перебили — дальше не говорим
                     tm = getattr(self, "_tm", None)
@@ -393,6 +555,8 @@ class Companion:
                         self.ui.emotion(parser.emotion)
                         shown = True
                     self.speaker.speak(sentence, parser.emotion)
+            except _Unheard:
+                pass
             except Exception as e:
                 print(f"[мозг] ошибка: {e}")
                 self.speaker.speak(self._error_line(e), "sad")
@@ -435,6 +599,11 @@ class Companion:
     @staticmethod
     def _error_line(e: Exception) -> str:
         msg = str(e)
+        if isinstance(e, NotReady):
+            return {"image": "Без Google я пока не умею смотреть на экран. Добавь ключ в настройках — и посмотрю.",
+                    "downloading": "Ещё учусь думать сама — скачиваю свой мозг, пару минут. Пока отвечаю попроще.",
+                    "failed": "Мой мозг на этом Mac не включился. Добавь ключ Google в настройках — буду думать через него.",
+                    }.get(msg, "Мне нечем думать: добавь ключ Google в настройках.")
         if "429" in msg or "RESOURCE_EXHAUSTED" in msg or "quota" in msg.lower():
             return ("Кажется, бесплатный лимит Google на сегодня закончился. "
                     "Он обнулится в пять вечера по корейскому времени.")
@@ -482,10 +651,21 @@ class Companion:
     def _do_search(self, query: str) -> None:
         city = self.cfg.get("user_city", "Пусан")
         t = now()
+        from local_brain import NeedGoogle
+        from websearch import is_weather
+        ctx = f"Пользователь живёт в городе {city}. Сейчас {t.strftime('%d.%m.%Y %H:%M')}."
+        b = self.brain
+        if b is not None and b is self.local and self.google is not None and not is_weather(query):
+            b = self.google                              # свежие данные и справки — лучше через Google, если есть ключ
         try:
-            facts = self.brain.search(query, f"Пользователь живёт в городе {city}. "
-                                             f"Сейчас {t.strftime('%d.%m.%Y %H:%M')}.")
+            if b is None:
+                raise RuntimeError("мозг ещё не готов")
+            facts = b.search(query, ctx)
             print(f"[поиск] {query} → {facts[:200]}")
+        except NeedGoogle:
+            print(f"[поиск] {query} → нужен Google (свежие данные)")
+            self.say("Курсы, новости и цены я без Google пока не нахожу. Добавь ключ в настройках — и буду.", "sad")
+            return
         except Exception as e:
             print(f"[поиск] не получилось: {e}")
             self.say("Не получилось найти, интернет капризничает.", "sad")
@@ -551,6 +731,55 @@ class Companion:
         self.ui.add("me", "Посмотри на экран", "📷")
         self.respond(text=LOOK_TEXT, image=img)
 
+    REPEAT_LINES = {"on": {"ru": "Хорошо, повторяю за тобой. Скажи «хватит повторять», когда надоест.",
+                           "en": "Okay, I'll repeat after you. Say \"stop repeating\" when you're done.",
+                           "ko": "좋아, 따라 할게. 그만하고 싶으면 \"그만 따라 해\"라고 해."},
+                    "off": {"ru": "Всё, больше не повторяю.", "en": "Okay, no more repeating.", "ko": "알았어, 이제 안 따라 할게."}}
+
+    def repeat_now(self, text: str, spoken: bool = True) -> bool:
+        """«Повтори за мной …», режим «повторяй за мной» — сразу, слово в слово, без мозга. True — сделано."""
+        cmd = intents.repeat_command(text)
+        if cmd is None and not getattr(self, "_repeat_mode", False):
+            return False
+        if cmd is None:
+            cmd = ("say", text.strip())                  # режим повторения: всё, что он скажет
+        kind, words = cmd
+        print(f"⚡ сразу: «{text}» → повтор ({kind})")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        lang = self._phrase_lang if self._phrase_lang in ("ru", "en", "ko") else "ru"
+        if kind in ("on", "off"):
+            self._repeat_mode = kind == "on"
+            line = self.REPEAT_LINES[kind][lang]
+        elif kind == "again":
+            line = next((h["text"] for h in reversed(self.history) if h["role"] == "model"), "")
+            if not line:
+                return False
+        else:
+            line = words
+        self.say(line, "joy" if kind == "on" else "calm")
+        self._history_add(line)
+        return True
+
+    def device_now(self, text: str, spoken: bool = True) -> bool:
+        """«Включи музыку», «громче», «таймер на 5 минут» — сразу, без мозга. True — сделано."""
+        cmd = intents.device_command(text)
+        if not cmd:
+            return False
+        print(f"⚡ сразу: «{text}» → {cmd}")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        self.handle_commands([cmd])
+        key = "timer" if cmd.startswith("ТАЙМЕР") else cmd.split()[1]
+        n = cmd.split()[1] if key == "timer" else ""
+        line = random.choice(DEVICE_LINES.get(self._phrase_lang, DEVICE_LINES["ru"])[key]).format(n=n)
+        self.say(line, "joy" if key == "play" else "calm")
+        self._history_add(line)
+        return True
+
     def on_text(self, text: str):
         if not self.ready.is_set():
             return
@@ -562,6 +791,10 @@ class Companion:
             self.awake = True
         from wake import LOOK_PHRASES, _norm
         look = any(p in _norm(text) for p in LOOK_PHRASES)
+        if not look and self.repeat_now(text, spoken=False):
+            return
+        if not look and self.device_now(text, spoken=False):
+            return
         if not look and self.quick_answer(text=text):
             return
         self.respond(text=text, image=self.screenshot() if look else None)
@@ -572,6 +805,8 @@ class Companion:
     def wake_up(self, has_request: bool, wav: bytes | None, look: bool = False) -> None:
         print("👋 проснулась")
         self.awake = True
+        if self.local is not None and self._local_wanted() and not self.local.ready.is_set():
+            threading.Thread(target=self._wake_local, daemon=True).start()     # ~10 с, пока она здоровается
         if getattr(self, "walker", None):
             self.walker.wake()
         self.ui.state("listen")
@@ -590,6 +825,7 @@ class Companion:
         if say_goodnight:
             self.say(random.choice(self.cfg["wake"]["goodnight"]), "tender")
         self.awake = False
+        self._asleep_since = time.monotonic()
         self.last_awake_at = now()
         wk = getattr(self, "walker", None)
         by_steps = bool(wk and wk.begin_sleep())       # сперва сказать окну про порядок, потом «спит»
@@ -881,6 +1117,12 @@ class Companion:
                 self.say(line, "joy" if body in ("pace", "stand") else "calm")
                 self._history_add(line)
                 return
+            if not h.look and self.repeat_now(text):     # «повтори за мной …» — слово в слово
+                tm["path"] = "сразу"
+                return
+            if not h.look and self.device_now(text):     # «включи музыку», «громче», «таймер на 5 минут»
+                tm["path"] = "сразу"
+                return
             if not h.look and self.quick_answer(text=text, spoken=True):
                 return
             self.ui.add("me", text, "📷" if h.look else None)
@@ -894,36 +1136,24 @@ class Companion:
         if p and not p.skip and is_goodbye(heard, self.cfg["wake"]["sleep_phrases"]):
             self.go_sleep(say_goodnight=False)
 
-    def preview_voice(self, voice_name: str, pitch: str = "medium"):
+    def preview_voice(self, voice_name: str | None = None, pitch: str = "medium"):
+        """Послушать голос девочки (кнопка в «Кастомизации»)."""
         if not self.ready.is_set() or self.text_mode:
             return
         phrase = "Привет! Так звучит мой голос. Как тебе?"
         try:
-            from config import SILERO_SPEAKERS
-            router = self.speaker.voice
-            if voice_name == "chatterbox":
-                cb = router.chatterbox
-                if cb is None or not cb.ready.is_set():
-                    self.ui.add("sys", "Пробный голос включится после «Сохранить» — сначала он "
-                                "установится (~3 ГБ, 5–15 минут). Я напишу, когда будет готов.")
-                    return
-                audio, rate = cb.synth(phrase, "joy")
-            elif voice_name in SILERO_SPEAKERS:
-                if router.silero is None or not router.silero.ready.wait(timeout=60):
-                    self.ui.add("sys", "Голос ещё загружается, попробуй через минуту.")
-                    return
-                s = router.silero
-                old = (s.speaker, s.pitch)
-                s.speaker, s.pitch = voice_name, pitch
-                try:
-                    audio, rate = s.synth(phrase)
-                finally:
-                    s.speaker, s.pitch = old
-            else:
-                from voice_gemini import GeminiVoiceOut
-                v = GeminiVoiceOut(self.cfg["voice"]["gemini_model"], voice_name,
-                                   self.cfg["voice"].get("style", ""))
-                audio, rate = v._cloud(phrase)
+            q = getattr(self.speaker.voice, "qwen", None)
+            if q is None or not q.ready.is_set():
+                self.ui.add("sys", "Живой голос ещё загружается (первый раз — скачивается ~2 ГБ). "
+                            "Попробуй через минуту.")
+                return
+            old = q.voice
+            from config import QWEN_VOICES
+            q.voice = voice_name if voice_name in QWEN_VOICES else old
+            try:
+                audio, rate = q.synth(phrase, "joy")
+            finally:
+                q.voice = old
             from tts import resample, smooth
             self.speaker.on_talk(True)
             self.speaker.audio_q.put(smooth(resample(audio, rate)))
@@ -931,7 +1161,6 @@ class Companion:
         except Exception as e:
             self.ui.add("sys", f"Не получилось проиграть голос: {str(e)[:80]}")
 
-    # --- память ---
     def save_memory(self) -> None:
         if not self.unsaved or not self.brain:
             return
@@ -946,6 +1175,7 @@ class Companion:
             self.memory.consolidate(self.brain, self.user)
         except Exception as e:
             print(f"[память] сжать не получилось: {e}")
+        self._sync_local()
         self.journal.log("conversation", summary="; ".join(facts) if facts else "болтали")
         if facts:
             print("💾 запомнила: " + "; ".join(facts))
@@ -969,6 +1199,11 @@ class Companion:
                                  or len(self.unsaved) >= m["save_after_turns"] * 2):
                 self.save_memory()
             self.last_seen.touch()
+            loc = self.local
+            if (loc is not None and loc.ready.is_set() and not self.awake
+                    and time.monotonic() - self._asleep_since > 60 * self.cfg["brain"].get("local_unload_min", 60)
+                    and not self.busy.locked()):
+                loc.unload()                         # спит дольше часа — модель не держим в памяти
 
     # --- пауза ---
     def _on_pause(self, reason, detail):
@@ -1062,7 +1297,7 @@ class Companion:
             self.quick = None
             print(f"[быстро] готовые ответы не загрузились: {e}")
         # Ключ: если нет — окно само попросит и дождётся
-        if not has_key():
+        if self.wants_key():
             if self.text_mode:
                 print("Нет ключа Gemini. Запусти setup_mac.command или открой приложение.")
                 return
@@ -1199,11 +1434,11 @@ class Companion:
                 self._closed = True
                 self.save_memory()
             return
-        self.quit_now()
+        self.quit_now(exit_process=exit_process)
 
     PENDING = "pending_memory.txt"
 
-    def quit_now(self, why: str = "") -> None:
+    def quit_now(self, why: str = "", exit_process: bool = True) -> None:
         """Выйти за доли секунды: спрятать окно, замолчать, отпустить микрофон, остановить всё.
         Разговор, который ещё не попал в память, кладём в файл — запишется при следующем запуске
         (раньше здесь ждали Google, и выход мог тянуться десятки секунд)."""
@@ -1231,7 +1466,8 @@ class Companion:
             pass
         print(f"\nПока!{' (' + why + ')' if why else ''} Выход за {time.monotonic() - t0:.2f} с", flush=True)
         sys.stdout.flush()
-        os._exit(0)
+        if exit_process:                         # перезапуск (restart.flag) сам откроет новую и выйдет
+            os._exit(0)
 
     def _stash_memory(self) -> None:
         if self.unsaved:
