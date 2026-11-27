@@ -45,6 +45,18 @@ def _osa(script: str) -> str:
     return r.stdout.strip()
 
 
+def known_target(what: str) -> bool:
+    """Ссылка или знакомый сайт/программа — тогда «открой …» можно сделать сразу, без мозга."""
+    low = what.strip().strip("«»\"'").lower()
+    if low.startswith(("http://", "https://")):
+        return True
+    rest = low
+    for k in list(SITES) + list(APPS):
+        if k in rest:
+            rest = rest.replace(k, " ")
+    return rest != low and len(rest.split()) <= 2      # «ютуб», «ютуб котики» — да; длинная просьба — мозгу
+
+
 def open_thing(what: str) -> str:
     w = what.strip().strip("«»\"'")
     low = w.lower()

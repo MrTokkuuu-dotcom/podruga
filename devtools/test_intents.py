@@ -49,6 +49,12 @@ for t, want in [("включи цоя в ютуб музыке", "СДЕЛАТЬ
                 ("включи музыку", None), ("как дела?", None), ("я вчера смотрел ютуб", None)]:
     assert task_command(t) == want, (t, task_command(t))
 assert device_command("включи музыку") == "МУЗЫКА play"
+# готовый ответ «открой {что}» — только для известных сайтов и программ, остальное — мозгу (он может СДЕЛАТЬ)
+import actions  # noqa: E402
+for what, want in [("ютуб", True), ("https://naver.com", True), ("телеграм", True), ("сафари", True),
+                   ("его какие-нибудь видосики первый второй первый", False),
+                   ("на этот мьюзик песню егора крида будильник", False)]:
+    assert actions.known_target(what) == want, (what, actions.known_target(what))
 # старое поведение телу не изменилось
 assert body_command("присядь") == "sit" and body_command("включи музыку") is None
 print("OK")

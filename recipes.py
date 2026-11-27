@@ -14,7 +14,8 @@ PLAY_WORDS = ("воспроизвести", "play", "재생", "слушать")
 VERBS = {"включи", "включай", "включить", "поставь", "поставить", "найди", "найти", "покажи", "запусти", "сыграй",
          "играй", "поищи", "открой", "play", "find", "search", "put", "show", "загугли", "погугли"}
 FILLER = {"песню", "песня", "трек", "пожалуйста", "мне", "плиз", "please", "аня", "алиса", "таня",
-          "подруга", "можешь", "давай", "а", "ну"}    # только по краям запроса: «Hate Me», «In the End» — целиком
+          "подруга", "можешь", "давай", "а", "ну", "какое-нибудь", "какой-нибудь", "какую-нибудь", "видео", "видос",
+          "видосик", "видосики", "ролик", "про", "о", "об", "что-нибудь"}    # только по краям запроса: «Hate Me», «In the End» — целиком
 KO_VERBS = ("틀어", "찾아", "재생", "보여", "켜줘", "검색", "들려")
 PRE = r"(?:\b(?:в|на|on|in)\s+)?"
 
@@ -44,7 +45,8 @@ def _is_video(el) -> bool:
 
 
 SITES = [   # (имя, шаблон, ссылка, цель, нужен ли глагол)
-    ("ytmusic", PRE + r"(?:ютуб\w*|ютьюб\w*|youtube|yt)\s*(?:музык\w*|music)|유튜브\s*뮤직(?:에서|으로|로)?",
+    ("ytmusic", PRE + r"(?:ютуб\w*|ютьюб\w*|youtube|yt|этот|ют)\s*(?:музык\w*|music|мьюзик\w*)|"
+     + PRE + r"(?<!эпл )(?<!apple )\bмьюзик\w*|유튜브\s*뮤직(?:에서|으로|로)?",
      "https://music.youtube.com/search?q=", _is_play, True),
     ("youtube", PRE + r"(?:ютуб\w*|ютьюб\w*|youtube)|유튜브(?:에서|로)?",
      "https://www.youtube.com/results?search_query=", _is_video, True),
@@ -120,6 +122,7 @@ def run(r: Recipe, eyes_mod, hands_mod, open_fn, timeout: float = 8.0, sleep=tim
             sleep(0.5)
             continue
         was_playing = r.verify and eyes_mod.is_playing(snap)
+        print(f"[руки] жму «{el.label}»")
         hands_mod.press(el, snap.app, snap.bundle_id)
         if not r.verify or was_playing:           # уже что-то играло — по «Паузе» не отличить, верим нажатию
             return True

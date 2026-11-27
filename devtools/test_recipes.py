@@ -20,6 +20,8 @@ for text, name, url in [
     ("play blackpink on youtube music", "ytmusic", YTM + quote("blackpink")),
     ("включи песню Hate Me в YouTube Music", "ytmusic", YTM + quote("hate me")),
     ("play In the End on youtube music", "ytmusic", YTM + quote("in the end")),
+    ("открой на этот мьюзик песню егора крида будильник", "ytmusic", YTM + quote("егора крида будильник")),
+    ("Включи какое-нибудь видео на ютубе про кемпинг", "youtube", YT + quote("кемпинг")),
     ("найди на ютубе как варить рамен", "youtube", YT + quote("как варить рамен")),
     ("включи на youtube котиков", "youtube", YT + quote("котиков")),
     ("유튜브에서 고양이 영상 찾아줘", "youtube", YT + quote("고양이 영상")),

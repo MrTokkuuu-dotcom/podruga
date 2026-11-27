@@ -961,6 +961,9 @@ class Companion:
         if not r:
             return False
         reply, emo, cmds = r
+        import actions
+        if any(c.startswith("ОТКРЫТЬ") and not actions.known_target(c[len("ОТКРЫТЬ"):]) for c in cmds):
+            return False                  # «открой его видосики…» — не сайт и не программа: пусть думает мозг
         print(f"⚡ быстро ({(time.monotonic() - t0) * 1000:.0f} мс): «{heard}» → {reply}")
         if getattr(self, "_tm", None) is not None:
             self._tm["path"] = "готовый ответ"

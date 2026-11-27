@@ -45,7 +45,7 @@ TESTS = [  # (фраза, язык, проверка)
     ("привет, как дела?", "ru", spoken),
     ("я сегодня так устал на работе, сил нет", "ru", spoken),
     ("включи музыку", "ru", lambda p: cmd(p, "МУЗЫКА play")),
-    ("открой ютуб и найди видео с котиками", "ru", lambda p: any("youtube" in c.lower() and c.upper().startswith("ОТКРЫТЬ") for c in p.commands)),
+    ("открой ютуб и найди видео с котиками", "ru", lambda p: any("youtube" in c.lower() and c.upper().startswith(("ОТКРЫТЬ", "СДЕЛАТЬ")) for c in p.commands)),
     ("напомни через 10 минут выключить чайник", "ru", lambda p: cmd(p, "НАПОМНИТЬ +10")),
     ("какая завтра погода в Сеуле?", "ru", lambda p: cmd(p, "ПОИСК")),
     ("ты меня любишь?", "ru", spoken),
