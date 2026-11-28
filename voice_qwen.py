@@ -176,8 +176,10 @@ class QwenVoiceOut:
         import gpu
         gpu.mark_own()
         t0 = time.monotonic()
+        # кусочками, как в потоке: целиком звук разбирается разом и память подскакивает на ~4 ГБ (замер v37)
         chunks = [np.array(r.audio) for r in self.model.generate(
-            text=text, lang_code=lang_name(text), ref_audio=self._ref(voice), ref_text=REF_TEXT)]
+            text=text, lang_code=lang_name(text), ref_audio=self._ref(voice), ref_text=REF_TEXT,
+            stream=True, streaming_interval=1.0)]
         audio = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
         a16 = (np.clip(audio, -1, 1) * 32767).astype(np.int16)
         print(f"[голос] Qwen: {time.monotonic() - t0:.2f} с на {len(a16) / RATE:.1f} с речи", flush=True)

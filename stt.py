@@ -205,6 +205,13 @@ class MlxWhisperSTT:
                 first = False
             t0 = time.monotonic()
             self.model = load_model(str(self.dir), dtype=mx.float16)
+            if os.environ.get("PODRUGA_WHISPER_BITS", "8") != "16":
+                # 8 бит: 1,62 → 0,94 ГБ, на проверочных фразах (ru/en/ko) текст тот же слово в слово (замер v37)
+                import mlx.nn as nn
+                nn.quantize(self.model, group_size=64, bits=8,
+                            class_predicate=lambda _, m: isinstance(m, nn.Linear) and m.weight.shape[-1] % 64 == 0)
+                mx.eval(self.model.parameters())
+                mx.clear_cache()
             self._mx = mx
             self._transcribe_array(np.zeros(16000, dtype=np.float32))      # прогрев
             print(f"[уши] Whisper large-v3-turbo (видеочип) готов за {time.monotonic() - t0:.1f} с")

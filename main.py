@@ -336,6 +336,9 @@ class Companion:
                          f"до голоса {v - tm.get('brain', tm.get('text', tm['end'])):.2f}"]
                 print(f"[время] {tm.get('path', tm.get('who', 'Google'))}: " + ", ".join(p for p in parts if p)
                       + f" | всего от конца фразы {v - tm['end']:.2f} с")
+                if v - tm['end'] > 8:                       # долго — не тесно ли Mac по памяти?
+                    import memwatch
+                    threading.Thread(target=lambda: print(memwatch.line()), daemon=True).start()
         else:
             self._spoke_end = time.monotonic()
 
