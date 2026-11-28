@@ -178,6 +178,13 @@ def build(brain: bool, keep_dir: Path | None = None):
     comp._run_mode = lambda name, steps: rec.act(f"MODE {name}")
     comp._redo = lambda text: rec.act(f"REDO {text}")
     comp.initiative.add_from_command = lambda c: None
+    _pending = comp.initiative.pending
+
+    def pending():                                   # «какие у меня напоминания» (не подсказка мозгу)
+        if sys._getframe(1).f_code.co_name == "device_now":
+            rec.act("НАПОМИНАНИЯ")
+        return _pending()
+    comp.initiative.pending = pending
     comp.tasks.start = lambda goal, fn=None, said=None: rec.act(f"СДЕЛАТЬ {goal}")
     comp.go_sleep = lambda say_goodnight=True: rec.act("СОН")
     comp._sync_local_orig = comp._sync_local

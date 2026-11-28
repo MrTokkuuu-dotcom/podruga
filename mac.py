@@ -125,8 +125,10 @@ def find_running(name: str) -> str | None:
     """«телеграм» → «Telegram», если запущен. Сначала по словарю actions.APPS, потом по буквам."""
     import actions
     low = name.strip().lower()
-    want = next((app for k, app in actions.APPS.items() if k in low), None)
     apps = running_apps()
+    if re.search(r"браузер|browser|브라우저", low):          # «закрой браузер» — тот, что запущен
+        return next((a for a in ("Google Chrome", "Safari", "Arc", "Firefox", "Yandex", "Microsoft Edge") if a in apps), None)
+    want = next((app for k, app in actions.APPS.items() if k in low), None)
     if want:
         return next((a for a in apps if a.lower() == want.lower()), None)
     return next((a for a in apps if low and (low in a.lower() or a.lower() in low)), None)

@@ -629,9 +629,13 @@ class Companion:
     # --- команды из ответа ---
     def handle_commands(self, commands: list[str]) -> None:
         import re as _re
+        told = intents.narrative(self._said()) if getattr(self, "_said_now", None) else False
         for c in commands:
             kind, _, arg = c.strip().partition(" ")
             kind = kind.upper()
+            if told and kind in ("ОТКРЫТЬ", "СДЕЛАТЬ", "ЗАКРЫТЬ", "МУЗЫКА", "ГРОМКОСТЬ"):
+                print(f"[команда] {c}: он рассказывает («{self._said()}»), а не просит — не делаю")
+                continue
             print(f"[команда] {kind} {arg}")
             if kind == "НАПОМНИТЬ":
                 self.initiative.add_from_command(c)
@@ -862,6 +866,17 @@ class Companion:
         self.unsaved.append(f"{self.user}: {text}")
         if cmd == "МУЗЫКА play":
             self._note_habit(text)
+        if cmd == "НАПОМИНАНИЯ list":                   # «какие у меня напоминания» — по-настоящему, а не выдумкой
+            items = self.initiative.pending()
+            if items:
+                self.ui.add("her", "\n".join(f"⏰ {r['at'][11:16]} — {r['text']}" for r in items), "📝")
+                line = "Напомню: " + "; ".join(f"в {r['at'][11:16]} — {r['text']}" for r in items[:3]) + \
+                       (f". И ещё {len(items) - 3}." if len(items) > 3 else ".")
+            else:
+                line = "Пока никаких напоминаний. Скажи, например: «напомни через десять минут выключить чайник»."
+            self.say(line, "calm")
+            self._history_add(line)
+            return True
         if cmd.startswith("МУЗЫКА"):                   # сразу и честно: если играть нечему — так и скажет
             import actions
             import mac
