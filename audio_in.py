@@ -112,6 +112,7 @@ class Listener:
         self.phrase_end = None                    # когда закончилась последняя фраза (для замера скорости)
         self.ptt = False                          # «нажми и говори»: слушает только пока зажата клавиша
         self.held = False
+        self.last_ptt = False                     # последняя фраза сказана с кнопкой
 
     def _callback(self, indata, frames, time_info, status):
         if not self.muted or (self.ptt and self.held):     # зажал клавишу — слышит даже пока она говорит
@@ -184,7 +185,7 @@ class Listener:
                 frame = self.q.get(timeout=0.1)
             except queue.Empty:
                 frame = None
-            if self.ptt:
+            if self.ptt or self.held or ptt_buf is not None:     # и в режиме «слушаю всегда» кнопка работает
                 if self.held:
                     if ptt_buf is None:
                         ptt_buf = list(ptt_ring)
@@ -197,6 +198,7 @@ class Listener:
                             ptt_buf = []
                 elif ptt_buf is not None:                 # отпустил — фраза готова
                     if len(ptt_buf) * self.frame_ms >= 400:
+                        self.last_ptt = True
                         yield to_wav(ptt_buf)
                     ptt_buf = None
                 elif frame is not None and len(frame) == self.frame * 2:
@@ -243,6 +245,7 @@ class Listener:
             if silence_ms >= self.end_silence_ms or len(voiced) * self.frame_ms >= self.max_ms:
                 density = speech_frames / max(1, last_speech_idx)
                 if speech_frames * self.frame_ms >= self.min_speech_ms and density >= min_density:
+                    self.last_ptt = False
                     yield to_wav(voiced[:last_speech_idx + max(1, 250 // self.frame_ms)])   # хвост тишины не нужен
                 elif speech_frames * self.frame_ms >= self.min_speech_ms:
                     print(f"   (похоже на музыку/шум, пропускаю: речи {density:.0%})")

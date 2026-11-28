@@ -448,23 +448,49 @@ class Companion:
     # --- «нажми и говори» ---
     def _ptt_press(self):
         L = getattr(self, "listener", None)
-        if not L or not L.ptt or self.pauser.paused:
+        if not L:
             return
+        if self.pauser.paused:
+            self.pauser.toggle()                     # на паузе нажал кнопку — значит, хочет говорить
         L.press()
+        if self.stt and hasattr(self.stt, "wake"):
+            self.stt.wake()                          # уши грузятся (~0,5 с), пока он говорит
         if self.speaking:
             self.interrupt()                         # зажал, пока она говорит, — замолкает и слушает
         self.ui.state("listen")
+        self.ui.ptt_held(True)
 
     def _ptt_release(self):
         L = getattr(self, "listener", None)
         if L and L.held:
             L.release()
+            self.ui.ptt_held(False)
+            self.ui.state("think" if self.awake else "sleep")
+            self._park_later()
+
+    def _park_later(self, secs: float = 12.0):
+        """«Нажми и говори»: через ~12 с без кнопки уши уходят из памяти (~0,9 ГБ)."""
+        self._ptt_last = time.monotonic()
+
+        def check():
+            L = getattr(self, "listener", None)
+            if L and L.ptt and not L.held and time.monotonic() - self._ptt_last >= secs - 0.1 \
+                    and self.stt and hasattr(self.stt, "park"):
+                self.stt.park()
+        t = threading.Timer(secs, check)
+        t.daemon = True
+        t.start()
 
     def set_push_to_talk(self, on: bool):
         L = getattr(self, "listener", None)
         if L:
             L.ptt = on
             L.held = False
+        self.ui.ptt_mode(on)
+        if on:
+            self._park_later()
+        elif self.stt and hasattr(self.stt, "wake"):
+            self.stt.wake()                          # снова слушает всё время — уши нужны всегда
         from config import save_user_settings
         try:
             save_user_settings(self.cfg, {"ptt": "1" if on else "0"})
@@ -1617,7 +1643,7 @@ class Companion:
         if self.awake and self.wake and self.stt and self.stt.active:
             lang = "en" if getattr(self.speaker.voice, "lang", "ru") == "en" else "ru"
             whisper = _Bg(lambda: self.stt.transcribe(wav, lang))
-        ptt = bool(getattr(self.listener, "ptt", False))   # сказал с зажатой клавишей — точно ей и точно он
+        ptt = bool(getattr(self.listener, "last_ptt", False))   # сказал с зажатой кнопкой — точно ей и точно он
         if ptt and not self.awake:
             print("   (с кнопки — просыпаюсь)")
             self.wake_up(True, wav, False)
@@ -1904,8 +1930,10 @@ class Companion:
             self.listener.start()
             import pushtotalk
             pushtotalk.start(self._ptt_press, self._ptt_release)
+            self.ui.ptt_mode(self.listener.ptt)
             if self.listener.ptt:
-                print("[уши] режим «нажми и говори»: слушаю только пока зажат правый ⌥")
+                print("[уши] режим «нажми и говори»: слушаю только пока зажата кнопка 🎙 или правый ⌥")
+                self._park_later(30)                 # после запуска уши поработают и уйдут из памяти
             if self.wake:
                 self.ui.state("sleep")
                 print(f"💤 Сплю. Разбудить: «{self.cfg['wake']['phrases'][0]}». "

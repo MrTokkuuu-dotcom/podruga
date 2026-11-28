@@ -204,16 +204,8 @@ class MlxWhisperSTT:
             else:
                 first = False
             t0 = time.monotonic()
-            self.model = load_model(str(self.dir), dtype=mx.float16)
-            if os.environ.get("PODRUGA_WHISPER_BITS", "8") != "16":
-                # 8 бит: 1,62 → 0,94 ГБ, на проверочных фразах (ru/en/ko) текст тот же слово в слово (замер v37)
-                import mlx.nn as nn
-                nn.quantize(self.model, group_size=64, bits=8,
-                            class_predicate=lambda _, m: isinstance(m, nn.Linear) and m.weight.shape[-1] % 64 == 0)
-                mx.eval(self.model.parameters())
-                mx.clear_cache()
             self._mx = mx
-            self._transcribe_array(np.zeros(16000, dtype=np.float32))      # прогрев
+            self._weights()
             print(f"[уши] Whisper large-v3-turbo (видеочип) готов за {time.monotonic() - t0:.1f} с")
             if first:
                 self.notify("Новый слух готов: понимаю русский, английский и корейский.")
@@ -225,9 +217,60 @@ class MlxWhisperSTT:
             if isinstance(self.fallback, _NoSTT):
                 self.fallback = WhisperSTT(self.home, self.fallback_model, notify=lambda m: None)
 
+    def _weights(self):
+        """Загрузить веса (8 бит) и прогреть. Повторно — после park(): с диска ~1 с, пока он ещё говорит."""
+        mx = self._mx
+        from mlx_whisper.load_models import load_model
+        m = load_model(str(self.dir), dtype=mx.float16)
+        if os.environ.get("PODRUGA_WHISPER_BITS", "8") != "16":
+            # 8 бит: 1,62 → 0,94 ГБ, на проверочных фразах (ru/en/ko) текст тот же слово в слово (замер v37)
+            import mlx.nn as nn
+            nn.quantize(m, group_size=64, bits=8,
+                        class_predicate=lambda _, x: isinstance(x, nn.Linear) and x.weight.shape[-1] % 64 == 0)
+            mx.eval(m.parameters())
+            mx.clear_cache()
+        self.model = m
+        self._transcribe_array(np.zeros(16000, dtype=np.float32))      # прогрев
+
+    # --- «нажми и говори»: пока кнопка не нажата, уши не держат память (~0,9 ГБ) ---
+    _parked = False
+    _waking = None
+
+    def park(self) -> bool:
+        """Выгрузить модель. Следующая фраза сама загрузит её (wake() — заранее, при нажатии кнопки)."""
+        if not self.ready.is_set() or self.failed or self._parked:
+            return False
+        with self._lock:
+            self._parked = True
+            self.ready.clear()
+            self.model = None
+            import gc
+            gc.collect()
+            self._mx.clear_cache()
+        print("[уши] выгрузила Whisper из памяти — до нажатия кнопки")
+        return True
+
+    def wake(self) -> None:
+        """Нажал кнопку — грузим уши, пока он говорит."""
+        if not self._parked or (self._waking and self._waking.is_alive()):
+            return
+
+        def go():
+            t0 = time.monotonic()
+            try:
+                with self._lock:
+                    self._weights()
+                    self._parked = False
+                    self.ready.set()
+                print(f"[уши] Whisper снова в памяти за {time.monotonic() - t0:.1f} с")
+            except Exception as e:
+                print(f"[уши] Whisper не загрузился: {e}")
+        self._waking = threading.Thread(target=go, name="whisper-wake", daemon=True)
+        self._waking.start()
+
     @property
     def active(self) -> bool:
-        return (self.ready.is_set() and not self.failed) or self.fallback.active
+        return (self.ready.is_set() and not self.failed) or self._parked or self.fallback.active
 
     # --- распознавание ---
     def _prompt(self, lang: str = "ru") -> str:
@@ -301,6 +344,9 @@ class MlxWhisperSTT:
         return r[0] if isinstance(r, list) else r
 
     def transcribe(self, wav: bytes, lang: str = "ru") -> str | None:
+        if self._parked:                                    # выгружена — грузим и ждём (обычно уже загрузилась)
+            self.wake()
+            self.ready.wait(20)
         if not (self.ready.is_set() and not self.failed):
             text = self.fallback.transcribe(wav, lang)
             self.last_secs, self.last_lang = self.fallback.last_secs, lang

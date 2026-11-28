@@ -92,6 +92,53 @@
     background: var(--accent2); display: none; }
   #chatBtn.unread .badge { display: block; }
 
+  /* ==== рядом с ней: кнопка 🎙 и табличка над головой (v39) ==== */
+  #micBtn { display: none; }
+  body.mini #micBtn { display: grid; place-items: center; position: absolute; right: 6px; top: 6px; width: 44px; height: 44px;
+    border-radius: 50%; border: 0; cursor: pointer; font-size: 19px; color: #fff; z-index: 6; touch-action: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 4px 14px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.25); transition: transform .12s, box-shadow .12s; }
+  body.mini #micBtn:hover { transform: scale(1.07); }
+  body.mini #micBtn.held { background: linear-gradient(135deg, #ff5c7a, #ff9a6b); transform: scale(1.12);
+    box-shadow: 0 0 0 calc(4px + var(--lv, 0) * 14px) rgba(255,92,122,.28), 0 4px 14px rgba(0,0,0,.4); }
+  body.mini #micBtn .k { position: absolute; bottom: -15px; font-size: 9.5px; color: var(--ink); opacity: 0; white-space: nowrap;
+    text-shadow: 0 1px 3px #000; transition: opacity .15s; pointer-events: none; }
+  body.mini #micBtn:hover .k { opacity: .85; }
+  body.mini.stage #micBtn { position: fixed; left: 0; top: 0; right: auto; transform: translate3d(var(--mx, 0), var(--my, 0), 0);
+    transition: box-shadow .12s, background .12s; }      /* без задержки: на ходу кнопка не отстаёт от неё */
+  #micBtn2.held { background: linear-gradient(135deg, #ff5c7a, #ff9a6b); color: #fff; }
+  body.mini.stage #micBtn:hover { transform: translate3d(var(--mx, 0), var(--my, 0), 0) scale(1.07); }
+  body.mini.stage #micBtn.held { transform: translate3d(var(--mx, 0), var(--my, 0), 0) scale(1.12); }
+  body.mini #chatBtn { top: 56px; }
+  body.mini #quitBtn { top: 96px; }
+
+  #hud { display: none; }
+  body.mini #hud { display: flex; flex-direction: column; align-items: center; gap: 5px; position: absolute; left: 50%; top: 4px;
+    transform: translateX(-50%); pointer-events: none; z-index: 4; max-width: 300px; }
+  body.mini.stage #hud { position: fixed; left: 0; top: 0; transform: translate3d(var(--hx, 0), var(--hy, 0), 0) translate(-50%, -100%); }
+  #hud .pill { display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 10px; border-radius: 999px;
+    background: rgba(28,22,44,.82); color: var(--ink); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+    box-shadow: 0 3px 12px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); transition: opacity .25s, background .2s; }
+  #hud .pill .ico { font-size: 14px; }
+  #hud .pill i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--c, var(--quiet)); flex: none; }
+  #hud.idle .pill { opacity: .55; font-weight: 500; }
+  #hud.s-listen .pill { --c: var(--good); } #hud.s-think .pill, #hud.s-look .pill { --c: var(--warn); }
+  #hud.s-talk .pill { --c: var(--accent2); } #hud.held .pill { background: rgba(160,40,70,.88); --c: #fff; }
+  #hud .bars { display: none; gap: 2px; align-items: center; height: 12px; }
+  #hud.held .bars { display: flex; }
+  #hud .bars b { width: 3px; border-radius: 2px; background: #fff; height: calc(3px + var(--lv, 0) * 9px); transition: height .08s; }
+  #hud .bars b:nth-child(2) { height: calc(3px + var(--lv, 0) * 12px); } #hud .bars b:nth-child(4) { height: calc(3px + var(--lv, 0) * 7px); }
+  #hud .dots span { animation: hudDot 1.2s infinite; opacity: .2; } #hud .dots span:nth-child(2) { animation-delay: .2s; }
+  #hud .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes hudDot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
+  #hud .say { max-width: 300px; padding: 7px 11px; border-radius: 14px; background: rgba(28,22,44,.86); color: var(--ink);
+    font-size: 12.5px; line-height: 1.35; white-space: normal; text-align: center; box-shadow: 0 3px 12px rgba(0,0,0,.35),
+    inset 0 0 0 1px var(--line); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    opacity: 0; transition: opacity .3s; }
+  #hud .say.me { background: rgba(58,47,92,.9); }
+  #hud .say.show { opacity: 1; }
+  #hud .say:empty { display: none; }
+
   /* панели: настройки и ключ */
   .panel { position: absolute; inset: 0; background: rgba(20,16,32,.97); border-radius: 22px; padding: 16px;
     display: none; flex-direction: column; gap: 10px; overflow-y: auto; -webkit-user-select: text; user-select: text; }
@@ -141,6 +188,11 @@
   <div id="charWrap" class="pywebview-drag-region">
     <div id="char" class="sleep">{{SVG}}</div>
     <div id="status">Сплю</div>
+    <div id="hud" class="s-sleep"><div class="say" id="hudSay"></div>
+      <div class="pill"><i></i><span class="ico" id="hudIco">💤</span><span id="hudTxt">Сплю</span>
+        <span class="dots" id="hudDots" hidden><span>.</span><span>.</span><span>.</span></span>
+        <span class="bars"><b></b><b></b><b></b><b></b></span></div></div>
+    <button id="micBtn" title="Зажми и говори (или правый ⌥)">🎙<span class="k">зажми и говори</span></button>
     <button id="chatBtn" title="Открыть переписку" onclick="setMini(false)">💬<span class="badge"></span></button>
     <button id="quitBtn" title="Выйти из Подруги" onclick="api('quit')">✕</button>
   </div>
@@ -152,6 +204,7 @@
   <div id="bottom">
     <input id="input" placeholder="Написать…" onkeydown="if(event.key==='Enter')sendText()">
     <button class="act" title="Посмотреть на экран" onclick="api('look')">👀</button>
+    <button class="act" id="micBtn2" title="Зажми и говори (или правый ⌥)">🎙</button>
     <button class="act" id="sleepBtn" title="Разбудить / усыпить" onclick="api('toggle_sleep')">☀︎</button>
     <button class="act" id="pauseBtn" title="Пауза" onclick="api('toggle_pause')">⏸</button>
   </div>
@@ -197,6 +250,8 @@
       <button class="btn" onclick="closePanels()">Закрыть</button>
     </div>
     <div class="note" id="setNote"></div>
+    <label style="flex-direction:row;align-items:center;gap:8px;margin-top:6px"><input type="checkbox" id="sPtt">
+      Слушать только пока зажата кнопка 🎙 (или правый ⌥) — не слышит видео и разговоры вокруг</label>
     <p style="margin-top:8px">Слушать только мой голос: <span id="vpState">—</span></p>
     <div class="row"><button class="btn" onclick="api('enroll_voice'); closePanels()">Запомнить мой голос</button>
       <button class="btn" onclick="api('forget_voice'); closePanels()">Забыть</button></div>
@@ -240,13 +295,40 @@ const ui = {
   state(s) {
     const face = (s === 'look') ? 'think' : (s === 'pause' || s === 'setup') ? 'sleep' : s;
     ui._face = face; ui._paint();
-    $('status').textContent = STATUS[s] || s;
+    $('status').textContent = (ui._ptt && s === 'listen') ? 'Зажми 🎙 и говори' : (ui._ptt && s === 'sleep') ? 'Сплю · зажми 🎙' : (STATUS[s] || s);
     $('dot').style.background = DOT[s] || 'var(--quiet)';
     $('sleepBtn').textContent = (s === 'sleep') ? '☀︎' : '☾';
     $('pauseBtn').classList.toggle('on', s === 'pause');
+    ui._s = s; ui._hud();
   },
+  // ---- табличка над головой: что она сейчас делает ----
+  _s: 'sleep', _ptt: false, _held: false, _hudT: null, _sayT: null,
+  _hud() {
+    const s = ui._s, held = ui._held, ptt = ui._ptt;
+    const M = { sleep: ['💤', ptt ? 'Сплю · зажми 🎙' : 'Сплю · «привет, подруга»'],
+                listen: held ? ['👂', 'Слушаю'] : ptt ? ['🎙', 'Зажми и говори'] : ['👂', 'Слушаю'],
+                think: ['💭', 'Думаю'], talk: ['🗣', 'Говорю'], look: ['👀', 'Смотрю на экран'],
+                pause: ['⏸', 'Пауза · нажми 🎙'], setup: ['✨', 'Знакомимся'] };
+    const [ico, txt] = held ? ['👂', 'Слушаю'] : (M[s] || ['•', s]);
+    const h = $('hud'); if (!h) return;
+    h.className = 's-' + (held ? 'listen' : s) + (held ? ' held' : '') + ((s === 'listen' || s === 'sleep') && !held ? ' idle' : '');
+    $('hudIco').textContent = ico; $('hudTxt').textContent = txt;
+    $('hudDots').hidden = !(s === 'think' || s === 'look') || held;
+    clearTimeout(ui._hudT);
+    if (s === 'think' && !held) ui._hudT = setTimeout(() => { if (ui._s === 'think') { ui._s = 'listen'; ui._hud(); } }, 30000);
+  },
+  _say(text, who) {
+    const d = $('hudSay'); if (!d) return;
+    d.textContent = text; d.classList.toggle('me', who === 'me'); d.classList.add('show');
+    clearTimeout(ui._sayT);
+    ui._sayT = setTimeout(() => d.classList.remove('show'), who === 'me' ? 2500 : 4000);
+  },
+  pttMode(on) { ui._ptt = !!on; $('micBtn').title = on ? 'Зажми и говори (или правый ⌥)' : 'Зажми, чтобы сказать точно ей'; ui._hud(); },
+  pttHeld(on) { ui._held = !!on; $('micBtn').classList.toggle('held', ui._held); $('micBtn2').classList.toggle('held', ui._held);
+    $('status').textContent = ui._held ? 'Слушаю…' : (STATUS[ui._s] || ui._s); ui._hud(); },
   add(role, text, tag) {
     const e = $('empty'); if (e) e.remove();
+    if (role === 'me') ui._say(text, 'me');
     const d = document.createElement('div'); d.className = 'msg ' + role;
     if (tag) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = tag; d.appendChild(t); }
     d.appendChild(document.createTextNode(text));
@@ -259,6 +341,7 @@ const ui = {
     if (last && last.classList.contains('her') && last.dataset.open === '1') {
       last.lastChild.textContent += ' ' + text;
     } else { ui.add('her', text); $('log').lastElementChild.dataset.open = '1'; }
+    ui._say(text, 'her');
     $('log').scrollTop = $('log').scrollHeight;
   },
   closeHer() { const l = $('log').lastElementChild; if (l) l.dataset.open = '0'; },
@@ -308,7 +391,10 @@ const ui = {
     ui._emo = e || 'calm'; ui._paint(); clearTimeout(ui._emoTimer);
     if (holdMs) ui._emoTimer = setTimeout(() => { ui._emo = 'calm'; ui._paint(); }, holdMs);
   },
-  level(v) { $('lvl').style.width = Math.min(100, v / 30) + '%'; },
+  level(v) {
+    $('lvl').style.width = Math.min(100, v / 30) + '%';
+    if (ui._held) { const k = Math.min(1, v / 2500).toFixed(2); $('hud').style.setProperty('--lv', k); $('micBtn').style.setProperty('--lv', k); }
+  },
   highlight(r) {          // «руки»: рамка вокруг того, что она сейчас нажимает
     let b = $('hl'); if (!b) { b = document.createElement('div'); b.id = 'hl'; document.body.appendChild(b); }
     clearTimeout(ui._hlT);
@@ -350,6 +436,7 @@ async function openSettings() {
   $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
   $('sBrain').value = s.brain || 'local'; $('brainState').textContent = s.brain_state || '';
   $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
+  $('sPtt').checked = !!s.ptt; $('sPtt').dataset.was = s.ptt ? '1' : '0';
   $('sHands').checked = s.hands !== false; $('sHandsGoogle').checked = s.hands_google !== false;
   $('handsGoogleRow').style.display = s.has_key ? '' : 'none';
   $('permAcc').textContent = s.perm && s.perm.accessibility ? 'есть ✓' : 'нет';
@@ -385,8 +472,24 @@ async function saveSettings() {
   const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
     trait_bold: $('tBold').value, trait_play: $('tPlay').value, trait_talk: $('tTalk').value,
     brain: $('sBrain').value, hands: $('sHands').checked ? '1' : '0', hands_google: $('sHandsGoogle').checked ? '1' : '0' });
+  const ptt = $('sPtt').checked ? '1' : '0';
+  if (ptt !== $('sPtt').dataset.was) { api('set_ptt_mode', ptt === '1'); $('sPtt').dataset.was = ptt; }
   note('setNote', r && r.ok ? 'Сохранено ✓' : 'Не сохранилось', r && r.ok);
 }
+// ---- кнопка 🎙: зажал — слушает, отпустил — отвечает ----
+['micBtn', 'micBtn2'].forEach((id) => {
+  const b = $(id); let down = false;
+  const up = () => { if (!down) return; down = false; ui.pttHeld(false); api('ptt', false); };
+  b.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation(); down = true;
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+    ui.pttHeld(true); api('ptt', true);
+  });
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+  b.addEventListener('lostpointercapture', up); window.addEventListener('blur', up);
+  b.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); api('menu'); });
+});
 window.addEventListener('pywebviewready', () => api('ui_ready'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanels(); });
 // если курсор давно не двигался — иногда сама смотрит по сторонам

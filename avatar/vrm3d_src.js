@@ -213,13 +213,13 @@ function placeStage(force) {
   if (!force && key === placedKey) return;
   placedKey = key;
   host.style.transform = `translate3d(${px}px,${py}px,0)`;
-  const btn = document.getElementById('chatBtn');
-  if (btn) {
-    S.btnX = Math.round(S.x + 70); S.btnY = Math.round(S.H - S.y + drop - top - 8);
-    btn.style.setProperty('--bx', S.btnX + 'px'); btn.style.setProperty('--by', S.btnY + 'px');
-  }
-  const q = document.getElementById('quitBtn');
-  if (q) { q.style.setProperty('--qx', (S.btnX + 42) + 'px'); q.style.setProperty('--qy', (S.btnY + 4) + 'px'); }
+  // рядом с головой справа — 🎙 (большая), 💬, ✕; над головой — табличка «слушаю / думаю / говорю»
+  S.btnX = Math.round(S.x + 66); S.btnY = Math.round(S.H - S.y + drop - top - 8);
+  const set = (id, a, x, b, y) => { const e = document.getElementById(id); if (e) { e.style.setProperty(a, x + 'px'); e.style.setProperty(b, y + 'px'); } };
+  set('micBtn', '--mx', S.btnX, '--my', S.btnY);
+  set('chatBtn', '--bx', S.btnX + 52, '--by', S.btnY + 5);
+  set('quitBtn', '--qx', S.btnX + 94, '--qy', S.btnY + 9);
+  set('hud', '--hx', Math.round(S.x), '--hy', Math.round(S.H - S.y + drop - top - 14));
 
 }
 function stageOn(W, H, x, y) {
