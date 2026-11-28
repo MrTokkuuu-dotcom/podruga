@@ -121,7 +121,11 @@ class Initiative:
         t = now()
         if _in_quiet(t, self.quiet):
             return
-        # 2) вечером — как прошёл день (раз в день)
+        # 2) привычка: он обычно в это время что-то включает — предложить (только предложить)
+        if getattr(c, "habit_offer", None) and c.habit_offer():
+            self.last_initiative = time.monotonic()
+            return
+        # 3) вечером — как прошёл день (раз в день)
         eh, em = map(int, self.evening.split(":"))
         if (self.evening_done_on != t.date() and (t.hour, t.minute) >= (eh, em)
                 and time.monotonic() - c.last_talk > 5 * 60):

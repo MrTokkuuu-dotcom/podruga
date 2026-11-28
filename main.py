@@ -106,6 +106,9 @@ class Companion:
         import lessons
         self.lessons = lessons.Lessons(self.cfg["_data_dir"] / "lessons.json")   # его поправки
         self._acted = 0.0                     # когда она последний раз что-то делала (для «нет, я имел в виду…»)
+        import habits
+        self.habits = habits.Habits(self.cfg["_data_dir"] / "habits.json")   # что он делает в одно время
+        self._habit_q = None                  # (ключ, фраза, когда спросила) — ждём «да» / «нет»
         self.speaker = _PrintSpeaker() if text_mode else None
 
         self.wake = None
@@ -638,6 +641,8 @@ class Companion:
                     self.initiative.add_from_command(f"НАПОМНИТЬ +{m.group(1)} | Таймер: {label}")
             elif kind in ("ОТКРЫТЬ", "МУЗЫКА", "ГРОМКОСТЬ"):
                 self._acted = time.monotonic()
+                if kind == "ОТКРЫТЬ" or arg.strip().lower().startswith("play"):
+                    self._note_habit(self._said())
                 sound = None
                 if kind == "МУЗЫКА":                 # играет ли что-то — до того, как она заговорит
                     import mac
@@ -645,6 +650,7 @@ class Companion:
                 threading.Thread(target=self._do_action, args=(kind, arg, sound), daemon=True).start()
             elif kind == "СДЕЛАТЬ":
                 self._acted = time.monotonic()
+                self._note_habit(self._said())
                 self.tasks.start(arg.strip(), said=getattr(self, "_said_now", None) or None)
             elif kind == "ПОИСК":
                 threading.Thread(target=self._do_search, args=(arg,), daemon=True).start()
@@ -802,6 +808,7 @@ class Companion:
         self.unsaved.append(f"{self.user}: {text}")
         busy = self.tasks.running
         self._acted = time.monotonic()
+        self._note_habit(text)
         self.tasks.start(text.strip())
         if not busy:
             line = random.choice(self.TASK_LINES.get(self._phrase_lang, self.TASK_LINES["ru"]))
@@ -821,6 +828,7 @@ class Companion:
         self.unsaved.append(f"{self.user}: {text}")
         busy = self.tasks.running
         self._acted = time.monotonic()
+        self._note_habit(text)
         self.tasks.start(text.strip())
         if not busy:
             line = random.choice(self.TASK_LINES.get(self._phrase_lang, self.TASK_LINES["ru"]))
@@ -839,6 +847,8 @@ class Companion:
             self.ui.add("me", text)
         self.history.append({"role": "user", "text": text})
         self.unsaved.append(f"{self.user}: {text}")
+        if cmd == "МУЗЫКА play":
+            self._note_habit(text)
         if cmd.startswith("МУЗЫКА"):                   # сразу и честно: если играть нечему — так и скажет
             import actions
             import mac
@@ -864,6 +874,83 @@ class Companion:
         line = random.choice(DEVICE_LINES.get(self._phrase_lang, DEVICE_LINES["ru"])[key]).format(n=n)
         self.say(line, "joy" if key == "play" else "calm")
         self._history_add(line)
+        return True
+
+    def _said(self) -> str:
+        """Его фраза, на которую она сейчас делает дело."""
+        s = getattr(self, "_said_now", None)
+        if s:
+            return s
+        return next((h["text"] for h in reversed(self.history) if h.get("role") == "user"), "") or ""
+
+    def _note_habit(self, phrase: str, mode: bool = False) -> None:
+        if self.cfg.get("initiative", {}).get("habits", True) and phrase:
+            try:
+                if self.habits.note(phrase.replace(" [скриншот экрана]", ""), mode=mode):
+                    print(f"[привычки] записала: «{phrase}»")
+            except Exception as e:
+                print(f"[привычки] {e}")
+
+    def habit_offer(self) -> bool:
+        """Из цикла инициативы: он обычно в это время что-то включает — предложить. True — предложила."""
+        if not self.cfg.get("initiative", {}).get("habits", True) or self.tasks.running or self._habit_q:
+            return False
+        if time.monotonic() - self.last_talk < 120:
+            return False
+        try:
+            import reactions
+            if reactions.idle_seconds() > 600:         # его нет за компьютером
+                return False
+        except Exception:
+            pass
+        s = self.habits.suggestion()
+        if s is None:
+            return False
+        key, phrase, days = s
+        self.habits.mark_offered(key)
+        line = f"Ты обычно в это время просишь «{phrase}». Сделать?"
+        print(f"[привычки] предлагаю «{phrase}» ({days} дн.)")
+        self.journal.log("initiative", what=f"привычка: {phrase}")
+        self._habit_q = (key, phrase, time.monotonic())
+        self.ui.add("her", line, "💡")
+        self.say(line, "joy")
+        self._history_add(line)
+        return True
+
+    def habit_answer(self, text: str, spoken: bool = True) -> bool:
+        """Ответ на «Сделать?» про привычку. True — это был ответ."""
+        q = self._habit_q
+        if q is None:
+            return False
+        key, phrase, t = q
+        if time.monotonic() - t > 90:
+            self._habit_q = None
+            return False
+        import guard
+        import habits
+        never = habits.never(text)
+        yn = False if never else guard.yes_no(text)
+        self._habit_q = None
+        if yn is None:
+            return False                                 # заговорил о другом — вопрос снят
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        if never:
+            self.habits.mute(key)
+            line = "Хорошо, больше не буду это предлагать."
+        elif yn:
+            self.habits.answer(key, True)
+            line = "Делаю!"
+        else:
+            self.habits.answer(key, False)
+            line = "Хорошо, не буду."
+        print(f"[привычки] «{phrase}»: {'никогда' if never else 'да' if yn else 'нет'}")
+        self.say(line, "joy" if yn else "calm")
+        self._history_add(line)
+        if yn and not never:
+            threading.Thread(target=self._redo, args=(phrase,), name="habit", daemon=True).start()
         return True
 
     def rewrite(self, text: str) -> str:
@@ -903,11 +990,15 @@ class Companion:
         elif cmd[0] == "list":
             items = self.lessons.describe()
             n = len(self.tasks.book().items) if self.tasks.book() is not None else 0
-            if items:
-                self.ui.add("her", "\n".join(f"• {x}" for x in items), "📝")
+            hb = self.habits.describe()
+            if items or hb:
+                self.ui.add("her", "\n".join([f"• {x}" for x in items] +
+                                             (["Твои привычки:"] + [f"• {x}" for x in hb] if hb else [])), "📝")
             line = (f"Я выучила {len(items)} {self._plural(len(items), 'урок', 'урока', 'уроков')} от тебя"
                     + (f" и {n} {self._plural(n, 'дело', 'дела', 'дел')} на экране" if n else "") + "."
-                    if items or n else "Пока ничему. Поправь меня — «нет, я имел в виду…» или «не говори так» — и запомню.")
+                    + (f" И заметила {len(hb)} {self._plural(len(hb), 'привычку', 'привычки', 'привычек')}." if hb else "")
+                    if items or n else (f"Пока ничему, но заметила {len(hb)} "
+                                        f"{self._plural(len(hb), 'привычку', 'привычки', 'привычек')}." if hb else None) or "Пока ничему. Поправь меня — «нет, я имел в виду…» или «не говори так» — и запомню.")
         elif cmd[0] == "forget":
             t = self.lessons.forget_last()
             if t:
@@ -917,6 +1008,7 @@ class Companion:
             n = self.lessons.forget_all()
             b = self.tasks.book()
             n += b.forget_all() if b is not None else 0
+            n += self.habits.forget_all()
             self._brain_prompt_changed()
             line = "Забыла всё, чему научилась." if n else "Я пока ничему и не научилась."
         self.say(line, "joy" if cmd[0] in ("meant", "rule") else "calm")
@@ -941,8 +1033,9 @@ class Companion:
             self.speaker.wait_done()                  # сначала договорит «Поняла!»
         except Exception:
             time.sleep(2)
-        if self.mac_now(text, spoken=False) or self.task_now(text, spoken=False) or \
-                self.device_now(text, spoken=False):
+        if self.modes_now(text, spoken=False) or self.mac_now(text, spoken=False) or \
+                self.task_now(text, spoken=False) or self.learned_now(text, spoken=False) or \
+                self.device_now(text, spoken=False) or self.quick_answer(text=text):
             return
         self.respond(text=text)
 
@@ -988,6 +1081,7 @@ class Companion:
         import actions
         import mac
         self.journal.log("action", what=f"режим «{name}»: {len(steps)} шагов")
+        self._note_habit(name, mode=True)
         self.tasks.stop.clear()
         for step in steps:
             if self.tasks.stop.is_set():
@@ -1138,6 +1232,8 @@ class Companion:
         from wake import LOOK_PHRASES, _norm
         look = any(p in _norm(text) for p in LOOK_PHRASES)
         if self.tasks.intercept(text):                    # «стоп» / «да» / «нет» посреди задачи на экране
+            return
+        if self.habit_answer(text, spoken=False):         # «да» на «ты обычно в это время …, сделать?»
             return
         if self.lessons_now(text, spoken=False):          # «нет, я имел в виду …», «не говори так»
             return
@@ -1454,6 +1550,9 @@ class Companion:
             if self.tasks.intercept(text):                # «стоп» / «да» / «нет» посреди задачи на экране
                 print(f"⚡ задача: «{text}»")
                 self.ui.add("me", text)
+                return
+            if self.habit_answer(text):                  # «да» на «ты обычно в это время …, сделать?» — до проверки «мне ли»
+                tm["path"] = "сразу"
                 return
             if not self.addressed_to_me(text):
                 return
