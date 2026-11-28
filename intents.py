@@ -13,7 +13,18 @@ NOT_SLEEP = ["не спи", "не ложись", "не иди спать", "не
 
 def norm(text: str) -> str:
     text = re.sub(r"[^\w\s-]", " ", text.lower().replace("ё", "е"))
+    text = re.sub(r"\bю\s*-?\s*туб|\bютюб|\byou tube\b", "ютуб", text)     # Whisper: «ю туб», «ютюб»
     return " ".join(text.split())
+
+
+# Мат и слова-паразиты: командам они не мешают («бля, поставь на паузу», «короче, это самое, включи музыку»).
+_JUNK = re.compile(r"\b(?:это самое|как его|ну это|короче|кароче|типа|блин|бля|блять|блядь|бляха|сука|нахуй|нахер|"
+                   r"нафиг|епта|ептыть|ебать|пиздец|слушай|слышь|эй|ой|йо|fuck|fucking|damn|hey|yo)\b")
+
+
+def unjunk(t: str) -> str:
+    """Уже нормализованный текст без мата и слов-паразитов."""
+    return " ".join(_JUNK.sub(" ", t).split())
 
 
 def _near(phrase: str, text: str, cutoff: float) -> bool:
@@ -58,8 +69,10 @@ _BODY_MAX_WORDS = 6
 
 def body_command(text: str) -> str | None:
     """'sit' | 'lie' | 'stand' | 'pace' | 'left' | 'right' | 'stop' или None."""
-    t = norm(text)
+    t = unjunk(norm(text))
     if not t or len(t.split()) > _BODY_MAX_WORDS or any(p in t for p in NOT_BODY) or any(w in t for w in _NOT_BODY_TOPIC):
+        return None
+    if device_command(text):                             # «turn it down» ≈ «sit down» — это громкость
         return None
     t = re.sub(r"\b(пожалуйста|please|подруга|ань|аня|алиса|таня|давай|можешь|а|ну|ка|please)\b", " ", t)
     t = " ".join(t.split())
@@ -78,9 +91,11 @@ DEVICE = [  # порядок важен: громкость раньше муз�
                        "volume down", "소리 줄여", "볼륨 내려", "작게 해"]),
     ("ГРОМКОСТЬ mute", ["выключи звук", "без звука", "убери звук", "mute", "음소거"]),
     ("МУЗЫКА pause", ["поставь на паузу", "на паузу", "пауза", "останови музыку", "выключи музыку", "стоп музыка",
-                      "выключи песню", "pause music", "pause", "stop music", "음악 꺼", "노래 꺼", "일시정지", "음악 멈춰"]),
+                      "выключи песню", "останови песню", "останови трек", "выключи трек", "pause music",
+                      "pause the music", "stop the music", "pause the song", "pause", "stop music", "음악 꺼", "노래 꺼", "일시정지", "음악 멈춰"]),
     ("МУЗЫКА next", ["следующая песня", "следующий трек", "следующую песню", "следующую", "следующая",
-                     "переключи песню", "переключи трек", "другую песню", "next song", "next track", "skip song",
+                     "переключи песню", "переключи трек", "песню переключи", "другую песню", "next song", "next track",
+                     "skip song", "skip this song", "next one",
                      "skip", "다음 곡", "다음 노래"]),
     ("МУЗЫКА prev", ["предыдущая песня", "предыдущую песню", "прошлую песню", "предыдущий трек", "верни песню",
                      "previous song", "previous track", "이전 곡", "이전 노래"]),
@@ -88,21 +103,51 @@ DEVICE = [  # порядок важен: громкость раньше муз�
                      "врубай музыку", "продолжи музыку", "play music", "play some music", "resume music",
                      "음악 틀어", "노래 틀어", "음악 켜", "노래 켜"]),
 ]
-_NO_FUZZY = {"ГРОМКОСТЬ mute", "МУЗЫКА pause"}
+_NO_FUZZY = {"ГРОМКОСТЬ mute", "МУЗЫКА pause"}      # короткие: «включи звук» ≈ «выключи звук» — не гадаем
+_FUZZY_OK = {"поставь на паузу"}      # «выключи музыку» ≈ «включи музыкy» — нельзя   # длинные — опечатки Whisper можно
+_NEXT_TAIL = re.compile(r"(?:песн|трек)\w*(?:\s+\w+){0,3}\s+(?:переключи|следующ\w*)$")
 NOT_DEVICE = ["не включай", "не выключай", "не ставь", "не надо", "не делай", "don t", "do not", "하지 마", "틀지 마", "끄지 마"]
 _DEVICE_FILLER = r"\b(пожалуйста|please|подруга|ань|аня|алиса|таня|давай|можешь|сделай|чуть|ещ[её]|немного|немножко|" \
                  r"а|ну|ка|можно|hey|can you|could you|a bit|little)\b"
 _NUM = {"один": 1, "одну": 1, "две": 2, "два": 2, "три": 3, "четыре": 4, "пять": 5, "шесть": 6, "семь": 7, "восемь": 8,
         "девять": 9, "десять": 10, "пятнадцать": 15, "двадцать": 20, "тридцать": 30, "минуту": 1, "one": 1, "two": 2,
         "three": 3, "five": 5, "ten": 10, "fifteen": 15, "twenty": 20, "thirty": 30}
-_TIMER = [r"таймер\w*\s+на\s+(\w+)\s*(?:минут\w*)?", r"(?:set\s+)?(?:a\s+)?timer\s+for\s+(\w+)",
+_TIMER = [r"(?:та[йи]?мер\w*|тамер\w*)\s+на\s+(\w+)\s*(?:минут\w*)?", r"засеки\s+(\w+)\s+минут\w*",
+          r"(?:set\s+)?(?:a\s+)?timer\s+for\s+(\w+)",
           r"(\d+)\s*분\s*(?:타이머|뒤|후)"]
+
+
+_LANG = [("РЕЖИМ english", re.compile(r"(?:давай|хочу|можем|будем|давай-ка)\s+(?:\w+\s+){0,2}(?:практиковать|потренируем|"
+                                       r"тренировать|учить|поговорим|говорить|болтать)\s+(?:\w+\s+)?(?:английск\w*|по английски)|"
+                                       r"^(?:говори|поговори|давай)\s+по английски|let s (?:practice|speak|talk in) english|"
+                                       r"^(?:speak|talk to me in) english")),
+         ("РЕЖИМ корейский", re.compile(r"(?:давай|хочу|можем|будем)\s+(?:\w+\s+){0,2}(?:практиковать|потренируем|"
+                                        r"тренировать|учить|поговорим|говорить|болтать)\s+(?:\w+\s+)?(?:корейск\w*|по корейски)|"
+                                        r"^(?:говори|поговори|давай)\s+по корейски|let s (?:practice|speak|talk in) korean|"
+                                        r"^(?:speak|talk to me in) korean|한국어로 (?:말해|얘기해|이야기해)")),
+         ("РЕЖИМ русский", re.compile(r"^(?:давай\s+)?(?:снова\s+|опять\s+)?(?:говори|поговорим|вернись|говорить)\s+"
+                                      r"(?:\w+\s+)?(?:по русски|на русский|на русском)|^speak russian|러시아어로 말해"))]
+
+
+def lang_command(text: str) -> str | None:
+    """«Давай практиковать английский», «поговорим по-корейски», «говори по-русски» → «РЕЖИМ …» или None."""
+    t = norm(text).replace("по-", "по ")
+    t = re.sub(r"\bпо-?\s*(английски|корейски|русски)", r"по \1", t)
+    if not t or len(t.split()) > 9 or t.startswith("не ") or "не надо" in t:
+        return None
+    for cmd, rx in _LANG:
+        if rx.search(t):
+            return cmd
+    return None
 
 
 def device_command(text: str) -> str | None:
     """Готовая команда для handle_commands: «МУЗЫКА play|pause|next|prev», «ГРОМКОСТЬ +10|-10|mute»,
     «ТАЙМЕР N | таймер» — или None (длинная фраза, отрицание, разговор о музыке)."""
-    t = norm(text)
+    lang = lang_command(text)
+    if lang:
+        return lang
+    t = unjunk(norm(text))
     if not t or len(t.split()) > 7 or any(p in t for p in NOT_DEVICE) or t.startswith("не "):
         return None
     for rx in _TIMER:
@@ -116,6 +161,12 @@ def device_command(text: str) -> str | None:
     t = " ".join(re.sub(_DEVICE_FILLER, " ", t).split())
     if not t:
         return None
+    m = re.search(r"(?:громкост\w*|звук)\s+(?:на\s+)?(\d{1,3})(?:\s*(?:процент\w*|%))?$|"
+                  r"(?:volume|소리|볼륨)\s+(?:to\s+)?(\d{1,3})", t)
+    if m and int(m.group(1) or m.group(2)) <= 100:         # «поставь громкость на 50», «громкость 30 процентов»
+        return f"ГРОМКОСТЬ {int(m.group(1) or m.group(2))}"
+    if _NEXT_TAIL.search(t) and "?" not in text:          # «эта песня надоела, переключи», «эту песню — следующую»
+        return "МУЗЫКА next"
     for fuzzy in (False, True):                          # сначала точно (иначе «включи» ≈ «выключи»), потом с опечатками
         for cmd, phrases in DEVICE:
             for p in phrases:
@@ -123,7 +174,7 @@ def device_command(text: str) -> str | None:
                     continue
                 if cmd.startswith("МУЗЫКА") and " " not in p and t != p:
                     continue                             # «skip», «следующая» — только сами по себе («а какая следующая?» — вопрос)
-                if fuzzy and cmd in _NO_FUZZY:
+                if fuzzy and cmd in _NO_FUZZY and p not in _FUZZY_OK:
                     continue                             # «включи звук» ≈ «выключи звук» — наоборот, не гадаем
                 if (re.search(rf"(^|\s){re.escape(p)}", t) if not fuzzy else len(p) > 8 and _near(p, t, 0.88)):
                     return cmd
@@ -187,6 +238,7 @@ def task_command(text: str) -> str | None:
 _MAC_FILLER = r"\b(пожалуйста|please|подруга|ань|аня|алиса|таня|давай|можешь|мне|ка|ну|а|быстро|сейчас|plz)\b"
 _QUIT = re.compile(r"^(?:закрой|закрыть|выключи|выруби|заверши|выйди из|закрой программу|выключи программу|"
                    r"quit|close)\s+(.+)$")
+_HANGUL = re.compile(r"[\uac00-\ud7a3]")
 _SHOT = ["сделай скриншот", "сделай скрин", "скриншот экрана", "сделай снимок экрана", "сфоткай экран",
          "заскринь", "скринь", "take a screenshot", "screenshot", "스크린샷", "화면 캡처", "캡처해"]
 _SHOW_FOLDER = re.compile(r"^(?:открой|покажи|открыть|зайди в|open|show)\s+(?:папку\s+|мне\s+)?(.+)$")
@@ -207,14 +259,14 @@ def mac_command(text: str):
     """('quit', программа) | ('shot', '') | ('folder', путь) | ('find', что) | ('read'|'translate'|'summary', язык)
     | ('screen', 'mouse'|'next') | None."""
     import mac
-    t = norm(text)
+    t = unjunk(norm(text))
     if not t or len(t.split()) > 12 or t.startswith("не "):
         return None
     t = " ".join(re.sub(_MAC_FILLER, " ", t).split())
     m = _MOVE.search(t)
     if m:
         return ("screen", "next" if re.search(r"другой|второй|соседний|other|\bтот\b", t) else "mouse")
-    if any(p == t or (len(p) > 6 and p in t) for p in _SHOT) and len(t.split()) <= 5:
+    if any(p == t or ((len(p) > 6 or _HANGUL.search(p)) and p in t) for p in _SHOT) and len(t.split()) <= 5:
         return ("shot", "")
     if _SCREEN.search(t) and (_SCREEN_WHERE.search(t) or _SCREEN_THIS.search(t)) and "ютуб" not in t:
         if re.search(r"переведи|translate|번역", t):
@@ -233,7 +285,7 @@ def mac_command(text: str):
         # «открой ютуб музыку», «открой видео с котиками» — это не папки: без слова «папка»
         # рядом с названием папки не должно быть других слов (кроме «мои»)
         others = [w for w in m.group(1).split() if not any(k in w for k in mac.FOLDERS)
-                  and w not in ("мои", "мою", "мой", "мне", "my", "the")]
+                  and w not in ("мои", "мою", "мой", "мне", "my", "the", "стол", "стола")]
         if p is not None and ("папк" in t or not others):
             return ("folder", str(p))
     m = _QUIT.search(t)

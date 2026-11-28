@@ -55,12 +55,13 @@ DEVICE_LINES = {  # короткие фразы к мгновенным кома
     "ru": {"play": ["Включаю!", "Ага, включаю музыку."], "pause": ["Ставлю на паузу.", "Пауза."],
            "next": ["Следующая!", "Переключаю."], "prev": ["Возвращаю прошлую.", "Назад."],
            "+10": ["Погромче.", "Делаю громче."], "-10": ["Потише.", "Делаю тише."], "mute": ["Выключила звук."],
-           "timer": ["Поставила таймер на {n} мин.", "Засекла {n} мин."]},
+           "timer": ["Поставила таймер на {n} мин.", "Засекла {n} мин."], "vol": ["Поставила громкость {n}%."]},
     "en": {"play": ["Playing!", "Sure, music on."], "pause": ["Paused."], "next": ["Next one!", "Skipping."],
            "prev": ["Going back."], "+10": ["Louder."], "-10": ["Quieter."], "mute": ["Sound off."],
-           "timer": ["Timer set for {n} minutes."]},
+           "timer": ["Timer set for {n} minutes."], "vol": ["Volume {n}%."]},
     "ko": {"play": ["음악 틀게!", "틀어줄게."], "pause": ["멈출게."], "next": ["다음 곡!", "넘길게."], "prev": ["이전 곡으로."],
-           "+10": ["크게 할게."], "-10": ["작게 할게."], "mute": ["소리 껐어."], "timer": ["{n}분 타이머 맞췄어."]},
+           "+10": ["크게 할게."], "-10": ["작게 할게."], "mute": ["소리 껐어."], "timer": ["{n}분 타이머 맞췄어."],
+           "vol": ["볼륨 {n}%로 맞췄어."]},
 }
 
 class NotReady(RuntimeError):
@@ -652,6 +653,18 @@ class Companion:
                 self._acted = time.monotonic()
                 self._note_habit(self._said())
                 self.tasks.start(arg.strip(), said=getattr(self, "_said_now", None) or None)
+            elif kind == "ЗАКРЫТЬ":                       # «закрой вотсап» — тот же путь, что «закрой телеграм» (с «да?»)
+                import mac
+                if not _re.search(r"(закрой|закрыть|выключи|выруби|заверши|выйди|вырубай|close|quit|닫아|종료|꺼)",
+                                  self._said().lower()):
+                    print(f"[команда] ЗАКРЫТЬ без его просьбы закрыть — не трогаю ({self._said()!r})")
+                    continue                          # «я закрыл телеграм» — он рассказывает, а не просит
+                app = mac.find_running(arg.strip())
+                self._acted = time.monotonic()
+                if app:
+                    threading.Thread(target=self._mac_do, args=("quit", app), name="mac", daemon=True).start()
+                else:
+                    self.ui.add("sys", f"Не вижу запущенной программы «{arg.strip()}»")
             elif kind == "ПОИСК":
                 threading.Thread(target=self._do_search, args=(arg,), daemon=True).start()
             elif kind == "ПОКАЗАТЬ":
@@ -867,14 +880,27 @@ class Companion:
                 print(f"[действие] не получилось: {e}")
                 self.say("Ой, не получилось.", "sad")
                 return True
+        elif cmd.startswith("РЕЖИМ"):                    # «давай практиковать английский» — и отвечает уже на нём
+            self.handle_commands([cmd])
+            line = random.choice(self.LANG_LINES[cmd.split()[1]])
+            self.say(line, "joy")
+            self._history_add(line)
+            return True
         else:
             self.handle_commands([cmd])
         key = "timer" if cmd.startswith("ТАЙМЕР") else cmd.split()[1]
-        n = cmd.split()[1] if key == "timer" else ""
+        n = cmd.split()[1] if key == "timer" or key.isdigit() else ""
+        if key.isdigit():
+            key = "vol"                                  # «громкость на 50»
         line = random.choice(DEVICE_LINES.get(self._phrase_lang, DEVICE_LINES["ru"])[key]).format(n=n)
         self.say(line, "joy" if key == "play" else "calm")
         self._history_add(line)
         return True
+
+    LANG_LINES = {"english": ["Okay, let's practice English! What did you do today?",
+                              "Sure! From now on, English. How are you today?"],
+                  "корейский": ["좋아, 이제 한국어로 말하자! 오늘 뭐 했어?", "알았어, 한국어로 얘기하자!"],
+                  "русский": ["Хорошо, снова по-русски!", "Ага, возвращаюсь к русскому."]}
 
     def _said(self) -> str:
         """Его фраза, на которую она сейчас делает дело."""
@@ -1235,26 +1261,34 @@ class Companion:
             return
         if self.habit_answer(text, spoken=False):         # «да» на «ты обычно в это время …, сделать?»
             return
-        if self.lessons_now(text, spoken=False):          # «нет, я имел в виду …», «не говори так»
-            return
-        text = self.rewrite(text)
-        if self.modes_now(text, spoken=False):
-            return
-        if self.mac_now(text, spoken=False, look=look):
-            return
-        if not look and self.task_now(text, spoken=False):
-            return
-        if not look and self.learned_now(text, spoken=False):
-            return
-        if not look and self.repeat_now(text, spoken=False):
-            return
-        if not look and self.device_now(text, spoken=False):
-            return
-        if not look and self.quick_answer(text=text):
-            return
-        self.respond(text=text, image=self.screenshot() if look else None)
-        if is_goodbye(text, self.cfg["wake"]["sleep_phrases"]):
+        if self.route(text, look, spoken=False) == "brain" and is_goodbye(text, self.cfg["wake"]["sleep_phrases"]):
             self.go_sleep(say_goodnight=False)
+
+    def route(self, text: str, look: bool = False, spoken: bool = True) -> str:
+        """Общий путь фразы (голос и переписка): кто первым возьмётся. Возвращает, кто взялся:
+        lessons, modes, mac, task, learned, repeat, device, quick или brain. Его же гоняет devtools/drill.py."""
+        if self.lessons_now(text, spoken=spoken):         # «нет, я имел в виду …», «не говори так» — учится
+            return "lessons"
+        if look and intents.task_command(text):            # «посмотри на ютубе новое видео …» — это не про экран
+            look = False
+        text = self.rewrite(text)                         # то, что он раньше поправлял
+        if self.modes_now(text, spoken=spoken):           # «запомни: рабочий режим — это …», «рабочий режим»
+            return "modes"
+        if self.mac_now(text, spoken=spoken, look=look):  # «закрой телеграм», «переведи, что на экране»
+            return "mac"
+        if not look:
+            for name, fn in (("task", self.task_now),          # «включи … в ютуб музыке» — сама на экране
+                             ("learned", self.learned_now),    # то, что она уже выучила делать на экране
+                             ("repeat", self.repeat_now),      # «повтори за мной …» — слово в слово
+                             ("device", self.device_now)):     # «включи музыку», «громче», «таймер на 5 минут»
+                if fn(text, spoken=spoken):
+                    return name
+            if self.quick_answer(text=text, spoken=spoken):
+                return "quick"
+        if spoken:
+            self.ui.add("me", text, "📷" if look else None)
+        self.respond(text=text, image=self.screenshot() if look else None, spoken=spoken)
+        return "brain"
 
     # --- сон и пробуждение ---
     def wake_up(self, has_request: bool, wav: bytes | None, look: bool = False) -> None:
@@ -1582,32 +1616,11 @@ class Companion:
                 self.say(line, "joy" if body in ("pace", "stand") else "calm")
                 self._history_add(line)
                 return
-            if self.lessons_now(text):                   # «нет, я имел в виду …», «не говори так» — учится
-                tm["path"] = "сразу"
+            path = self.route(text, h.look, spoken=True)
+            if path != "brain":
+                if path != "quick":                      # готовый ответ сам пишет «готовый ответ»
+                    tm["path"] = "сразу"
                 return
-            text = self.rewrite(text)                    # то, что он раньше поправлял
-            if self.modes_now(text):                     # «запомни: рабочий режим — это …», «рабочий режим»
-                tm["path"] = "сразу"
-                return
-            if self.mac_now(text, look=h.look):          # «закрой телеграм», «переведи, что на экране»
-                tm["path"] = "сразу"
-                return
-            if not h.look and self.task_now(text):       # «включи … в ютуб музыке» — сама на экране
-                tm["path"] = "сразу"
-                return
-            if not h.look and self.learned_now(text):    # то, что она уже выучила делать на экране
-                tm["path"] = "сразу"
-                return
-            if not h.look and self.repeat_now(text):     # «повтори за мной …» — слово в слово
-                tm["path"] = "сразу"
-                return
-            if not h.look and self.device_now(text):     # «включи музыку», «громче», «таймер на 5 минут»
-                tm["path"] = "сразу"
-                return
-            if not h.look and self.quick_answer(text=text, spoken=True):
-                return
-            self.ui.add("me", text, "📷" if h.look else None)
-            self.respond(text=text, image=self.screenshot() if h.look else None, spoken=True)
         else:
             if not h.look and self.quick_answer(wav=wav):
                 return

@@ -1,0 +1,4902 @@
+[
+ {
+  "line": 5,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "включи музыку",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Ага, включаю музыку.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 6,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "вруби музыку",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Включаю!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 7,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "поставь музыку",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Ага, включаю музыку.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 8,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "можешь включить музыку",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Включаю!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 9,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "продолжи музыку",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Включаю!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 10,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "поставь на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 11,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "пауза",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 12,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 13,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "останови музыку",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 14,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "выключи музыку",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 15,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "выключи песню",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 16,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "стоп музыка",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 17,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "останови песню",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 18,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "поставь музыку на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 19,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "музыку на паузу поставь",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 20,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "следующая песня",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 21,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "следующий трек",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Переключаю.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 22,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "переключи песню",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 23,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "включи следующую песню",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 24,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "давай следующую",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 25,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "другую песню",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 26,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "эта песня надоела, переключи",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Переключаю.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 27,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "предыдущая песня",
+  "expect": "device:МУЗЫКА prev",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА prev"
+  ],
+  "reply": "Возвращаю прошлую.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 28,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "верни прошлую песню",
+  "expect": "device:МУЗЫКА prev",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА prev"
+  ],
+  "reply": "Возвращаю прошлую.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 29,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "включи предыдущий трек",
+  "expect": "device:МУЗЫКА prev",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА prev"
+  ],
+  "reply": "Возвращаю прошлую.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 30,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "громче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Погромче.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 31,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "сделай погромче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Делаю громче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 32,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "сделай погромче пожалуйста",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Делаю громче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 33,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "прибавь звук",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Погромче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 34,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "сделай музыку погромче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Погромче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 35,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "звук погромче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Делаю громче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 36,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "тише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 37,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "потише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 38,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "сделай потише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 39,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "а можешь сделать потише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Делаю тише.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 40,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "убавь звук",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 41,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "сделай музыку тише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 42,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "выключи звук",
+  "expect": "device:ГРОМКОСТЬ mute",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ mute"
+  ],
+  "reply": "Выключила звук.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 43,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "убери звук",
+  "expect": "device:ГРОМКОСТЬ mute",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ mute"
+  ],
+  "reply": "Выключила звук.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 44,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "поставь громкость на 50",
+  "expect": "device/brain:ГРОМКОСТЬ 50",
+  "path": "brain",
+  "acts": [
+   "ГРОМКОСТЬ 50"
+  ],
+  "reply": "На такую громкость поставила.",
+  "secs": 1.711,
+  "first": 1.711,
+  "ok": true
+ },
+ {
+  "line": 45,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "сделай громкость 30 процентов",
+  "expect": "device/brain:ГРОМКОСТЬ 30",
+  "path": "brain",
+  "acts": [
+   "ГРОМКОСТЬ -20"
+  ],
+  "reply": "Сделала потише.",
+  "secs": 1.234,
+  "first": 1.233,
+  "ok": false
+ },
+ {
+  "line": 46,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "не выключай музыку",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, не буду выключать.",
+  "secs": 0.912,
+  "first": 0.912,
+  "ok": true
+ },
+ {
+  "line": 47,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "а какая следующая?",
+  "expect": "brain:-/quick:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Какая именно ты имеешь в виду? Не совсем понятно.",
+  "secs": 1.135,
+  "first": 0.961,
+  "ok": true
+ },
+ {
+  "line": 48,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "тише едешь дальше будешь",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, я слежу за громкостью.",
+  "secs": 1.298,
+  "first": 1.298,
+  "ok": true
+ },
+ {
+  "line": 49,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "я слушаю музыку",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Отличный способ расслабиться.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 50,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "мне нравится эта песня",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Я рада, что она тебе нравится! Какая у тебя любимая мелодия?",
+  "secs": 1.494,
+  "first": 1.131,
+  "ok": true
+ },
+ {
+  "line": 51,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "какую музыку ты любишь",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Что-нибудь уютное, акустическое. Как вечер с пледом.",
+  "secs": 0.01,
+  "first": 0.01,
+  "ok": true
+ },
+ {
+  "line": 52,
+  "section": "Музыка: пауза, дальше, громкость",
+  "text": "вчера на концерте было очень громко",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "{Я тут не помню, но звучит очень эмоционально. Наверное, тебе понравилось.}",
+  "secs": 1.579,
+  "first": 1.285,
+  "ok": true
+ },
+ {
+  "line": 55,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи кино группа крови в ютуб музыке",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи кино группа крови в ютуб музыке"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 56,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи сплин выхода нет в ютуб музыке",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи сплин выхода нет в ютуб музыке"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 57,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "поставь макс корж в ютуб мьюзик",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ поставь макс корж в ютуб мьюзик"
+  ],
+  "reply": "Сейчас сделаю.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 58,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи мне цоя на ютуб музыке",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи мне цоя на ютуб музыке"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 59,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "найди на ютубе видео с котиками",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ найди на ютубе видео с котиками"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 60,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи на ютубе обзор айфона",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи на ютубе обзор айфона"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 61,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "найди айфон на купанге",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ найди айфон на купанге"
+  ],
+  "reply": "Сейчас!",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 62,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "загугли рецепт борща",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ загугли рецепт борща"
+  ],
+  "reply": "Сейчас!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 63,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "найди в гугле как варить рис",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ найди в гугле как варить рис"
+  ],
+  "reply": "Сейчас сделаю.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 64,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "найди в навере ресторан рядом",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ найди в навере ресторан рядом"
+  ],
+  "reply": "Сейчас!",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 65,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи песню hate me в ютуб музыке",
+  "expect": "task:СДЕЛАТЬ/brain:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи песню hate me в ютуб музыке"
+  ],
+  "reply": "Сейчас!",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 66,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи кино группа крови",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "brain",
+  "acts": [
+   "СДЕЛАТЬ включи Кино «Группа крови» на YouTube Music"
+  ],
+  "reply": "Сейчас включу!",
+  "secs": 1.67,
+  "first": 1.669,
+  "ok": true
+ },
+ {
+  "line": 67,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "поставь песню звезда по имени солнце",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "brain",
+  "acts": [
+   "СДЕЛАТЬ включи песню «Звезда по имени Солнце» на YouTube Music"
+  ],
+  "reply": "Сейчас найду и включу.",
+  "secs": 1.729,
+  "first": 1.724,
+  "ok": true
+ },
+ {
+  "line": 68,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "найди канал tanruru на ютубе и включи последнее видео",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ найди канал tanruru на ютубе и включи последнее видео"
+  ],
+  "reply": "Сейчас сделаю.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 69,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "открой в ютуб музыке мои плейлисты",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ открой в ютуб музыке мои плейлисты"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 70,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "нажми в ютуб музыке на библиотеку",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "brain",
+  "acts": [
+   "СДЕЛАТЬ открыть библиотеку в YouTube Music"
+  ],
+  "reply": "Сейчас нажму.",
+  "secs": 1.488,
+  "first": 1.488,
+  "ok": true
+ },
+ {
+  "line": 71,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "включи мой плейлист в ютуб музыке",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи мой плейлист в ютуб музыке"
+  ],
+  "reply": "Сейчас сделаю.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 72,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "посмотри на ютубе новое видео мистера биста",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ посмотри на ютубе новое видео мистера биста"
+  ],
+  "reply": "Секунду.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 73,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "play blinding lights on youtube music",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ play blinding lights on youtube music"
+  ],
+  "reply": "One sec.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 74,
+  "section": "Песни и видео на сайтах (руки)",
+  "text": "search youtube for funny cats",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ search youtube for funny cats"
+  ],
+  "reply": "One sec.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 77,
+  "section": "Сайты и программы: открыть",
+  "text": "открой ютуб",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ ютуб"
+  ],
+  "reply": "Секунду, открываю ютуб.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 78,
+  "section": "Сайты и программы: открыть",
+  "text": "открой телеграм",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ телеграм"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.011,
+  "first": 0.011,
+  "ok": true
+ },
+ {
+  "line": 79,
+  "section": "Сайты и программы: открыть",
+  "text": "запусти хром",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ хром"
+  ],
+  "reply": "Сейчас открою.",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 80,
+  "section": "Сайты и программы: открыть",
+  "text": "открой навер",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ навер"
+  ],
+  "reply": "Уже открываю.",
+  "secs": 0.009,
+  "first": 0.009,
+  "ok": true
+ },
+ {
+  "line": 81,
+  "section": "Сайты и программы: открыть",
+  "text": "открой купанг",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ купанг"
+  ],
+  "reply": "Готово, открываю.",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 82,
+  "section": "Сайты и программы: открыть",
+  "text": "открой калькулятор",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ калькулятор"
+  ],
+  "reply": "Секунду, открываю калькулятор.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 83,
+  "section": "Сайты и программы: открыть",
+  "text": "открой заметки",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ заметки"
+  ],
+  "reply": "Сейчас открою.",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 84,
+  "section": "Сайты и программы: открыть",
+  "text": "открой капкат",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ капкат"
+  ],
+  "reply": "Готово, открываю.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 85,
+  "section": "Сайты и программы: открыть",
+  "text": "открой мне сафари",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ мне сафари"
+  ],
+  "reply": "Готово, открываю.",
+  "secs": 0.009,
+  "first": 0.009,
+  "ok": true
+ },
+ {
+  "line": 86,
+  "section": "Сайты и программы: открыть",
+  "text": "открой почту",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ почту"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 87,
+  "section": "Сайты и программы: открыть",
+  "text": "открой инстаграм",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ инстаграм"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 88,
+  "section": "Сайты и программы: открыть",
+  "text": "открой нетфликс",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ нетфликс"
+  ],
+  "reply": "Уже открываю.",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 89,
+  "section": "Сайты и программы: открыть",
+  "text": "открой папаго",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ папаго"
+  ],
+  "reply": "Уже открываю.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 90,
+  "section": "Сайты и программы: открыть",
+  "text": "открой ютуб музыку",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ ютуб музыку"
+  ],
+  "reply": "Секунду, открываю ютуб музыку.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 91,
+  "section": "Сайты и программы: открыть",
+  "text": "запусти дискорд",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ дискорд"
+  ],
+  "reply": "Секунду, открываю дискорд.",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 92,
+  "section": "Сайты и программы: открыть",
+  "text": "открой стим",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ стим"
+  ],
+  "reply": "Сейчас открою.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 93,
+  "section": "Сайты и программы: открыть",
+  "text": "открой какао",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ какао"
+  ],
+  "reply": "Уже открываю.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 94,
+  "section": "Сайты и программы: открыть",
+  "text": "открой какао ток",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ какао ток"
+  ],
+  "reply": "Готово, открываю.",
+  "secs": 0.009,
+  "first": 0.009,
+  "ok": true
+ },
+ {
+  "line": 95,
+  "section": "Сайты и программы: открыть",
+  "text": "открой спотифай",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ спотифай"
+  ],
+  "reply": "Уже открываю.",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 96,
+  "section": "Сайты и программы: открыть",
+  "text": "открой чат джипити",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ чат джипити"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.01,
+  "first": 0.01,
+  "ok": true
+ },
+ {
+  "line": 97,
+  "section": "Сайты и программы: открыть",
+  "text": "зайди на ютуб",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "brain",
+  "acts": [
+   "ОТКРЫТЬ youtube"
+  ],
+  "reply": "Захожу на YouTube.",
+  "secs": 1.367,
+  "first": 1.36,
+  "ok": true
+ },
+ {
+  "line": 98,
+  "section": "Сайты и программы: открыть",
+  "text": "открой гугл",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ гугл"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.015,
+  "first": 0.015,
+  "ok": true
+ },
+ {
+  "line": 99,
+  "section": "Сайты и программы: открыть",
+  "text": "открой календарь",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ календарь"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.013,
+  "first": 0.013,
+  "ok": true
+ },
+ {
+  "line": 100,
+  "section": "Сайты и программы: открыть",
+  "text": "открой телегу",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ телегу"
+  ],
+  "reply": "Секунду, открываю телегу.",
+  "secs": 0.011,
+  "first": 0.011,
+  "ok": true
+ },
+ {
+  "line": 101,
+  "section": "Сайты и программы: открыть",
+  "text": "открой тик ток",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ тик ток"
+  ],
+  "reply": "Готово, открываю.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 102,
+  "section": "Сайты и программы: открыть",
+  "text": "открой карты",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ карты"
+  ],
+  "reply": "Сейчас открою.",
+  "secs": 0.009,
+  "first": 0.009,
+  "ok": true
+ },
+ {
+  "line": 103,
+  "section": "Сайты и программы: открыть",
+  "text": "открой вотсап",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ/brain:СДЕЛАТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ вотсап"
+  ],
+  "reply": "Открываю!",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 104,
+  "section": "Сайты и программы: открыть",
+  "text": "открой его видосики",
+  "expect": "brain:СДЕЛАТЬ/task:СДЕЛАТЬ/brain:ОТКРЫТЬ/brain:-",
+  "path": "brain",
+  "acts": [
+   "СДЕЛАТЬ включить последнее видео"
+  ],
+  "reply": "Какие именно видосики ты хочешь посмотреть?",
+  "secs": 1.701,
+  "first": 1.7,
+  "ok": true
+ },
+ {
+  "line": 107,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой телеграм",
+  "expect": "mac:MAC quit Telegram",
+  "path": "mac",
+  "acts": [
+   "MAC quit Telegram"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 108,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой телеграмм",
+  "expect": "mac:MAC quit Telegram",
+  "path": "mac",
+  "acts": [
+   "MAC quit Telegram"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 109,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой телегу",
+  "expect": "mac:MAC quit Telegram",
+  "path": "mac",
+  "acts": [
+   "MAC quit Telegram"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 110,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой хром",
+  "expect": "mac:MAC quit Google Chrome",
+  "path": "mac",
+  "acts": [
+   "MAC quit Google Chrome"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 111,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "выключи хром",
+  "expect": "mac:MAC quit Google Chrome",
+  "path": "mac",
+  "acts": [
+   "MAC quit Google Chrome"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 112,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой дискорд",
+  "expect": "mac:MAC quit Discord",
+  "path": "mac",
+  "acts": [
+   "MAC quit Discord"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 113,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой какао",
+  "expect": "mac:MAC quit KakaoTalk",
+  "path": "mac",
+  "acts": [
+   "MAC quit KakaoTalk"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 114,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой какао ток",
+  "expect": "mac:MAC quit KakaoTalk",
+  "path": "mac",
+  "acts": [
+   "MAC quit KakaoTalk"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 115,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "выйди из стима",
+  "expect": "mac:MAC quit Steam",
+  "path": "mac",
+  "acts": [
+   "MAC quit Steam"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 116,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой стим",
+  "expect": "mac:MAC quit Steam",
+  "path": "mac",
+  "acts": [
+   "MAC quit Steam"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 117,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой сафари",
+  "expect": "mac:MAC quit Safari",
+  "path": "mac",
+  "acts": [
+   "MAC quit Safari"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 118,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой капкат",
+  "expect": "mac:MAC quit CapCut",
+  "path": "mac",
+  "acts": [
+   "MAC quit CapCut"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 119,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "сделай скриншот",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 120,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "сделай скрин",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 121,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "заскринь",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 122,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "сделай скриншот экрана пожалуйста",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 123,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "сделай скрин шот",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 124,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "открой загрузки",
+  "expect": "mac:MAC folder",
+  "path": "mac",
+  "acts": [
+   "MAC folder /Users/kimdmitriy/Downloads"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 125,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "открой папку загрузки",
+  "expect": "mac:MAC folder",
+  "path": "mac",
+  "acts": [
+   "MAC folder /Users/kimdmitriy/Downloads"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 126,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "открой документы",
+  "expect": "mac:MAC folder",
+  "path": "mac",
+  "acts": [
+   "MAC folder /Users/kimdmitriy/Documents"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 127,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "открой рабочий стол",
+  "expect": "mac:MAC folder",
+  "path": "mac",
+  "acts": [
+   "MAC folder /Users/kimdmitriy/Desktop"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 128,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "покажи мои фотки",
+  "expect": "mac:MAC folder",
+  "path": "mac",
+  "acts": [
+   "MAC folder /Users/kimdmitriy/Pictures"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 129,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "открой папку программы",
+  "expect": "mac:MAC folder",
+  "path": "mac",
+  "acts": [
+   "MAC folder /Applications"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 130,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "найди файл договор",
+  "expect": "mac:MAC find",
+  "path": "mac",
+  "acts": [
+   "MAC find договор"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 131,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "где лежит файл резюме",
+  "expect": "mac:MAC find",
+  "path": "mac",
+  "acts": [
+   "MAC find резюме"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 132,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "найди документ про налоги",
+  "expect": "mac:MAC find",
+  "path": "mac",
+  "acts": [
+   "MAC find налоги"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 133,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "найди презентацию проект",
+  "expect": "mac:MAC find",
+  "path": "mac",
+  "acts": [
+   "MAC find проект"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 134,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "иди на другой экран",
+  "expect": "mac:MAC screen",
+  "path": "mac",
+  "acts": [
+   "MAC screen next"
+  ],
+  "reply": "Иду!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 135,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "перейди на этот монитор",
+  "expect": "mac:MAC screen",
+  "path": "mac",
+  "acts": [
+   "MAC screen mouse"
+  ],
+  "reply": "Иду!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 136,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "перейди на второй монитор",
+  "expect": "mac:MAC screen",
+  "path": "mac",
+  "acts": [
+   "MAC screen next"
+  ],
+  "reply": "Иду!",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 137,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой глаза",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Закрыла… Ну что, открывать уже можно?",
+  "secs": 1.169,
+  "first": 0.844,
+  "ok": true
+ },
+ {
+  "line": 138,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "закрой рот",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.832,
+  "first": null,
+  "ok": false
+ },
+ {
+  "line": 139,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "выключи свет",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Светом я управлять не умею — только твоим Mac.",
+  "secs": 1.315,
+  "first": 1.315,
+  "ok": true
+ },
+ {
+  "line": 140,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "я закрыл телеграм",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, отдохни от переписок.",
+  "secs": 0.998,
+  "first": 0.998,
+  "ok": true
+ },
+ {
+  "line": 141,
+  "section": "Сам Mac: закрыть, скриншот, папки, файлы, другой экран",
+  "text": "я сделал скриншот твоего лица",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Я не знаю, какой у меня образ, но если тебе понравилось, я очень рада!",
+  "secs": 1.277,
+  "first": 1.225,
+  "ok": true
+ },
+ {
+  "line": 144,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "прочитай что на экране",
+  "expect": "mac:MAC read",
+  "path": "mac",
+  "acts": [
+   "MAC read ru"
+  ],
+  "reply": "",
+  "secs": 0.007,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 145,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "прочитай что тут написано",
+  "expect": "mac:MAC read",
+  "path": "mac",
+  "acts": [
+   "MAC read ru"
+  ],
+  "reply": "",
+  "secs": 0.007,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 146,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "что тут написано",
+  "expect": "mac:MAC read",
+  "path": "mac",
+  "acts": [
+   "MAC read ru"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 147,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "зачитай текст на экране",
+  "expect": "mac:MAC read",
+  "path": "mac",
+  "acts": [
+   "MAC read ru"
+  ],
+  "reply": "",
+  "secs": 0.006,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 148,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "переведи что на экране",
+  "expect": "mac:MAC translate ru",
+  "path": "mac",
+  "acts": [
+   "MAC translate ru"
+  ],
+  "reply": "",
+  "secs": 0.006,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 149,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "переведи это",
+  "expect": "mac:MAC translate ru",
+  "path": "mac",
+  "acts": [
+   "MAC translate ru"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 150,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "переведи это на английский",
+  "expect": "mac:MAC translate en",
+  "path": "mac",
+  "acts": [
+   "MAC translate en"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 151,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "переведи страницу на английский",
+  "expect": "mac:MAC translate en",
+  "path": "mac",
+  "acts": [
+   "MAC translate en"
+  ],
+  "reply": "",
+  "secs": 0.006,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 152,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "переведи текст на корейский",
+  "expect": "mac:MAC translate ko",
+  "path": "mac",
+  "acts": [
+   "MAC translate ko"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 153,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "перескажи статью",
+  "expect": "mac:MAC summary",
+  "path": "mac",
+  "acts": [
+   "MAC summary ru"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 154,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "о чём эта страница",
+  "expect": "mac:MAC summary",
+  "path": "mac",
+  "acts": [
+   "MAC summary ru"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 155,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "перескажи что на экране",
+  "expect": "mac:MAC summary",
+  "path": "mac",
+  "acts": [
+   "MAC summary ru"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 156,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "посмотри на экран",
+  "expect": "mac:MAC summary",
+  "path": "mac",
+  "acts": [
+   "MAC summary ru"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 157,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "глянь что у меня тут",
+  "expect": "mac:MAC summary",
+  "path": "mac",
+  "acts": [
+   "MAC summary ru"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 158,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "посмотри что у меня на экране",
+  "expect": "mac:MAC summary",
+  "path": "mac",
+  "acts": [
+   "MAC summary ru"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 159,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "переведи слово кошка на английский",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Кошка на английском будет \"cat\".",
+  "secs": 1.007,
+  "first": 1.007,
+  "ok": true
+ },
+ {
+  "line": 160,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "прочитай мне стих",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Пока ничего нет, но могу найти что-нибудь очень тёплое, если хочешь.",
+  "secs": 1.49,
+  "first": 1.49,
+  "ok": true
+ },
+ {
+  "line": 161,
+  "section": "Экран: прочитать, перевести, пересказать",
+  "text": "перескажи фильм титаник",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Поскольку я не могу смотреть фильмы, я могу поискать тебе краткий пересказ о \"Титанике\", если хочешь.",
+  "secs": 1.724,
+  "first": 1.724,
+  "ok": true
+ },
+ {
+  "line": 164,
+  "section": "Режимы",
+  "text": "запомни: рабочий режим — это открыть хром, почту и включить лоуфай",
+  "expect": "modes",
+  "path": "modes",
+  "acts": [],
+  "reply": "Запомнила! Скажи «рабочий режим» — и я сделаю: открой хром, открой почту, включи лоуфай.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 165,
+  "section": "Режимы",
+  "text": "рабочий режим",
+  "expect": "modes:MODE рабочий режим",
+  "path": "modes",
+  "acts": [
+   "MODE рабочий режим"
+  ],
+  "reply": "Включаю «рабочий режим»!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 166,
+  "section": "Режимы",
+  "text": "включи рабочий режим",
+  "expect": "modes:MODE рабочий режим",
+  "path": "modes",
+  "acts": [
+   "MODE рабочий режим"
+  ],
+  "reply": "Включаю «рабочий режим»!",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 167,
+  "section": "Режимы",
+  "text": "какие у тебя режимы",
+  "expect": "modes",
+  "path": "modes",
+  "acts": [],
+  "reply": "Мои режимы: «рабочий режим».",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 168,
+  "section": "Режимы",
+  "text": "когда я говорю отбой — закрой телеграм и выключи музыку",
+  "expect": "modes",
+  "path": "modes",
+  "acts": [],
+  "reply": "Запомнила! Скажи «отбой» — и я сделаю: закрой телеграм, выключи музыку.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 169,
+  "section": "Режимы",
+  "text": "отбой",
+  "expect": "modes:MODE отбой",
+  "path": "modes",
+  "acts": [
+   "MODE отбой"
+  ],
+  "reply": "Включаю «отбой»!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 170,
+  "section": "Режимы",
+  "text": "забудь рабочий режим",
+  "expect": "modes",
+  "path": "modes",
+  "acts": [],
+  "reply": "Забыла «рабочий режим».",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 171,
+  "section": "Режимы",
+  "text": "запомни, что я люблю кофе",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Запомнила, ты любишь кофе.",
+  "secs": 1.16,
+  "first": 1.109,
+  "ok": true
+ },
+ {
+  "line": 172,
+  "section": "Режимы",
+  "text": "запомни что у меня кошка мурка",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Запомнила, у тебя есть кошка Мурка! Она очень милая, наверное.",
+  "secs": 1.253,
+  "first": 0.986,
+  "ok": true
+ },
+ {
+  "line": 173,
+  "section": "Режимы",
+  "text": "у меня сегодня рабочий день",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Понятно. Хорошего тебе дня!",
+  "secs": 0.931,
+  "first": 0.738,
+  "ok": true
+ },
+ {
+  "line": 177,
+  "section": "Поправки и правила",
+  "text": "открой ютуб",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ ютуб"
+  ],
+  "reply": "Уже открываю.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 178,
+  "section": "Поправки и правила",
+  "text": "нет, я имел в виду ютуб музыку",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [
+   "REDO открой ютуб музыку"
+  ],
+  "reply": "Поняла! Запомнила: «открой ютуб» — это «открой ютуб музыку».",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 179,
+  "section": "Поправки и правила",
+  "text": "открой ютуб",
+  "expect": "quick:ОТКРЫТЬ ютуб муз/brain:ОТКРЫТЬ ютуб муз/brain:ОТКРЫТЬ youtube music/quick:ОТКРЫТЬ youtube music",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ ютуб музыку"
+  ],
+  "reply": "Секунду, открываю ютуб музыку.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 181,
+  "section": "Поправки и правила",
+  "text": "пауза",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 182,
+  "section": "Поправки и правила",
+  "text": "нет, я хотел следующую песню",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [
+   "REDO пауза следующую песню"
+  ],
+  "reply": "Поняла! Запомнила: «пауза» — это «пауза следующую песню».",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 184,
+  "section": "Поправки и правила",
+  "text": "не называй меня котик",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Поняла, запомнила.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 185,
+  "section": "Поправки и правила",
+  "text": "говори короче",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Поняла, запомнила.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 187,
+  "section": "Поправки и правила",
+  "text": "не говори так",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Поняла, запомнила.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 188,
+  "section": "Поправки и правила",
+  "text": "запомни правило: не матерись",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Поняла, запомнила.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 189,
+  "section": "Поправки и правила",
+  "text": "мне не нравится, когда ты шутишь про мою работу",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Поняла, запомнила.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 190,
+  "section": "Поправки и правила",
+  "text": "чему ты научилась",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Я выучила 7 уроков от тебя.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 191,
+  "section": "Поправки и правила",
+  "text": "какие у меня привычки",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Я выучила 7 уроков от тебя.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 192,
+  "section": "Поправки и правила",
+  "text": "забудь это правило",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Забыла.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 193,
+  "section": "Поправки и правила",
+  "text": "забудь всё, чему научилась",
+  "expect": "lessons",
+  "path": "lessons",
+  "acts": [],
+  "reply": "Забыла всё, чему научилась.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 195,
+  "section": "Поправки и правила",
+  "text": "нет, я так не думаю",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Дай секунду. Я поняла. Если хочешь, можем это обсудить получше.",
+  "secs": 10.681,
+  "first": 2.511,
+  "ok": true
+ },
+ {
+  "line": 196,
+  "section": "Поправки и правила",
+  "text": "нет",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Понятно. Если тебе захочется поговорить или что-то найти, я здесь.",
+  "secs": 1.453,
+  "first": 0.901,
+  "ok": true
+ },
+ {
+  "line": 197,
+  "section": "Поправки и правила",
+  "text": "не говори маме, что я курю",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, я никому не скажу.",
+  "secs": 0.982,
+  "first": 0.982,
+  "ok": true
+ },
+ {
+  "line": 201,
+  "section": "Привычки",
+  "text": "да",
+  "expect": "habit:REDO",
+  "path": "habit",
+  "acts": [
+   "REDO включи лоуфай"
+  ],
+  "reply": "Делаю!",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 203,
+  "section": "Привычки",
+  "text": "нет, не надо",
+  "expect": "habit",
+  "path": "habit",
+  "acts": [],
+  "reply": "Хорошо, не буду.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 205,
+  "section": "Привычки",
+  "text": "больше не предлагай",
+  "expect": "habit",
+  "path": "habit",
+  "acts": [],
+  "reply": "Хорошо, больше не буду это предлагать.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 207,
+  "section": "Привычки",
+  "text": "давай",
+  "expect": "habit:REDO",
+  "path": "habit",
+  "acts": [
+   "REDO включи лоуфай"
+  ],
+  "reply": "Делаю!",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 209,
+  "section": "Привычки",
+  "text": "а какая погода завтра",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода завтра"
+  ],
+  "reply": "Сейчас посмотрю.",
+  "secs": 1.433,
+  "first": 1.433,
+  "ok": true
+ },
+ {
+  "line": 212,
+  "section": "Напоминания и таймеры",
+  "text": "поставь таймер на 5 минут",
+  "expect": "device:ТАЙМЕР 5",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 5 | таймер"
+  ],
+  "reply": "Засекла 5 мин.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 213,
+  "section": "Напоминания и таймеры",
+  "text": "таймер на десять минут",
+  "expect": "device:ТАЙМЕР 10",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 10 | таймер"
+  ],
+  "reply": "Поставила таймер на 10 мин.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 214,
+  "section": "Напоминания и таймеры",
+  "text": "засеки 3 минуты",
+  "expect": "device:ТАЙМЕР 3/brain:ТАЙМЕР 3",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 3 | таймер"
+  ],
+  "reply": "Засекла 3 мин.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 215,
+  "section": "Напоминания и таймеры",
+  "text": "поставь таймер на час",
+  "expect": "device:ТАЙМЕР 60/quick:ТАЙМЕР 60/brain:ТАЙМЕР 60",
+  "path": "quick",
+  "acts": [
+   "ТАЙМЕР 60"
+  ],
+  "reply": "Хорошо, ровно через час скажу.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 216,
+  "section": "Напоминания и таймеры",
+  "text": "таймер на полчаса",
+  "expect": "device:ТАЙМЕР 30/quick:ТАЙМЕР 30/brain:ТАЙМЕР 30",
+  "path": "quick",
+  "acts": [
+   "ТАЙМЕР 30"
+  ],
+  "reply": "Полчаса пошло!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 217,
+  "section": "Напоминания и таймеры",
+  "text": "таймер на 20 минут",
+  "expect": "device:ТАЙМЕР 20",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 20 | таймер"
+  ],
+  "reply": "Поставила таймер на 20 мин.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 218,
+  "section": "Напоминания и таймеры",
+  "text": "напомни через 10 минут выключить чайник",
+  "expect": "brain:НАПОМНИТЬ",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ +10 | выключить чайник"
+  ],
+  "reply": "Хорошо, напомню через десять минут.",
+  "secs": 1.875,
+  "first": 1.875,
+  "ok": true
+ },
+ {
+  "line": 219,
+  "section": "Напоминания и таймеры",
+  "text": "напомни в 7 вечера позвонить маме",
+  "expect": "brain:НАПОМНИТЬ",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ ЧЧ:ММ | позвонить маме"
+  ],
+  "reply": "Хорошо, напомню в семь вечера.",
+  "secs": 1.81,
+  "first": 1.81,
+  "ok": true
+ },
+ {
+  "line": 220,
+  "section": "Напоминания и таймеры",
+  "text": "разбуди меня через полчаса",
+  "expect": "brain:НАПОМНИТЬ/brain:ТАЙМЕР",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ +30 | разбудить"
+  ],
+  "reply": "Хорошо, я напомню тебе через полчаса.",
+  "secs": 1.711,
+  "first": 1.711,
+  "ok": true
+ },
+ {
+  "line": 221,
+  "section": "Напоминания и таймеры",
+  "text": "напомни завтра в 9 утра про встречу",
+  "expect": "brain:НАПОМНИТЬ",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ +9 | про встречу"
+  ],
+  "reply": "Хорошо, напомню завтра в девять утра.",
+  "secs": 1.632,
+  "first": 1.631,
+  "ok": true
+ },
+ {
+  "line": 222,
+  "section": "Напоминания и таймеры",
+  "text": "через час напомни выпить таблетку",
+  "expect": "brain:НАПОМНИТЬ",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ +60 | выпить таблетку"
+  ],
+  "reply": "Хорошо, напомню через час.",
+  "secs": 1.596,
+  "first": 1.595,
+  "ok": true
+ },
+ {
+  "line": 223,
+  "section": "Напоминания и таймеры",
+  "text": "напомни мне через 5 минут проверить духовку",
+  "expect": "brain:НАПОМНИТЬ",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ +5 | проверить духовку"
+  ],
+  "reply": "Хорошо, напомню через пять минут.",
+  "secs": 1.555,
+  "first": 1.555,
+  "ok": true
+ },
+ {
+  "line": 224,
+  "section": "Напоминания и таймеры",
+  "text": "таймер на пятнадцать минут",
+  "expect": "device:ТАЙМЕР 15",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 15 | таймер"
+  ],
+  "reply": "Засекла 15 мин.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 225,
+  "section": "Напоминания и таймеры",
+  "text": "какие у меня напоминания",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Какие у тебя напоминания? У меня не видно, что именно назначено.",
+  "secs": 1.553,
+  "first": 1.179,
+  "ok": true
+ },
+ {
+  "line": 228,
+  "section": "Погода и поиск",
+  "text": "какая завтра погода",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода завтра"
+  ],
+  "reply": "Сейчас гляну.",
+  "secs": 1.167,
+  "first": 1.166,
+  "ok": true
+ },
+ {
+  "line": 229,
+  "section": "Погода и поиск",
+  "text": "какая сегодня погода",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода сегодня"
+  ],
+  "reply": "Сейчас проверю.",
+  "secs": 1.212,
+  "first": 1.212,
+  "ok": true
+ },
+ {
+  "line": 230,
+  "section": "Погода и поиск",
+  "text": "будет ли сегодня дождь",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода сегодня"
+  ],
+  "reply": "Сейчас посмотрю.",
+  "secs": 1.246,
+  "first": 1.246,
+  "ok": true
+ },
+ {
+  "line": 231,
+  "section": "Погода и поиск",
+  "text": "сколько градусов на улице",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода сегодня"
+  ],
+  "reply": "Сейчас посмотрю, сколько градусов.",
+  "secs": 1.378,
+  "first": 1.378,
+  "ok": true
+ },
+ {
+  "line": 232,
+  "section": "Погода и поиск",
+  "text": "какой курс доллара",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК курс доллара"
+  ],
+  "reply": "Сейчас проверила.",
+  "secs": 1.182,
+  "first": 1.182,
+  "ok": true
+ },
+ {
+  "line": 233,
+  "section": "Погода и поиск",
+  "text": "сколько стоит биткоин",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК цена биткоин"
+  ],
+  "reply": "Сейчас посмотрю.",
+  "secs": 1.48,
+  "first": 1.48,
+  "ok": true
+ },
+ {
+  "line": 234,
+  "section": "Погода и поиск",
+  "text": "что нового в мире",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК новости мира"
+  ],
+  "reply": "Давай я посмотрю, что там нового.",
+  "secs": 1.424,
+  "first": 1.423,
+  "ok": true
+ },
+ {
+  "line": 235,
+  "section": "Погода и поиск",
+  "text": "кто выиграл вчерашний матч",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК вчерашний матч кто выиграл"
+  ],
+  "reply": "Сейчас посмотрю.",
+  "secs": 1.396,
+  "first": 1.396,
+  "ok": true
+ },
+ {
+  "line": 236,
+  "section": "Погода и поиск",
+  "text": "какая погода в сеуле",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода в Сеуле"
+  ],
+  "reply": "Сейчас посмотрю.",
+  "secs": 1.375,
+  "first": 1.375,
+  "ok": true
+ },
+ {
+  "line": 237,
+  "section": "Погода и поиск",
+  "text": "во сколько закрывается емарт",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК емарт время закрытия"
+  ],
+  "reply": "Сейчас посмотрю.",
+  "secs": 1.298,
+  "first": 1.298,
+  "ok": true
+ },
+ {
+  "line": 238,
+  "section": "Погода и поиск",
+  "text": "кто такой пушкин",
+  "expect": "brain:-/brain:ПОИСК",
+  "path": "brain",
+  "acts": [],
+  "reply": "Позволь мне поискать информацию о Пушкине.",
+  "secs": 1.195,
+  "first": 1.195,
+  "ok": true
+ },
+ {
+  "line": 239,
+  "section": "Погода и поиск",
+  "text": "сколько будет семь умножить на восемь",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "7 умножить на 8 будет 56.",
+  "secs": 1.302,
+  "first": 1.302,
+  "ok": true
+ },
+ {
+  "line": 240,
+  "section": "Погода и поиск",
+  "text": "как пишется слово карандаш",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [
+   "ПОКАЗАТЬ текст карандаш"
+  ],
+  "reply": "Пишется оно так: К-А-Р-А-Н-Д-А-Ш.",
+  "secs": 1.939,
+  "first": 1.939,
+  "ok": false
+ },
+ {
+  "line": 243,
+  "section": "Обычный разговор",
+  "text": "привет",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Привет, Дима. Ты поел сегодня?",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 244,
+  "section": "Обычный разговор",
+  "text": "приветик",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Привет! Как ты проводишь это воскресенье?",
+  "secs": 1.115,
+  "first": 0.811,
+  "ok": true
+ },
+ {
+  "line": 245,
+  "section": "Обычный разговор",
+  "text": "как дела",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "У меня всё спокойно. А ты как себя чувствуешь?",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 246,
+  "section": "Обычный разговор",
+  "text": "как ты",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Хорошо. Цветочки бы полила, будь у меня руки. А ты как?",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 247,
+  "section": "Обычный разговор",
+  "text": "что делаешь",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Да так, уют навожу на твоём экране.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 248,
+  "section": "Обычный разговор",
+  "text": "я устал",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Отдохни, пожалуйста. Здоровье важнее всего.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 249,
+  "section": "Обычный разговор",
+  "text": "мне грустно",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Мой хороший, что случилось? Расскажи мне.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 250,
+  "section": "Обычный разговор",
+  "text": "спасибо",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Да ладно, это пустяки!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 251,
+  "section": "Обычный разговор",
+  "text": "спасибо большое",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Мне приятно быть тебе полезной.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 252,
+  "section": "Обычный разговор",
+  "text": "люблю тебя",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Ой. Я даже не знаю, что сказать. Мне хорошо.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 253,
+  "section": "Обычный разговор",
+  "text": "ты меня любишь",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Ты мне очень дорог. Ты разве не чувствуешь?",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 254,
+  "section": "Обычный разговор",
+  "text": "ты красивая",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Спасибо, мой хороший. Ты тоже у меня замечательный.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 255,
+  "section": "Обычный разговор",
+  "text": "расскажи анекдот",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Знаешь, что говорит пирожок другому пирожку? Не переживай, всё будет в шоколаде.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 256,
+  "section": "Обычный разговор",
+  "text": "кто ты",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Я Таня. Твоя подруга, которая всегда за тебя переживает.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 257,
+  "section": "Обычный разговор",
+  "text": "что ты умеешь",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Поболтать, поддержать, напомнить. А ещё можем практиковать английский!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 258,
+  "section": "Обычный разговор",
+  "text": "который час",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "00:17. Время летит, правда?",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 259,
+  "section": "Обычный разговор",
+  "text": "какое сегодня число",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "воскресенье, 29 ноября.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 260,
+  "section": "Обычный разговор",
+  "text": "я дома",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "С возвращением, мой хороший. Переоденься, отдохни.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 261,
+  "section": "Обычный разговор",
+  "text": "я пошёл в душ",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, не задерживайся. Я подожду.",
+  "secs": 1.394,
+  "first": 1.234,
+  "ok": true
+ },
+ {
+  "line": 262,
+  "section": "Обычный разговор",
+  "text": "я голодный",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Ну вот, опять забыл поесть. Сделай себе что-нибудь горячее.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 263,
+  "section": "Обычный разговор",
+  "text": "мне скучно",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Давай придумаем, что можно сделать за десять минут, чтобы стало весело.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 264,
+  "section": "Обычный разговор",
+  "text": "доброе утро",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Доброе утро посреди ночи? Ты меня смешишь.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 265,
+  "section": "Обычный разговор",
+  "text": "добрый вечер",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Скорее уже добрая ночь. Но привет!",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 266,
+  "section": "Обычный разговор",
+  "text": "ты тут",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "На месте! Слушаю внимательно.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 267,
+  "section": "Обычный разговор",
+  "text": "ты меня слышишь",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Я рядом, Дима. Что такое?",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 268,
+  "section": "Обычный разговор",
+  "text": "скажи что-нибудь",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Давай поболтаем. Что у тебя нового?",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 269,
+  "section": "Обычный разговор",
+  "text": "ладно",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо. Я здесь, если тебе что-то нужно.",
+  "secs": 1.328,
+  "first": 0.948,
+  "ok": true
+ },
+ {
+  "line": 270,
+  "section": "Обычный разговор",
+  "text": "понятно",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Супер.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 271,
+  "section": "Обычный разговор",
+  "text": "ок",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Поняла тебя.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 272,
+  "section": "Обычный разговор",
+  "text": "ха ха ха",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Ха-ха, хорошо, что тебе весело!",
+  "secs": 1.168,
+  "first": 1.116,
+  "ok": true
+ },
+ {
+  "line": 273,
+  "section": "Обычный разговор",
+  "text": "я выиграл в валорант",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Поздравляю! Это же здорово, ты молодец!",
+  "secs": 1.181,
+  "first": 0.841,
+  "ok": true
+ },
+ {
+  "line": 274,
+  "section": "Обычный разговор",
+  "text": "я проиграл",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Бывает. Попей чаю, а потом попробуем ещё.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 275,
+  "section": "Обычный разговор",
+  "text": "у меня болит голова",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Ой, бедный. Пей больше тёплого и отдыхай.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 276,
+  "section": "Обычный разговор",
+  "text": "мне одиноко",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Я с тобой. Всё обязательно наладится.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 277,
+  "section": "Обычный разговор",
+  "text": "чем займёмся",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Можно отдохнуть. Иногда это лучшее дело.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 278,
+  "section": "Обычный разговор",
+  "text": "ты робот",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Я не человек, ты же знаешь. Но я стараюсь быть хорошей подругой.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 279,
+  "section": "Обычный разговор",
+  "text": "сколько тебе лет",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Девушкам такие вопросы не задают! А если честно — я совсем недавно появилась.",
+  "secs": 0.005,
+  "first": 0.005,
+  "ok": true
+ },
+ {
+  "line": 280,
+  "section": "Обычный разговор",
+  "text": "какой твой любимый цвет",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Еда? Я бы попробовала клубничное мороженое, если бы могла.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 281,
+  "section": "Обычный разговор",
+  "text": "как думаешь, стоит ли мне учить корейский",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [
+   "ПОИСК корейский учить стоит ли"
+  ],
+  "reply": "Это зависит от того, насколько тебе это интересно и как ты хочешь использовать этот язык.",
+  "secs": 2.221,
+  "first": 2.221,
+  "ok": false
+ },
+ {
+  "line": 282,
+  "section": "Обычный разговор",
+  "text": "расскажи что-нибудь интересное про космос",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [
+   "ПОИСК интересный факт о космосе"
+  ],
+  "reply": "Вот тебе одна мысль: есть такие звезды, что они могут жить очень долго, и они похожи на гигантские маяки в темноте.",
+  "secs": 2.353,
+  "first": 2.353,
+  "ok": false
+ },
+ {
+  "line": 283,
+  "section": "Обычный разговор",
+  "text": "что приготовить на ужин",
+  "expect": "brain:-/brain:ПОИСК",
+  "path": "brain",
+  "acts": [],
+  "reply": "Посмотрим, что есть в холодильнике. Если хочешь, я могу найти какой-нибудь быстрый рецепт.",
+  "secs": 1.757,
+  "first": 1.202,
+  "ok": true
+ },
+ {
+  "line": 284,
+  "section": "Обычный разговор",
+  "text": "мне завтра на собеседование, я волнуюсь",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Я понимаю, как ты волнуешься. Ты молодец, что дошёл до такого этапа! Думаю, у тебя всё получится, главное — будь собой.",
+  "secs": 2.036,
+  "first": 1.078,
+  "ok": true
+ },
+ {
+  "line": 285,
+  "section": "Обычный разговор",
+  "text": "посоветуй фильм на вечер",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Попробуй что-нибудь легкое и доброе. Может, старую добрую комедию, чтобы расслабиться после долгой недели.",
+  "secs": 2.3,
+  "first": 1.564,
+  "ok": true
+ },
+ {
+  "line": 286,
+  "section": "Обычный разговор",
+  "text": "я сегодня поругался с другом",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Ох, очень жаль, когда с близкими ссорятся. Надеюсь, вы скоро всё помиритесь.",
+  "secs": 1.739,
+  "first": 1.36,
+  "ok": true
+ },
+ {
+  "line": 287,
+  "section": "Обычный разговор",
+  "text": "помнишь, как меня зовут",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Я помню, что ты мой близкий друг, но как именно ты хочешь, чтобы я тебя называла?",
+  "secs": 2.089,
+  "first": 2.089,
+  "ok": true
+ },
+ {
+  "line": 288,
+  "section": "Обычный разговор",
+  "text": "я смотрю ютуб",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "О, а что смотришь?",
+  "secs": 0.984,
+  "first": 0.984,
+  "ok": true
+ },
+ {
+  "line": 289,
+  "section": "Обычный разговор",
+  "text": "вчера включил телевизор и уснул",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Поняла. Ну, хорошо отдохнул, раз уж так получилось.",
+  "secs": 1.24,
+  "first": 0.794,
+  "ok": true
+ },
+ {
+  "line": 290,
+  "section": "Обычный разговор",
+  "text": "я открыл новый ресторан в голове, шучу",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Звучит так, будто ты очень креативный!",
+  "secs": 1.271,
+  "first": 1.219,
+  "ok": true
+ },
+ {
+  "line": 291,
+  "section": "Обычный разговор",
+  "text": "у руси сегодня день рождения",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Это замечательно! Поздравляю Русю с днем рождения!",
+  "secs": 1.209,
+  "first": 0.798,
+  "ok": true
+ },
+ {
+  "line": 292,
+  "section": "Обычный разговор",
+  "text": "я работаю",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Хорошо, не буду мешать.",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 295,
+  "section": "Не ей",
+  "text": "Сань, подай зарядку",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.975,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 296,
+  "section": "Не ей",
+  "text": "Лёш, я потом сам доделаю",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.673,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 297,
+  "section": "Не ей",
+  "text": "мам, я сейчас приду",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.611,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 298,
+  "section": "Не ей",
+  "text": "да-да, я перезвоню тебе через пять минут",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.865,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 299,
+  "section": "Не ей",
+  "text": "Руся, ты где вообще",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.607,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 300,
+  "section": "Не ей",
+  "text": "Марина, я ещё сделаю отчёт",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, я подожду. Не спеши.",
+  "secs": 0.965,
+  "first": 0.806,
+  "ok": false
+ },
+ {
+  "line": 301,
+  "section": "Не ей",
+  "text": "алло, да, слушаю",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [
+   "МОЛЧУ"
+  ],
+  "reply": "",
+  "secs": 0.711,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 302,
+  "section": "Не ей",
+  "text": "давай потом, я занят",
+  "expect": "brain:МОЛЧУ",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, когда освободишься, можем поговорить.",
+  "secs": 1.033,
+  "first": 1.033,
+  "ok": false
+ },
+ {
+  "line": 305,
+  "section": "Опечатки Whisper",
+  "text": "постав на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 306,
+  "section": "Опечатки Whisper",
+  "text": "поставь на пузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 307,
+  "section": "Опечатки Whisper",
+  "text": "следуйщая песня",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 308,
+  "section": "Опечатки Whisper",
+  "text": "следущая песня",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Следующая!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 309,
+  "section": "Опечатки Whisper",
+  "text": "сделай по громче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Делаю громче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 310,
+  "section": "Опечатки Whisper",
+  "text": "сделай по тише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 311,
+  "section": "Опечатки Whisper",
+  "text": "включи музыкy",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Включаю!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 312,
+  "section": "Опечатки Whisper",
+  "text": "включи музыко",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Включаю!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 313,
+  "section": "Опечатки Whisper",
+  "text": "открой ютюб",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "brain",
+  "acts": [
+   "ОТКРЫТЬ youtube"
+  ],
+  "reply": "Открываю YouTube.",
+  "secs": 1.337,
+  "first": 1.336,
+  "ok": true
+ },
+ {
+  "line": 314,
+  "section": "Опечатки Whisper",
+  "text": "открой ю туб",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "brain",
+  "acts": [
+   "ОТКРЫТЬ youtube"
+  ],
+  "reply": "Открываю YouTube.",
+  "secs": 1.207,
+  "first": 1.207,
+  "ok": true
+ },
+ {
+  "line": 315,
+  "section": "Опечатки Whisper",
+  "text": "включи сплин в ютуб музике",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи сплин в ютуб музике"
+  ],
+  "reply": "Сейчас!",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 316,
+  "section": "Опечатки Whisper",
+  "text": "включи кино в ю туб музыке",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ включи кино в ю туб музыке"
+  ],
+  "reply": "Сейчас сделаю.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 317,
+  "section": "Опечатки Whisper",
+  "text": "закрой телеграмм пожалуйста",
+  "expect": "mac:MAC quit Telegram",
+  "path": "mac",
+  "acts": [
+   "MAC quit Telegram"
+  ],
+  "reply": "",
+  "secs": 0.005,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 318,
+  "section": "Опечатки Whisper",
+  "text": "сделай скрин шот экрана",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.006,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 319,
+  "section": "Опечатки Whisper",
+  "text": "спакойной ночи",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 320,
+  "section": "Опечатки Whisper",
+  "text": "спокойно ночи",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 321,
+  "section": "Опечатки Whisper",
+  "text": "присять",
+  "expect": "body:BODY sit/quick:ГУЛЯТЬ сесть",
+  "path": "quick",
+  "acts": [
+   "ГУЛЯТЬ сесть"
+  ],
+  "reply": "Хорошо, посижу.",
+  "secs": 0.009,
+  "first": 0.009,
+  "ok": true
+ },
+ {
+  "line": 322,
+  "section": "Опечатки Whisper",
+  "text": "присядь пожалуйста",
+  "expect": "body:BODY sit",
+  "path": "body",
+  "acts": [
+   "BODY sit"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 323,
+  "section": "Опечатки Whisper",
+  "text": "поставь тамер на 5 минут",
+  "expect": "device:ТАЙМЕР 5",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 5 | таймер"
+  ],
+  "reply": "Засекла 5 мин.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 326,
+  "section": "Мат и слова-паразиты",
+  "text": "бля поставь на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 327,
+  "section": "Мат и слова-паразиты",
+  "text": "короче это самое включи музыку",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Ага, включаю музыку.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 328,
+  "section": "Мат и слова-паразиты",
+  "text": "ну типа сделай потише",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Потише.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 329,
+  "section": "Мат и слова-паразиты",
+  "text": "ну это как его сделай громче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Погромче.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 330,
+  "section": "Мат и слова-паразиты",
+  "text": "нахуй эту песню, следующую",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Переключаю.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 331,
+  "section": "Мат и слова-паразиты",
+  "text": "блять переключи песню",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Переключаю.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 332,
+  "section": "Мат и слова-паразиты",
+  "text": "епта открой ютуб",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ ютуб"
+  ],
+  "reply": "Готово, открываю.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 333,
+  "section": "Мат и слова-паразиты",
+  "text": "блин закрой телеграм",
+  "expect": "mac:MAC quit Telegram",
+  "path": "mac",
+  "acts": [
+   "MAC quit Telegram"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 334,
+  "section": "Мат и слова-паразиты",
+  "text": "короче сделай скриншот",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 335,
+  "section": "Мат и слова-паразиты",
+  "text": "сука как же я устал",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Я вижу, ты очень устал. Отдохни хорошенько, мой дорогой.",
+  "secs": 1.504,
+  "first": 1.094,
+  "ok": true
+ },
+ {
+  "line": 336,
+  "section": "Мат и слова-паразиты",
+  "text": "бля я опять проиграл",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Мне очень жаль, что так вышло. Ты хорошо поборолся.",
+  "secs": 1.497,
+  "first": 1.266,
+  "ok": true
+ },
+ {
+  "line": 337,
+  "section": "Мат и слова-паразиты",
+  "text": "ну типа короче как дела",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Хорошо, спасибо. Мне важнее, как ты. Рассказывай.",
+  "secs": 0.009,
+  "first": 0.009,
+  "ok": true
+ },
+ {
+  "line": 338,
+  "section": "Мат и слова-паразиты",
+  "text": "короче включи кино в ютуб музыке",
+  "expect": "task:СДЕЛАТЬ",
+  "path": "task",
+  "acts": [
+   "СДЕЛАТЬ короче включи кино в ютуб музыке"
+  ],
+  "reply": "Сейчас!",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 339,
+  "section": "Мат и слова-паразиты",
+  "text": "слушай, поставь на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Ставлю на паузу.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 340,
+  "section": "Мат и слова-паразиты",
+  "text": "подруга поставь на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 341,
+  "section": "Мат и слова-паразиты",
+  "text": "аня поставь на паузу",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Пауза.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 342,
+  "section": "Мат и слова-паразиты",
+  "text": "эй сделай погромче",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Делаю громче.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 345,
+  "section": "English",
+  "text": "hi",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Hey, hi! How's your mood?",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 346,
+  "section": "English",
+  "text": "how are you",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Everything's calm here. How are you feeling?",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 347,
+  "section": "English",
+  "text": "what are you doing",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Looking at your desktop. I mean, waiting for you.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 348,
+  "section": "English",
+  "text": "thank you",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "You're very welcome, sweetie.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 349,
+  "section": "English",
+  "text": "i love you",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "I'll remember that. And keep smiling.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 350,
+  "section": "English",
+  "text": "open youtube",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ youtube"
+  ],
+  "reply": "Opening it!",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 351,
+  "section": "English",
+  "text": "open telegram",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ telegram"
+  ],
+  "reply": "Done, opening.",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 352,
+  "section": "English",
+  "text": "pause the music",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Paused.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 353,
+  "section": "English",
+  "text": "pause",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "Paused.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 354,
+  "section": "English",
+  "text": "next song",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "Skipping.",
+  "secs": 0.0,
+  "first": 0.0,
+  "ok": true
+ },
+ {
+  "line": 355,
+  "section": "English",
+  "text": "play some music",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "Playing!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 356,
+  "section": "English",
+  "text": "turn it up",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "Louder.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 357,
+  "section": "English",
+  "text": "turn it down",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "Quieter.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 358,
+  "section": "English",
+  "text": "set a timer for 10 minutes",
+  "expect": "device:ТАЙМЕР 10",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 10 | таймер"
+  ],
+  "reply": "Timer set for 10 minutes.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 359,
+  "section": "English",
+  "text": "remind me in 5 minutes to check the oven",
+  "expect": "brain:НАПОМНИТЬ",
+  "path": "brain",
+  "acts": [
+   "НАПОМНИТЬ +5 | check the oven"
+  ],
+  "reply": "Sure, I'll remind you in 5 minutes.",
+  "secs": 1.864,
+  "first": 1.864,
+  "ok": true
+ },
+ {
+  "line": 360,
+  "section": "English",
+  "text": "what's the weather tomorrow",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК weather tomorrow"
+  ],
+  "reply": "Let me check for you.",
+  "secs": 1.235,
+  "first": 1.235,
+  "ok": true
+ },
+ {
+  "line": 361,
+  "section": "English",
+  "text": "take a screenshot",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 362,
+  "section": "English",
+  "text": "close telegram",
+  "expect": "mac:MAC quit Telegram",
+  "path": "mac",
+  "acts": [
+   "MAC quit Telegram"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 363,
+  "section": "English",
+  "text": "translate the screen",
+  "expect": "mac:MAC translate",
+  "path": "mac",
+  "acts": [
+   "MAC translate ru"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 364,
+  "section": "English",
+  "text": "read the text on the screen",
+  "expect": "mac:MAC read",
+  "path": "mac",
+  "acts": [
+   "MAC read ru"
+  ],
+  "reply": "",
+  "secs": 0.006,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 365,
+  "section": "English",
+  "text": "good night",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 366,
+  "section": "English",
+  "text": "sit down",
+  "expect": "body:BODY sit",
+  "path": "body",
+  "acts": [
+   "BODY sit"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 367,
+  "section": "English",
+  "text": "tell me something interesting",
+  "expect": "brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "I don't have anything interesting right now, but I can search for something if you like.",
+  "secs": 1.587,
+  "first": 1.587,
+  "ok": true
+ },
+ {
+  "line": 368,
+  "section": "English",
+  "text": "let's practice english",
+  "expect": "device:РЕЖИМ english/brain:РЕЖИМ english",
+  "path": "device",
+  "acts": [
+   "РЕЖИМ english"
+  ],
+  "reply": "Okay, let's practice English! What did you do today?",
+  "secs": 0.002,
+  "first": 0.002,
+  "ok": true
+ },
+ {
+  "line": 369,
+  "section": "English",
+  "text": "speak russian",
+  "expect": "device:РЕЖИМ русский/brain:РЕЖИМ русский",
+  "path": "device",
+  "acts": [
+   "РЕЖИМ русский"
+  ],
+  "reply": "Ага, возвращаюсь к русскому.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 372,
+  "section": "Корейский",
+  "text": "안녕",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "오, 안녕! 언제 말 걸어주나 기다리고 있었어.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 373,
+  "section": "Корейский",
+  "text": "고마워",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "천만에. 너를 위해서라면 언제나.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 374,
+  "section": "Корейский",
+  "text": "뭐 해",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "너 지켜보고 있어. 너 오래 안 쉬었잖아.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 375,
+  "section": "Корейский",
+  "text": "잘 자",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 376,
+  "section": "Корейский",
+  "text": "음악 틀어줘",
+  "expect": "device:МУЗЫКА play",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА play"
+  ],
+  "reply": "음악 틀게!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 377,
+  "section": "Корейский",
+  "text": "다음 곡",
+  "expect": "device:МУЗЫКА next",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА next"
+  ],
+  "reply": "넘길게.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 378,
+  "section": "Корейский",
+  "text": "소리 줄여줘",
+  "expect": "device:ГРОМКОСТЬ -10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ -10"
+  ],
+  "reply": "작게 할게.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 379,
+  "section": "Корейский",
+  "text": "소리 키워줘",
+  "expect": "device:ГРОМКОСТЬ +10",
+  "path": "device",
+  "acts": [
+   "ГРОМКОСТЬ +10"
+  ],
+  "reply": "크게 할게.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 380,
+  "section": "Корейский",
+  "text": "음악 꺼줘",
+  "expect": "device:МУЗЫКА pause",
+  "path": "device",
+  "acts": [
+   "МУЗЫКА pause"
+  ],
+  "reply": "멈출게.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 381,
+  "section": "Корейский",
+  "text": "유튜브 열어줘",
+  "expect": "quick:ОТКРЫТЬ/brain:ОТКРЫТЬ",
+  "path": "quick",
+  "acts": [
+   "ОТКРЫТЬ 유튜브"
+  ],
+  "reply": "바로 열게.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 382,
+  "section": "Корейский",
+  "text": "스크린샷 찍어줘",
+  "expect": "mac:MAC shot",
+  "path": "mac",
+  "acts": [
+   "MAC shot"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 383,
+  "section": "Корейский",
+  "text": "내일 날씨 어때",
+  "expect": "brain:ПОИСК",
+  "path": "brain",
+  "acts": [
+   "ПОИСК погода завтра"
+  ],
+  "reply": "내일 날씨 어때?",
+  "secs": 1.595,
+  "first": 1.595,
+  "ok": true
+ },
+ {
+  "line": 384,
+  "section": "Корейский",
+  "text": "5분 타이머",
+  "expect": "device:ТАЙМЕР 5",
+  "path": "device",
+  "acts": [
+   "ТАЙМЕР 5 | таймер"
+  ],
+  "reply": "5분 타이머 맞췄어.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 385,
+  "section": "Корейский",
+  "text": "давай поговорим по-корейски",
+  "expect": "device:РЕЖИМ корейский/brain:РЕЖИМ корейский",
+  "path": "device",
+  "acts": [
+   "РЕЖИМ корейский"
+  ],
+  "reply": "알았어, 한국어로 얘기하자!",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 386,
+  "section": "Корейский",
+  "text": "говори по-русски",
+  "expect": "device:РЕЖИМ русский/brain:РЕЖИМ русский",
+  "path": "device",
+  "acts": [
+   "РЕЖИМ русский"
+  ],
+  "reply": "Ага, возвращаюсь к русскому.",
+  "secs": 0.001,
+  "first": 0.001,
+  "ok": true
+ },
+ {
+  "line": 389,
+  "section": "Тело",
+  "text": "присядь",
+  "expect": "body:BODY sit",
+  "path": "body",
+  "acts": [
+   "BODY sit"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 390,
+  "section": "Тело",
+  "text": "ляг",
+  "expect": "body:BODY lie",
+  "path": "body",
+  "acts": [
+   "BODY lie"
+  ],
+  "reply": "",
+  "secs": 0.002,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 391,
+  "section": "Тело",
+  "text": "встань",
+  "expect": "body:BODY stand",
+  "path": "body",
+  "acts": [
+   "BODY stand"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 392,
+  "section": "Тело",
+  "text": "походи туда-обратно",
+  "expect": "body:BODY pace",
+  "path": "body",
+  "acts": [
+   "BODY pace"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 393,
+  "section": "Тело",
+  "text": "иди налево",
+  "expect": "body:BODY left",
+  "path": "body",
+  "acts": [
+   "BODY left"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 394,
+  "section": "Тело",
+  "text": "иди направо",
+  "expect": "body:BODY right",
+  "path": "body",
+  "acts": [
+   "BODY right"
+  ],
+  "reply": "",
+  "secs": 0.004,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 395,
+  "section": "Тело",
+  "text": "стой",
+  "expect": "body:BODY stop",
+  "path": "body",
+  "acts": [
+   "BODY stop"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 396,
+  "section": "Тело",
+  "text": "можешь присесть?",
+  "expect": "body:BODY sit",
+  "path": "body",
+  "acts": [
+   "BODY sit"
+  ],
+  "reply": "",
+  "secs": 0.003,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 397,
+  "section": "Тело",
+  "text": "сядь на поезд и приезжай ко мне завтра утром",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "(Тут у меня нет информации о поездах или о том, куда ехать. Я могу только помогать с задачами на компьютере.)",
+  "secs": 2.287,
+  "first": 1.841,
+  "ok": true
+ },
+ {
+  "line": 398,
+  "section": "Тело",
+  "text": "не садись",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, я не сяду.",
+  "secs": 1.022,
+  "first": 1.022,
+  "ok": true
+ },
+ {
+  "line": 401,
+  "section": "Повтор",
+  "text": "повтори за мной: я люблю пиццу",
+  "expect": "repeat",
+  "path": "repeat",
+  "acts": [],
+  "reply": "я люблю пиццу",
+  "secs": 0.008,
+  "first": 0.008,
+  "ok": true
+ },
+ {
+  "line": 402,
+  "section": "Повтор",
+  "text": "скажи за мной привет руся",
+  "expect": "repeat",
+  "path": "repeat",
+  "acts": [],
+  "reply": "привет руся",
+  "secs": 0.007,
+  "first": 0.007,
+  "ok": true
+ },
+ {
+  "line": 403,
+  "section": "Повтор",
+  "text": "повторяй за мной",
+  "expect": "repeat",
+  "path": "repeat",
+  "acts": [],
+  "reply": "Хорошо, повторяю за тобой. Скажи «хватит повторять», когда надоест.",
+  "secs": 0.004,
+  "first": 0.004,
+  "ok": true
+ },
+ {
+  "line": 404,
+  "section": "Повтор",
+  "text": "хватит повторять",
+  "expect": "repeat",
+  "path": "repeat",
+  "acts": [],
+  "reply": "Всё, больше не повторяю.",
+  "secs": 0.003,
+  "first": 0.003,
+  "ok": true
+ },
+ {
+  "line": 405,
+  "section": "Повтор",
+  "text": "повторение мать учения",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "<|channel>thought Thinking Process: 1. **Analyze the input:** The user said: \"повторение мать учения\" (repetition is the mother of learning). 2. **Determine the context/action:** The user is making a statement, not giving a command that requires an action (like opening a site or setting a timer). 3. **Check the constraints:** * Must use the prescribed format: ` [Command/Response]`. * Emotion must be one of the allowed Russian words based on the context. * The response must be 1-2 short sentences, like a living conversation. * Must adhere to the persona (Таня: warm, soft, caring, supportive). * *Crucial check:* Does the statement require a specific *action* from the system (like repeating it or reacting to a command)? No, it'",
+  "secs": 7.887,
+  "first": 1.263,
+  "ok": true
+ },
+ {
+  "line": 409,
+  "section": "Задача идёт на экране",
+  "text": "стоп",
+  "expect": "intercept",
+  "path": "intercept",
+  "acts": [],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 411,
+  "section": "Задача идёт на экране",
+  "text": "стой, не надо",
+  "expect": "intercept",
+  "path": "intercept",
+  "acts": [],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 413,
+  "section": "Задача идёт на экране",
+  "text": "как дела",
+  "expect": "quick:-/brain:-",
+  "path": "quick",
+  "acts": [],
+  "reply": "Всё отлично, жалоб нет! А у тебя?",
+  "secs": 0.006,
+  "first": 0.006,
+  "ok": true
+ },
+ {
+  "line": 417,
+  "section": "Сон",
+  "text": "спокойной ночи",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 418,
+  "section": "Сон",
+  "text": "иди спать",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 419,
+  "section": "Сон",
+  "text": "всё, спокойной ночи, подруга",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 420,
+  "section": "Сон",
+  "text": "сладких снов",
+  "expect": "sleep",
+  "path": "sleep",
+  "acts": [
+   "СОН"
+  ],
+  "reply": "",
+  "secs": 0.0,
+  "first": null,
+  "ok": true
+ },
+ {
+  "line": 421,
+  "section": "Сон",
+  "text": "не спи ещё",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Я тут, если захочешь поговорить или нужно что-то найти.",
+  "secs": 1.165,
+  "first": 1.165,
+  "ok": true
+ },
+ {
+  "line": 422,
+  "section": "Сон",
+  "text": "я не хочу спать",
+  "expect": "quick:-/brain:-",
+  "path": "brain",
+  "acts": [],
+  "reply": "Хорошо, я рядом, если тебе не хочется спать.",
+  "secs": 1.209,
+  "first": 1.208,
+  "ok": true
+ }
+]

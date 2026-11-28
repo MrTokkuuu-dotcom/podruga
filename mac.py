@@ -152,7 +152,8 @@ def screenshot() -> Path:
 
 FOLDERS = {"загрузк": "Downloads", "download": "Downloads", "рабоч": "Desktop", "desktop": "Desktop",
            "документ": "Documents", "document": "Documents", "картинк": "Pictures", "фото": "Pictures",
-           "изображен": "Pictures", "музык": "Music", "видео": "Movies", "фильм": "Movies",
+           "изображен": "Pictures", "фотк": "Pictures", "фоток": "Pictures", "музык": "Music", "видео": "Movies",
+           "фильм": "Movies", "программ": "/Applications", "applications": "/Applications",
            "다운로드": "Downloads", "바탕화면": "Desktop", "문서": "Documents", "사진": "Pictures"}
 
 
@@ -160,7 +161,7 @@ def folder_for(text: str) -> Path | None:
     low = text.lower()
     for k, d in FOLDERS.items():
         if k in low:
-            return Path.home() / d
+            return Path(d) if d.startswith("/") else Path.home() / d
     return None
 
 

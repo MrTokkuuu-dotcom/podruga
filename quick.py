@@ -252,6 +252,8 @@ class QuickReplies:
             break
         if not seg:
             return None
+        if any(s.commands for s, _ in seg) and re.search(r"(^|\s)(не|don t|dont|do not)\s", " " + norm(text) + " "):
+            return None                           # «не садись», «не включай» — не команда, пусть думает мозг
         t = datetime.now()
         texts, emo, cmds = [], "calm", []
         for k, (s, caps) in enumerate(seg):

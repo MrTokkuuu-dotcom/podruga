@@ -12,7 +12,7 @@ SITES = {
     "yt music": "https://music.youtube.com", "유튜브 뮤직": "https://music.youtube.com",
     "youtube": "https://www.youtube.com", "ютуб": "https://www.youtube.com",
     "google": "https://www.google.com", "гугл": "https://www.google.com",
-    "gmail": "https://mail.google.com", "почта": "https://mail.google.com",
+    "gmail": "https://mail.google.com", "почт": "https://mail.google.com",
     "naver": "https://www.naver.com", "навер": "https://www.naver.com",
     "coupang": "https://www.coupang.com", "купанг": "https://www.coupang.com",
     "instagram": "https://www.instagram.com", "инстаграм": "https://www.instagram.com",
@@ -20,7 +20,8 @@ SITES = {
     "netflix": "https://www.netflix.com", "нетфликс": "https://www.netflix.com",
     "papago": "https://papago.naver.com", "папаго": "https://papago.naver.com",
     "карты": "https://map.naver.com", "погода": "https://weather.naver.com",
-    "chatgpt": "https://chatgpt.com", "claude": "https://claude.ai",
+    "chatgpt": "https://chatgpt.com", "чат джипити": "https://chatgpt.com", "чатгпт": "https://chatgpt.com",
+    "чат гпт": "https://chatgpt.com", "claude": "https://claude.ai", "тик ток": "https://www.tiktok.com",
     # корейские названия
     "유튜브": "https://www.youtube.com", "구글": "https://www.google.com", "지메일": "https://mail.google.com",
     "네이버": "https://www.naver.com", "쿠팡": "https://www.coupang.com", "인스타그램": "https://www.instagram.com",
@@ -29,7 +30,8 @@ SITES = {
     "챗지피티": "https://chatgpt.com", "maps": "https://map.naver.com", "weather": "https://weather.naver.com",
 }
 APPS = {
-    "telegram": "Telegram", "телеграм": "Telegram", "kakaotalk": "KakaoTalk", "какао": "KakaoTalk",
+    "telegram": "Telegram", "телеграм": "Telegram", "телег": "Telegram", "kakaotalk": "KakaoTalk", "какао": "KakaoTalk",
+    "дискорд": "Discord", "стим": "Steam", "whatsapp": "WhatsApp", "вотсап": "WhatsApp", "ватсап": "WhatsApp",
     "музыка": "Music", "music": "Music", "spotify": "Spotify", "спотифай": "Spotify",
     "заметки": "Notes", "notes": "Notes", "календарь": "Calendar", "calendar": "Calendar",
     "safari": "Safari", "сафари": "Safari", "chrome": "Google Chrome", "хром": "Google Chrome",
