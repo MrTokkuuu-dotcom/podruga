@@ -67,7 +67,9 @@ mac._can_post = lambda: True
 mac.find_running = lambda w: {"телеграм": "Telegram", "хром": "Google Chrome"}.get(w)
 cases = {
     "Закрой телеграм": ("quit", "Telegram"), "выключи музыку": None, "Аня, сделай скриншот": ("shot", ""),
-    "открой загрузки": ("folder", str(Path.home() / "Downloads")), "найди файл договор": ("find", "договор"),
+    "открой загрузки": ("folder", str(Path.home() / "Downloads")), "открой ютуб музыку": None,
+    "открой видео с котиками": None, "открой папку музыка": ("folder", str(Path.home() / "Music")),
+    "открой мои документы": ("folder", str(Path.home() / "Documents")), "найди файл договор": ("find", "договор"),
     "прочитай что на экране": ("read", "ru"), "Что тут написано?": ("read", "ru"), "переведи это": ("translate", "ru"),
     "переведи страницу на английский": ("translate", "en"), "о чём эта страница": ("summary", "ru"),
     "расскажи про это": None, "переведи привет на английский": None, "иди на другой экран": ("screen", "next"),

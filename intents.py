@@ -230,7 +230,11 @@ def mac_command(text: str):
     m = _SHOW_FOLDER.search(t)
     if m and len(m.group(1).split()) <= 3:
         p = mac.folder_for(m.group(1))
-        if p is not None:
+        # «открой ютуб музыку», «открой видео с котиками» — это не папки: без слова «папка»
+        # рядом с названием папки не должно быть других слов (кроме «мои»)
+        others = [w for w in m.group(1).split() if not any(k in w for k in mac.FOLDERS)
+                  and w not in ("мои", "мою", "мой", "мне", "my", "the")]
+        if p is not None and ("папк" in t or not others):
             return ("folder", str(p))
     m = _QUIT.search(t)
     if m and len(m.group(1).split()) <= 3:

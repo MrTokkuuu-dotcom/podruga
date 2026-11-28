@@ -6,6 +6,10 @@ import sys
 import urllib.parse
 
 SITES = {
+    # YouTube Music — раньше обычного YouTube, иначе «ютуб музыку» искалось бы на YouTube как «музыку»
+    "youtube music": "https://music.youtube.com", "ютуб музык": "https://music.youtube.com",
+    "ютуб мьюзик": "https://music.youtube.com", "ютуб мюзик": "https://music.youtube.com",
+    "yt music": "https://music.youtube.com", "유튜브 뮤직": "https://music.youtube.com",
     "youtube": "https://www.youtube.com", "ютуб": "https://www.youtube.com",
     "google": "https://www.google.com", "гугл": "https://www.google.com",
     "gmail": "https://mail.google.com", "почта": "https://mail.google.com",
@@ -67,7 +71,7 @@ def open_thing(what: str) -> str:
         if k in low:
             # «youtube котики» → поиск на YouTube
             rest = low.replace(k, "").strip(" :—-")
-            if rest and "youtube" in url:
+            if rest and url == "https://www.youtube.com":
                 url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(rest)
             subprocess.run(["open", url], check=True)
             return f"открыла {k}"

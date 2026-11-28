@@ -86,6 +86,8 @@ class Task:
         self.done: list[str] = []
         self._last = None          # (подпись, вид экрана) прошлого нажатия
         self._repeats = 0
+        self.trace: list[dict] = []   # что реально сделала — для самообучения (learned.py)
+        self.denied = False
 
     def on_step(self, text: str, el=None) -> None:
         self.shown.append(text)
@@ -140,6 +142,10 @@ class Task:
             self.on_step(f"нажимаю «{el.label}»" + (" мышью" if mouse else ""), el)
             r = self._confirmed(h.press, el, app, bid, mouse=mouse)
             self.done.append(r or f"он не разрешил нажать «{el.label}»")
+            if r:
+                self.trace.append({"do": "press", "label": el.label, "role": el.role})
+            else:
+                self.denied = True
             return True
         if step.kind == "ПЕЧАТАТЬ":
             el = snap.get(step.target) if step.target is not None else None
@@ -148,6 +154,7 @@ class Task:
                 return False
             self.on_step(f"печатаю «{step.arg}»", el)
             self.done.append(h.type_text(el, step.arg, app, bid))
+            self.trace.append({"do": "type", "label": el.label, "role": el.role, "text": step.arg})
             return True
         if step.kind == "КЛАВИША":
             try:
@@ -156,12 +163,22 @@ class Task:
                 self.done.append(str(e))
                 return False
             self.done.append(r or f"он не разрешил клавишу {step.arg}")
+            if r:
+                self.trace.append({"do": "key", "name": step.arg.strip().lower()})
+            else:
+                self.denied = True
             return True
         if step.kind == "ЛИСТАТЬ":
             self.done.append(h.scroll(step.arg))
+            self.trace.append({"do": "scroll", "arg": step.arg})
             return True
+        if step.kind == "ОТКРЫТЬ" and norm(step.arg) in ("", "ссылка", "ссылку", "сайт", "программа", "программу", "что",
+                                                       "url", "link"):
+            self.done.append("«ОТКРЫТЬ» — напиши, что именно (адрес сайта или название программы)")
+            return False                      # маленькая модель переписала пример из подсказки
         if step.kind == "ОТКРЫТЬ" and self.open_fn:
             self.done.append(self.open_fn(step.arg))
+            self.trace.append({"do": "open", "arg": step.arg})
             return True
         self.done.append(f"не умею: {step.kind}")
         return False

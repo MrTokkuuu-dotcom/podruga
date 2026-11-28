@@ -103,6 +103,9 @@ class Companion:
             self.ui.api._companion = self
         self.listener = None
         self.tasks = tasks.TaskRunner(self)   # «глаза и руки»: одна задача на экране за раз
+        import lessons
+        self.lessons = lessons.Lessons(self.cfg["_data_dir"] / "lessons.json")   # его поправки
+        self._acted = 0.0                     # когда она последний раз что-то делала (для «нет, я имел в виду…»)
         self.speaker = _PrintSpeaker() if text_mode else None
 
         self.wake = None
@@ -376,7 +379,8 @@ class Companion:
         """Стабильная часть подсказки для своего мозга (лежит в кэше модели)."""
         from local_prompt import stable_system
         return stable_system(self.character, traits_text(self.cfg.get("traits", {})),
-                             self.memory.read() or "", self.user)
+                             "\n\n".join(x for x in (self.memory.read() or "", self.lessons.prompt_block(self.user)) if x),
+                             self.user)
 
     def system_parts(self, wake: str | None = None) -> tuple[str, str]:
         """(стабильное, свежее): характер+правила+память для Google и время/события/режим/возвращение."""
@@ -394,6 +398,8 @@ class Companion:
                  "как подруга). Одна фраза — один язык: не смешивай русские и корейские слова в одном "
                  "предложении. Эмоции в {} и команды << >> всегда пиши по-русски.", "",
                  "## Память о " + self.user, self.memory.read() or "(пока пусто)", ""]
+        if self.lessons.prompt_block(self.user):
+            parts += [self.lessons.prompt_block(self.user), ""]
         stable = "\n".join(parts)
         parts = [f"## Сейчас\n{WEEKDAYS[t.weekday()]}, {t.strftime('%d.%m.%Y %H:%M')}"
                  + (f"\nУже стоят напоминания: {reminders}" if reminders else ""), "",
@@ -574,7 +580,11 @@ class Companion:
 
         self.last_parser = parser
         if parser.commands:
-            self.handle_commands(parser.commands)
+            self._said_now = parser.transcript or text or ""      # его слова — для самообучения (СДЕЛАТЬ)
+            try:
+                self.handle_commands(parser.commands)
+            finally:
+                self._said_now = None
         if parser.skip:
             print(f"   (не мне: «{parser.transcript}»)")
             return
@@ -627,13 +637,15 @@ class Companion:
                     label = (m.group(2) or "").strip() or "время вышло"
                     self.initiative.add_from_command(f"НАПОМНИТЬ +{m.group(1)} | Таймер: {label}")
             elif kind in ("ОТКРЫТЬ", "МУЗЫКА", "ГРОМКОСТЬ"):
+                self._acted = time.monotonic()
                 sound = None
                 if kind == "МУЗЫКА":                 # играет ли что-то — до того, как она заговорит
                     import mac
                     sound = mac._sound()
                 threading.Thread(target=self._do_action, args=(kind, arg, sound), daemon=True).start()
             elif kind == "СДЕЛАТЬ":
-                self.tasks.start(arg.strip())
+                self._acted = time.monotonic()
+                self.tasks.start(arg.strip(), said=getattr(self, "_said_now", None) or None)
             elif kind == "ПОИСК":
                 threading.Thread(target=self._do_search, args=(arg,), daemon=True).start()
             elif kind == "ПОКАЗАТЬ":
@@ -789,6 +801,26 @@ class Companion:
         self.history.append({"role": "user", "text": text})
         self.unsaved.append(f"{self.user}: {text}")
         busy = self.tasks.running
+        self._acted = time.monotonic()
+        self.tasks.start(text.strip())
+        if not busy:
+            line = random.choice(self.TASK_LINES.get(self._phrase_lang, self.TASK_LINES["ru"]))
+            self.say(line, "joy")
+            self._history_add(line)
+        return True
+
+    def learned_now(self, text: str, spoken: bool = True) -> bool:
+        """Дело на экране, которое она уже выучила по его словам, — сразу, без мозга. True — взялась."""
+        book = self.tasks.book()
+        if book is None or len(text.split()) < 3 or book.find(text) is None:
+            return False
+        print(f"⚡ сразу: «{text}» → выученное «{book.find(text)[0]}»")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        busy = self.tasks.running
+        self._acted = time.monotonic()
         self.tasks.start(text.strip())
         if not busy:
             line = random.choice(self.TASK_LINES.get(self._phrase_lang, self.TASK_LINES["ru"]))
@@ -801,6 +833,7 @@ class Companion:
         cmd = intents.device_command(text)
         if not cmd:
             return False
+        self._acted = time.monotonic()
         print(f"⚡ сразу: «{text}» → {cmd}")
         if spoken:
             self.ui.add("me", text)
@@ -832,6 +865,86 @@ class Companion:
         self.say(line, "joy" if key == "play" else "calm")
         self._history_add(line)
         return True
+
+    def rewrite(self, text: str) -> str:
+        """Фраза, которую он раньше поправлял («нет, я имел в виду …»), → то, что он имеет в виду."""
+        new = self.lessons.rewrite(text)
+        if new != text:
+            print(f"[учусь] «{text}» → «{new}» (он так поправлял)")
+        return new
+
+    def lessons_now(self, text: str, spoken: bool = True) -> bool:
+        """«Нет, я имел в виду …», «не называй меня …», «говори короче», «чему ты научилась». True — взялась."""
+        import lessons
+        prev_user = next((h["text"] for h in reversed(self.history) if h.get("role") == "user"), None)
+        prev_her = next((h["text"] for h in reversed(self.history) if h.get("role") == "model"), None)
+        acted = time.monotonic() - self._acted < 180
+        cmd = lessons.command(text, prev_user, prev_her, acted)
+        if cmd is None:
+            return False
+        print(f"⚡ сразу: «{text}» → урок {cmd}")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        redo = None
+        if cmd[0] == "meant":
+            meant = cmd[1]
+            self.lessons.add_alias(prev_user, meant)
+            self.journal.log("action", what=f"выучила: «{prev_user}» — это «{meant}»")
+            line = f"Поняла! Запомнила: «{prev_user}» — это «{meant}»."
+            redo = meant
+        elif cmd[0] == "rule":
+            new = self.lessons.add_rule(cmd[1])
+            if new:
+                self.journal.log("action", what=f"новое правило: {cmd[1]}")
+                self._brain_prompt_changed()
+            line = "Поняла, запомнила." if new else "Я это уже помню."
+        elif cmd[0] == "list":
+            items = self.lessons.describe()
+            n = len(self.tasks.book().items) if self.tasks.book() is not None else 0
+            if items:
+                self.ui.add("her", "\n".join(f"• {x}" for x in items), "📝")
+            line = (f"Я выучила {len(items)} {self._plural(len(items), 'урок', 'урока', 'уроков')} от тебя"
+                    + (f" и {n} {self._plural(n, 'дело', 'дела', 'дел')} на экране" if n else "") + "."
+                    if items or n else "Пока ничему. Поправь меня — «нет, я имел в виду…» или «не говори так» — и запомню.")
+        elif cmd[0] == "forget":
+            t = self.lessons.forget_last()
+            if t:
+                self._brain_prompt_changed()
+            line = "Забыла." if t else "Мне нечего забывать."
+        else:
+            n = self.lessons.forget_all()
+            b = self.tasks.book()
+            n += b.forget_all() if b is not None else 0
+            self._brain_prompt_changed()
+            line = "Забыла всё, чему научилась." if n else "Я пока ничему и не научилась."
+        self.say(line, "joy" if cmd[0] in ("meant", "rule") else "calm")
+        self._history_add(line)
+        if redo:
+            threading.Thread(target=self._redo, args=(redo,), name="redo", daemon=True).start()
+        return True
+
+    @staticmethod
+    def _plural(n: int, one: str, few: str, many: str) -> str:
+        if n % 10 == 1 and n % 100 != 11:
+            return one
+        return few if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else many
+
+    def _brain_prompt_changed(self) -> None:
+        """Правила — в стабильной части подсказки: своему мозгу пересчитать её (в фоне, ~4 с)."""
+        self._sync_local()
+
+    def _redo(self, text: str) -> None:
+        """После «нет, я имел в виду …» — сделать правильно (как будто он сказал это сам)."""
+        try:
+            self.speaker.wait_done()                  # сначала договорит «Поняла!»
+        except Exception:
+            time.sleep(2)
+        if self.mac_now(text, spoken=False) or self.task_now(text, spoken=False) or \
+                self.device_now(text, spoken=False):
+            return
+        self.respond(text=text)
 
     def modes_now(self, text: str, spoken: bool = True) -> bool:
         """«Запомни: рабочий режим — это …», «рабочий режим», «забудь …», «какие у тебя режимы». True — взялась."""
@@ -913,6 +1026,7 @@ class Companion:
             cmd = ("summary", "ru")                  # «посмотри на экран» без ключа: читаю текст сама
         if cmd is None:
             return False
+        self._acted = time.monotonic()
         print(f"⚡ сразу: «{text}» → {cmd}")
         if spoken:
             self.ui.add("me", text)
@@ -1025,11 +1139,16 @@ class Companion:
         look = any(p in _norm(text) for p in LOOK_PHRASES)
         if self.tasks.intercept(text):                    # «стоп» / «да» / «нет» посреди задачи на экране
             return
+        if self.lessons_now(text, spoken=False):          # «нет, я имел в виду …», «не говори так»
+            return
+        text = self.rewrite(text)
         if self.modes_now(text, spoken=False):
             return
         if self.mac_now(text, spoken=False, look=look):
             return
         if not look and self.task_now(text, spoken=False):
+            return
+        if not look and self.learned_now(text, spoken=False):
             return
         if not look and self.repeat_now(text, spoken=False):
             return
@@ -1364,6 +1483,10 @@ class Companion:
                 self.say(line, "joy" if body in ("pace", "stand") else "calm")
                 self._history_add(line)
                 return
+            if self.lessons_now(text):                   # «нет, я имел в виду …», «не говори так» — учится
+                tm["path"] = "сразу"
+                return
+            text = self.rewrite(text)                    # то, что он раньше поправлял
             if self.modes_now(text):                     # «запомни: рабочий режим — это …», «рабочий режим»
                 tm["path"] = "сразу"
                 return
@@ -1371,6 +1494,9 @@ class Companion:
                 tm["path"] = "сразу"
                 return
             if not h.look and self.task_now(text):       # «включи … в ютуб музыке» — сама на экране
+                tm["path"] = "сразу"
+                return
+            if not h.look and self.learned_now(text):    # то, что она уже выучила делать на экране
                 tm["path"] = "сразу"
                 return
             if not h.look and self.repeat_now(text):     # «повтори за мной …» — слово в слово

@@ -7,6 +7,7 @@ import threading
 
 import agent
 import eyes
+import learned
 import guard
 import hands
 import recipes
@@ -71,13 +72,22 @@ class TaskRunner:
             self.c.ui.add("sys", "Не стала: нет ответа «да»")
         return ok
 
+    def book(self):
+        """Выученные задачи (data/learned.json); None — самообучение выключено в настройках."""
+        if not self.c.cfg.get("hands", {}).get("learn", True) or "_data_dir" not in self.c.cfg:
+            return None
+        if getattr(self, "_book", None) is None:
+            self._book = learned.Learned(self.c.cfg["_data_dir"] / "learned.json")
+        return self._book
+
     # --- запуск ---
-    def start(self, goal: str, fn=None) -> None:
+    def start(self, goal: str, fn=None, said: str | None = None) -> None:
         """fn — своё дело вместо рецепта/агента (например, «закрой телеграм» со своим вопросом «да?»)."""
         if self.running:
             self.c.say("Подожди, я ещё с прошлым вожусь. Скажи «стоп», если не нужно.")
             return
         self.running = True
+        self._said = said if said and said.strip() != goal.strip() else None   # его слова — чтобы узнать в следующий раз
         self.stop.clear()
         self._thread = threading.Thread(target=self._run_safe, args=(goal, fn), name="task", daemon=True)
         self._thread.start()
@@ -156,16 +166,46 @@ class TaskRunner:
                 c.say(DONE_LINES.get(r.name, "Готово!"), "joy")
                 return
             print("[руки] рецепт не справился — дальше сама")
+        book = self.book()
+        hit = book.find(goal) if book is not None else None
+        if hit is not None:
+            key, q = hit
+            self._on_step("делаю, как в прошлый раз")
+            try:
+                ok = learned.replay(book.items[key], q, eyes, hands, self.ask_yes, actions.open_thing, self.stop,
+                                    on_step=self._on_step)
+            except guard.Blocked as b:
+                c.say(b.reason)
+                return
+            book.done(key, ok)
+            if self.stop.is_set():
+                c.say("Остановилась.")
+                return
+            if ok:
+                print(f"[учусь] сделала по выученному: «{key}»" + (f" ({q})" if q else ""))
+                c.journal.log("action", what=f"по выученному: {goal}")
+                c.say("Готово!", "joy")
+                return
+            print("[учусь] по выученному не вышло — дальше сама")
         look = self._look_google if (h.get("google_fallback", True) and c.google is not None) else None
         spoken = []
 
         def say(text, emotion="calm"):
             spoken.append(text)
             c.say(text, emotion)
-        res = agent.Task(goal, self._think, eyes, hands, self.ask_yes, say, look_google=look, stop=self.stop,
-                         open_fn=actions.open_thing, on_step=self._on_step,
-                         ignore=lambda: spoken + [h.get("text", "") for h in list(getattr(c, "history", []))[-12:]]).run()
+        task = agent.Task(goal, self._think, eyes, hands, self.ask_yes, say, look_google=look, stop=self.stop,
+                          open_fn=actions.open_thing, on_step=self._on_step,
+                          ignore=lambda: spoken + [h.get("text", "") for h in list(getattr(c, "history", []))[-12:]])
+        res = task.run()
         print(f"[руки] итог: {res}")
+        if res.ok and not task.denied and not self.stop.is_set() and book is not None:
+            key = book.record(goal, task.trace)
+            said = getattr(self, "_said", None)
+            if said:
+                key = book.record(said, task.trace) or key
+            if key:
+                print(f"[учусь] запомнила, как делать «{key}»: {len(task.trace)} шагов")
+                c.ui.add("sys", "Запомнила, как это делается — в следующий раз будет быстрее.")
         c.journal.log("action", what=f"задача «{goal}»: {'да' if res.ok else 'нет'} за {res.steps} шагов")
         if self.stop.is_set():
             c.say("Остановилась.")
