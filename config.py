@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent
 HOME = Path(os.environ.get("PODRUGA_HOME", ROOT))
 
 USER_KEYS = {"companion_name", "user_name",
-             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar", "brain", "hands", "hands_google", "ptt", "ptt_style"}   # что меняется из окна настроек
+             "trait_bold", "trait_play", "trait_talk", "walk", "guests", "avatar", "brain", "hands", "hands_google", "ptt", "ptt_style", "ptt_key"}   # что меняется из окна настроек
 TRAITS_DEFAULT = {"trait_bold": "20", "trait_play": "55", "trait_talk": "30"}
 SILERO_SPEAKERS = {"xenia", "kseniya", "baya"}
 QWEN_VOICES = {"anya", "alisa", "tanya"}                 # живые голоса (voice_qwen.py), можно продавать
@@ -99,6 +99,8 @@ def apply_user_settings(cfg: dict) -> None:
             cfg.setdefault("hands", {})[name] = s[key] == "1"
     if s.get("walk") in ("0", "1"):
         cfg.setdefault("walk", {})["enabled"] = s["walk"] == "1"
+    if s.get("ptt_key") in ("ralt", "rcmd", "rshift", "rctrl", "fn", "off"):
+        cfg.setdefault("microphone", {})["ptt_key"] = s["ptt_key"]
     if s.get("ptt_style") in ("toggle", "hold"):
         cfg.setdefault("microphone", {})["ptt_style"] = s["ptt_style"]
     if s.get("ptt") in ("0", "1"):                    # слушать только пока зажата клавиша

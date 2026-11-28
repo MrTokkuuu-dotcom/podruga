@@ -35,6 +35,47 @@ def lang_name(text: str) -> str:
     return "russian"
 
 
+class PhraseCache:
+    """Короткие фразы, которые она уже говорила этим голосом («Включила!», «Вот, открыла.», «Привет, Дима.»),
+    лежат готовым звуком: в следующий раз — сразу, без работы видеочипа (он нужен мозгу). ~100 КБ на фразу,
+    не больше MAX штук (самые старые уходят)."""
+    MAX_CHARS, MAX = 60, 400
+
+    def __init__(self, folder: Path):
+        self.dir = folder
+        self.hits = 0
+
+    def _path(self, voice: str, text: str) -> Path:
+        import hashlib
+        key = re.sub(r"\s+", " ", text.strip().lower())
+        return self.dir / voice / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:20] + ".npy")
+
+    def get(self, voice: str, text: str):
+        if len(text.strip()) > self.MAX_CHARS:
+            return None
+        f = self._path(voice, text)
+        try:
+            a = np.load(f)
+            os.utime(f)                                   # свежая — дольше живёт
+            self.hits += 1
+            return a
+        except Exception:
+            return None
+
+    def put(self, voice: str, text: str, audio: np.ndarray) -> None:
+        if len(text.strip()) > self.MAX_CHARS or audio is None or len(audio) < RATE // 4:
+            return
+        try:
+            f = self._path(voice, text)
+            f.parent.mkdir(parents=True, exist_ok=True)
+            np.save(f, audio.astype(np.int16))
+            files = sorted(f.parent.glob("*.npy"), key=lambda x: x.stat().st_mtime)
+            for old in files[:-self.MAX]:
+                old.unlink(missing_ok=True)
+        except Exception as e:
+            print(f"[голос] кэш фраз: {e}", flush=True)
+
+
 class QwenVoiceOut:
     def __init__(self, home: Path, voice: str = "anya", fallback=None, notify=print):
         self.home = Path(home)
@@ -47,6 +88,7 @@ class QwenVoiceOut:
         self.failed = False
         self.model = None
         self._refs: dict = {}
+        self.cache = PhraseCache(self.home / "data" / "voice_cache")
         self._jobs: queue.Queue = queue.Queue()
         threading.Thread(target=self._worker, name="voice-qwen", daemon=True).start()
 
@@ -56,6 +98,9 @@ class QwenVoiceOut:
                 r = self.fallback.synth(text, emotion) if _takes_emotion(self.fallback) else self.fallback.synth(text)
                 return r if isinstance(r, tuple) else (r, getattr(self.fallback, "rate", RATE))
             return np.zeros(0, dtype=np.int16), RATE
+        hit = self.cache.get(self.voice, text)
+        if hit is not None:
+            return hit, RATE
         out: queue.Queue = queue.Queue()
         self._jobs.put((text, self.voice, out))
         try:
@@ -71,6 +116,11 @@ class QwenVoiceOut:
         """По кусочкам (~1 с речи): первый звук через ~0,7 с, пока она говорит — готовится следующий."""
         if not self.ready.is_set():
             yield self.synth(text, emotion)
+            return
+        hit = self.cache.get(self.voice, text)
+        if hit is not None:                               # уже говорила эту фразу — готовый звук, сразу
+            print(f"[голос] готовая фраза: «{text[:40]}»", flush=True)
+            yield hit, RATE
             return
         out: queue.Queue = queue.Queue()
         cancel = threading.Event()
@@ -104,11 +154,18 @@ class QwenVoiceOut:
             text, voice, out = job[:3]
             try:
                 if len(job) == 4:
+                    parts = []
                     for a in self._stream(text, voice, job[3]):
+                        parts.append(a)
                         out.put(("chunk", a))
+                    whole = not job[3].is_set()              # до «end»: потом слушатель сам ставит cancel
                     out.put(("end", None))
+                    if parts and whole:
+                        self.cache.put(voice, text, np.concatenate(parts))
                 else:
-                    out.put(("ok", self._synth(text, voice)))
+                    a = self._synth(text, voice)
+                    self.cache.put(voice, text, a)
+                    out.put(("ok", a))
             except Exception as e:
                 out.put(("err", e))
 

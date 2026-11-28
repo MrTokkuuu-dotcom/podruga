@@ -145,7 +145,7 @@ tasks.TaskRunner(c).run("включи x в ютуб музыке")
 if ran or not c.said:
     bad.append(f"рецепт: агент={ran} сказала={c.said}")
 
-# 8) вторая задача, пока идёт первая
+# 8) вторая задача, пока идёт первая (v41): новая просьба главнее — прежнюю молча бросаем, начинаем новую
 agent.Task = SlowTask
 recipes.find = lambda goal: None
 started.clear()
@@ -153,9 +153,12 @@ c = Comp()
 tr = tasks.TaskRunner(c)
 tr.start("раз")
 started.wait(2)
+started.clear()
 tr.start("два")
-if not any("подожди" in s.lower() for s in c.said):
-    bad.append("вторая задача не получила «подожди»")
+if any("подожди" in s.lower() for s in c.said) or any("остановилась" in s.lower() for s in c.said):
+    bad.append(f"новая просьба посреди дела: {c.said}")
+if not started.wait(2) or not tr.running:
+    bad.append("вторая задача не началась")
 tr.intercept("стоп")
 tr.join(2)
 

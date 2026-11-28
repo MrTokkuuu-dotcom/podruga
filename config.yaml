@@ -41,6 +41,7 @@ microphone:
   barge_in: "auto"         # перебивание: auto = только в наушниках; true = всегда; false = никогда
   push_to_talk: true       # слушает только по кнопке 🎙 рядом с ней (или правый ⌥); false = слушает всё время
   ptt_style: "toggle"      # toggle = нажал — слушает, нажал ещё раз — закончил; hold = слушает, пока держишь
+  ptt_key: "ralt"          # клавиша микрофона: ralt (⌥ справа), rcmd (⌘ справа), rshift, rctrl, fn, off
 
 wake:
   enabled: true            # false = слушает всё подряд, без команд

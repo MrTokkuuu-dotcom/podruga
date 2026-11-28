@@ -468,13 +468,15 @@ class Companion:
             self.ui.state("think" if self.awake else "sleep")
             self._park_later()
 
-    def _ptt_event(self, down: bool):
+    def _ptt_event(self, down: bool, src: str = "кнопка"):
         """Кнопка 🎙 или правый ⌥. «toggle» (по умолчанию): нажал — слушает, нажал ещё раз — закончил.
         «hold»: слушает, пока держишь."""
         L = getattr(self, "listener", None)
         if not L:
             return
         style = self.cfg.get("microphone", {}).get("ptt_style", "toggle")
+        if down:
+            print(f"[кнопка] {src}: {'закончил' if (L.held and style != 'hold') else 'слушаю'}")
         if style == "hold":
             (self._ptt_start if down else self._ptt_stop)()
         elif down:
@@ -504,6 +506,19 @@ class Companion:
         t = threading.Timer(secs, check)
         t.daemon = True
         t.start()
+
+    def set_ptt_key(self, key: str):
+        import pushtotalk
+        if key not in pushtotalk.KEYS:
+            return
+        self.cfg.setdefault("microphone", {})["ptt_key"] = key
+        from config import save_user_settings
+        try:
+            save_user_settings(self.cfg, {"ptt_key": key})
+        except Exception as e:
+            print(f"[кнопка] настройку не сохранила: {e}")
+        print(f"[кнопка] клавиша микрофона: {pushtotalk.label(key)}")
+        self.ui.ptt_key(pushtotalk.label(key) if key != "off" else "")
 
     def set_listen_mode(self, mode: str):
         """Из настроек: toggle (нажал/нажал), hold (держать) или always (слушает всё время)."""
@@ -739,6 +754,9 @@ class Companion:
             if told and kind in ("ОТКРЫТЬ", "СДЕЛАТЬ", "ЗАКРЫТЬ", "МУЗЫКА", "ГРОМКОСТЬ"):
                 print(f"[команда] {c}: он рассказывает («{self._said()}»), а не просит — не делаю")
                 continue
+            import actions
+            if kind == "ОТКРЫТЬ" and not actions.known_target(arg):
+                kind = "СДЕЛАТЬ"                     # «ОТКРЫТЬ YouTube и найти канал ITpedia» — это дело, а не просто сайт
             print(f"[команда] {kind} {arg}")
             if kind == "НАПОМНИТЬ":
                 self.initiative.add_from_command(c)
@@ -799,7 +817,20 @@ class Companion:
             print(f"[действие] не получилось: {e}")
             self.ui.add("sys", f"Не получилось: {kind.lower()} {arg} ({str(e)[:80]})")
 
+    # «смешные факты о собаках», «расскажи что-нибудь интересное про космос» — это знания, а не свежие данные:
+    # Википедия на такое находит «Партию двухвостой собаки» (журнал 29.11). Рассказывает сама.
+    _KNOWLEDGE = re.compile(r"\b(факт\w*|интересн\w*|смешн\w*|забавн\w*|прикольн\w*|fun facts?|interesting|"
+                            r"facts?|шутк\w*|анекдот\w*|загадк\w*|история про|историю про)\b", re.I)
+
     def _do_search(self, query: str) -> None:
+        from websearch import is_weather as _is_w, needs_google as _ng
+        if self._KNOWLEDGE.search(query) and not _is_w(query) and not _ng(query):
+            print(f"[поиск] {query} → это знания, рассказываю сама")
+            self.say_generated(self.system(),
+                               f"{self.user} попросил: «{query}». Расскажи сама, из своих знаний: 2–3 коротких настоящих "
+                               f"факта именно про это (не про другое), живо, своими словами. Не выдумывай. Без списков.")
+            self.last_talk = time.monotonic()
+            return
         city = self.cfg.get("user_city", "Пусан")
         t = now()
         from local_brain import NeedGoogle
@@ -1975,8 +2006,11 @@ class Companion:
             self.listener.ptt = bool(m.get("push_to_talk", False))
             self.listener.start()
             import pushtotalk
-            pushtotalk.start(lambda: self._ptt_event(True), lambda: self._ptt_event(False))
+            pushtotalk.start(lambda: self._ptt_event(True, "клавиша"), lambda: self._ptt_event(False, "клавиша"),
+                             lambda: self.cfg.get("microphone", {}).get("ptt_key", "ralt"))
             self.ui.ptt_mode(self.listener.ptt, m.get("ptt_style", "toggle"))
+            k = m.get("ptt_key", "ralt")
+            self.ui.ptt_key(pushtotalk.label(k) if k != "off" else "")
             if self.listener.ptt:
                 print("[уши] режим «нажми и говори»: слушаю только пока зажата кнопка 🎙 или правый ⌥")
                 self._park_later(30)                 # после запуска уши поработают и уйдут из памяти

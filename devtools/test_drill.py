@@ -71,7 +71,7 @@ check("스크린샷", intents.mac_command("스크린샷 찍어줘"), ("shot", ""
 check("ю туб", recipes.find("включи кино в ю туб музыке").name, "ytmusic")
 check("епта не поиск", recipes.find("епта открой ютуб"), None)
 check("короче не в запросе", recipes.find("короче включи кино в ютуб музыке").query, "кино")
-check("посмотри на ютубе", recipes.find("посмотри на ютубе новое видео мистера биста").name, "youtube")
+check("посмотри на ютубе", recipes.find("посмотри на ютубе новое видео мистера биста").name, "youtube_latest")   # v41: новое — по дате
 import actions  # noqa: E402
 for w in ("почту", "дискорд", "стим", "телегу", "вотсап", "чат джипити"):
     check(f"знаю «{w}»", actions.known_target(w), True)

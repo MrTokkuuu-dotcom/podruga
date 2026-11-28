@@ -133,7 +133,8 @@ class LocalBrain:
         text = "\n\n".join(m["content"] for m in messages)
         temp = (options or {}).get("temperature", 0.2)
         n = (options or {}).get("max_tokens", 400)
-        return "".join(self._run([{"role": "user", "content": text}], n, temp, cached=False))
+        static = (options or {}).get("static")             # неизменное начало подсказки (правила агента) — в кэш
+        return "".join(self._run([{"role": "user", "content": text}], n, temp, cached=False, static=static))
 
     def search(self, query: str, context: str = "") -> str:
         """Погода (MET Norway) или справка (Википедия) → своя модель выбирает главное.
@@ -182,10 +183,10 @@ class LocalBrain:
         except queue.Empty:
             return False
 
-    def _run(self, msgs, max_tokens, temp, cached=True):
+    def _run(self, msgs, max_tokens, temp, cached=True, static=None):
         out: queue.Queue = queue.Queue()
         cancel = threading.Event()
-        self._jobs.put(("gen", (msgs, max_tokens, temp, cached, cancel), out))
+        self._jobs.put(("gen", (msgs, max_tokens, temp, cached, cancel, static), out))
         try:
             while True:
                 kind, val = out.get(timeout=180)
@@ -242,6 +243,9 @@ class LocalBrain:
                 elif kind == "unload":
                     res = self._unload()
                 elif kind == "prefix":
+                    if any(j[0] == "gen" for j in list(self._jobs.queue)):
+                        self._jobs.put((kind, args, out))     # сначала ответы, характер — потом
+                        continue
                     res = self._prefix() if self.model is not None else True
                 else:
                     self._gen(*args, out)
@@ -382,7 +386,24 @@ class LocalBrain:
         self._hist_ids, self._hist_cache = hist, copy.deepcopy(cache)
         return cache, ids[len(hist):], done
 
-    def _gen(self, msgs, max_tokens, temp, cached, cancel, out):
+    def _static_cache(self, static: str):
+        """Кэш для неизменного начала подсказки без характера (правила агента «глаз и рук»): ~1500 ток один раз,
+        а не на каждом шаге (журнал 29.11: каждый шаг 3,7 с, «из кэша 0»)."""
+        from mlx_lm.models.cache import make_prompt_cache
+        sc = getattr(self, "_statics", None)
+        if sc is None:
+            sc = self._statics = {}
+        if static not in sc:
+            base = self._template([{"role": "user", "content": static + "§"}], False)
+            ids = self._encode(base[: base.index("§")])
+            cache = make_prompt_cache(self.model)
+            self._feed(cache, ids)
+            if len(sc) >= 3:
+                sc.pop(next(iter(sc)))
+            sc[static] = (ids, cache)
+        return sc[static]
+
+    def _gen(self, msgs, max_tokens, temp, cached, cancel, static, out):
         import gpu
         gpu.mark_own()
         try:
@@ -392,12 +413,22 @@ class LocalBrain:
             from mlx_lm.sample_utils import make_sampler
             t0 = time.monotonic()
             if cached:
-                self._prefix()
+                if self._pre_text is None:
+                    self._prefix()
+                elif self._stable != self._pre_text:
+                    # память обновилась: этот ответ — со старым характером из кэша (сразу), новый посчитается
+                    # после ответа. Раньше ответ ждал пересчёта ~6–7 с (журнал 29.11)
+                    msgs = [{"role": "system", "content": self._pre_text}] + list(msgs[1:])
+                    self._jobs.put(("prefix", None, None))
                 ids = self._encode(self._template(msgs))
                 cache, rest, reused = self._prompt(msgs, ids)
             else:
                 ids = self._encode(self._template(msgs))
                 cache, rest, reused = None, ids, 0
+                if static and msgs and msgs[0]["content"].startswith(static):
+                    pids, pc = self._static_cache(static)
+                    if self._starts(ids, pids) and len(ids) > len(pids):
+                        cache, rest, reused = copy.deepcopy(pc), ids[len(pids):], len(pids)
             first, n = None, 0
             kw = {"prompt_cache": cache} if cache is not None else {}
             for r in stream_generate(self.model, self.tok, rest, max_tokens=max_tokens,

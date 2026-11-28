@@ -51,9 +51,12 @@ class TaskRunner:
             yn = guard.yes_no(text)
             if yn is None:
                 return False
-            self._answer = yn
+            new = len(text.split()) > 4              # «нет, ты зашла не туда, нужен ITpedia» — это новая просьба
+            self._answer = yn and not new
+            if new:
+                self.stop.set()                      # прежнее бросаем, новое поймёт мозг и начнёт заново
             self._got.set()
-            return True
+            return not new
         return False
 
     def ask_yes(self, question: str) -> bool:
@@ -83,10 +86,19 @@ class TaskRunner:
     # --- запуск ---
     def start(self, goal: str, fn=None, said: str | None = None) -> None:
         """fn — своё дело вместо рецепта/агента (например, «закрой телеграм» со своим вопросом «да?»)."""
-        if self.running:
-            self.c.say("Подожди, я ещё с прошлым вожусь. Скажи «стоп», если не нужно.")
-            return
+        if self.running:                                 # новая просьба посреди дела — главнее старой
+            print(f"[руки] новая просьба — бросаю прежнее: {goal}")
+            self._quiet_stop = True                      # старое молча, без «Остановилась»
+            self.stop.set()
+            self._answer = False
+            self._got.set()
+            if self._thread:
+                self._thread.join(8)
+            if self.running:
+                self.c.say("Подожди, я ещё с прошлым вожусь. Скажи «стоп», если не нужно.")
+                return
         self.running = True
+        self._quiet_stop = False
         self._said = said if said and said.strip() != goal.strip() else None   # его слова — чтобы узнать в следующий раз
         self.stop.clear()
         self._thread = threading.Thread(target=self._run_safe, args=(goal, fn), name="task", daemon=True)
@@ -121,7 +133,10 @@ class TaskRunner:
         b = loc if loc is not None and not getattr(loc, "failed", False) and loc.ready.is_set() else g
         if b is None:
             raise RuntimeError("нечем думать")
-        return b.chat([{"role": "user", "content": prompt}], {"temperature": 0.2, "max_tokens": 60})
+        opts = {"temperature": 0.2, "max_tokens": 60}
+        if b is loc and prompt.startswith(agent.RULES):
+            opts["static"] = agent.RULES                  # правила агента — из кэша
+        return b.chat([{"role": "user", "content": prompt}], opts)
 
     def _look_google(self, prompt: str) -> str:
         import vision
@@ -208,7 +223,8 @@ class TaskRunner:
                 c.ui.add("sys", "Запомнила, как это делается — в следующий раз будет быстрее.")
         c.journal.log("action", what=f"задача «{goal}»: {'да' if res.ok else 'нет'} за {res.steps} шагов")
         if self.stop.is_set():
-            c.say("Остановилась.")
+            if not getattr(self, "_quiet_stop", False):
+                c.say("Остановилась.")
         elif res.ok:
             msg = res.message.strip(" .")
             plain = len(msg) < 4 or msg.lower() in ("готово", "что сделала", "коротко", "коротко, что сделала")

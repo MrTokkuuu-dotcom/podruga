@@ -101,7 +101,38 @@ cy = yaml.safe_load(open(Path(main.__file__).with_name("config.yaml"), encoding=
 if cy["brain"].get("filler") is not False:
     bad.append("«Хм, сейчас подумаю» снова включено по умолчанию")
 
+# v41: по журналу 29.11 (ITpedia, Маркарян, собаки, «давай по-английски»)
+for goal, name, q in [("Так, найди пожалуйста на YouTube канал Арсена Маркаряна.", "youtube_channel", "арсена маркаряна"),
+                      ("открыть канал ITpedia на YouTube и включить самое последнее видео", "youtube_latest", "itpedia"),
+                      ("Зайди на канал Marmokka на ютубе и поставь его видео", "youtube_latest", "marmokka"),
+                      ("search for the ITpedia channel on youtube", "youtube_channel", "itpedia")]:
+    r = recipes.find(goal)
+    if not r or (r.name, r.query) != (name, q) or "%25" in r.url:
+        bad.append(f"ютуб: «{goal}» → {r and (r.name, r.query, r.url)}")
+import intents  # noqa: E402
+for t, want in [("Let's talk English now.", "РЕЖИМ english"), ("오케이 이제 한국어로 말을 하자.", "РЕЖИМ корейский"),
+                ("Why you speak Russian?", None), ("я учу английский", None)]:
+    if intents.device_command(t) != want:
+        bad.append(f"язык: «{t}» → {intents.device_command(t)}")
+if intents.body_command("Все, хватит ходить, хватит, хватит, присядь.") != "sit":
+    bad.append("«…хватит, присядь» — не села")
+for f in ["[разное] Обсуждает еду (готовить/не готовить).", "[о нём] Обсуждает с собеседницей, какой ролик поставить."]:
+    if not memory.junk_fact(f):
+        bad.append(f"память пропустила мусор: {f}")
+import tempfile  # noqa: E402
+import voice_qwen  # noqa: E402
+pc = voice_qwen.PhraseCache(Path(tempfile.mkdtemp()))
+pc.put("anya", "Вот, открыла.", np.ones(24000, np.int16))
+if pc.get("anya", "вот,  открыла.") is None or pc.get("alisa", "Вот, открыла.") is not None:
+    bad.append("готовые фразы: не нашла своё или нашла чужим голосом")
+pc.put("anya", "Очень длинная фраза " * 10, np.ones(24000, np.int16))
+if pc.get("anya", "Очень длинная фраза " * 10) is not None:
+    bad.append("готовые фразы: длинные хранить не надо")
+import agent  # noqa: E402
+if not agent.build_prompt("цель", [], "экран").startswith(agent.RULES):
+    bad.append("агент: правила не в начале — кэш не сработает")
+
 if bad:
     print("FAIL\n" + "\n".join(bad))
     sys.exit(1)
-print("OK: кнопка (нажал/нажал и держать), запрос YouTube, память, без «думаю»")
+print("OK: кнопка, YouTube (каналы, свежее), язык, память, готовые фразы, кэш агента")

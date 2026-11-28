@@ -1,35 +1,49 @@
-"""«Нажми и говори»: пока зажат правый ⌥ (Option), она слушает; отпустил — отвечает. В этом режиме
-не слышит ни видео, ни друзей, ни телевизор — только то, что сказано с зажатой клавишей.
-Ловим клавишу средствами macOS (NSEvent), нужен «Универсальный доступ» — он у неё уже есть для «рук»."""
+"""Клавиша микрофона: работает как кнопка 🎙 рядом с ней (нажал — слушает, нажал ещё раз — закончил, или «держать»).
+Удобно, когда она гуляет по экрану и до кнопки не дотянуться. Какая клавиша — в настройках («microphone.ptt_key»).
+Ловим средствами macOS (NSEvent, только клавиши-модификаторы: они не печатают букв в других программах),
+нужен «Универсальный доступ» — он у неё уже есть для «рук»."""
 import sys
 
-RIGHT_OPTION = 61                 # код клавиши правого ⌥
-_DEV_RALT = 0x40                  # бит «правый Alt/Option» в modifierFlags
+# имя → (код клавиши, бит в modifierFlags, подпись)
+KEYS = {
+    "ralt": (61, 0x40, "⌥ справа"),
+    "rcmd": (54, 0x10, "⌘ справа"),
+    "rshift": (60, 0x04, "⇧ справа"),
+    "rctrl": (62, 0x2000, "⌃ справа"),
+    "fn": (63, 1 << 23, "fn / 🌐"),
+    "off": (None, 0, "выключена"),
+}
 _keep = []
 
 
-def start(on_press, on_release) -> bool:
+def label(name: str) -> str:
+    return KEYS.get(name, KEYS["ralt"])[2]
+
+
+def start(on_press, on_release, key_name=lambda: "ralt") -> bool:
+    """key_name() спрашивается на каждое нажатие — смена в настройках действует сразу, без перезапуска."""
     if sys.platform != "darwin":
         return False
     try:
         from PyObjCTools import AppHelper
-        AppHelper.callAfter(_install, on_press, on_release)     # мониторы ставятся только в главном потоке
+        AppHelper.callAfter(_install, on_press, on_release, key_name)     # мониторы — только в главном потоке
         return True
     except Exception as e:
         print(f"[кнопка] не включилась: {e}")
         return False
 
 
-def _install(on_press, on_release):
+def _install(on_press, on_release, key_name):
     from AppKit import NSEvent
     state = {"down": False}
     MASK = 1 << 12                # NSEventMaskFlagsChanged
 
     def handle(ev):
         try:
-            if ev.keyCode() != RIGHT_OPTION:
+            code, bit, _ = KEYS.get(key_name(), KEYS["ralt"])
+            if code is None or ev.keyCode() != code:
                 return
-            down = bool(ev.modifierFlags() & _DEV_RALT)
+            down = bool(ev.modifierFlags() & bit)
             if down != state["down"]:
                 state["down"] = down
                 (on_press if down else on_release)()
@@ -42,4 +56,4 @@ def _install(on_press, on_release):
 
     _keep.append(NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(MASK, handle))   # в других программах
     _keep.append(NSEvent.addLocalMonitorForEventsMatchingMask_handler_(MASK, local))     # в её окне
-    print("[кнопка] «нажми и говори»: правый ⌥ (Option)")
+    print(f"[кнопка] клавиша микрофона: {label(key_name())}")

@@ -71,6 +71,15 @@ _BODY_MAX_WORDS = 6
 
 def body_command(text: str) -> str | None:
     """'sit' | 'lie' | 'stand' | 'pace' | 'left' | 'right' | 'stop' или None."""
+    r = _body_command(text)
+    if r is None and "," in text:                       # «всё, хватит ходить, хватит, присядь» — главное в конце
+        last = text.rsplit(",", 1)[1].strip(" .!?")
+        if last and len(last.split()) <= 3:
+            r = _body_command(last)
+    return r
+
+
+def _body_command(text: str) -> str | None:
     t = unjunk(norm(text))
     if not t or len(t.split()) > _BODY_MAX_WORDS or any(p in t for p in NOT_BODY) or any(w in t for w in _NOT_BODY_TOPIC):
         return None
@@ -124,11 +133,16 @@ _TIMER_H = re.compile(r"(?:та[йи]?мер\w*|тамер\w*)\s+на\s+(?:(\w+)
 _LANG = [("РЕЖИМ english", re.compile(r"(?:давай|хочу|можем|будем|давай-ка)\s+(?:\w+\s+){0,2}(?:практиковать|потренируем|"
                                        r"тренировать|учить|поговорим|говорить|болтать)\s+(?:\w+\s+)?(?:английск\w*|по английски)|"
                                        r"^(?:говори|поговори|давай)\s+по английски|let s (?:practice|speak|talk in) english|"
-                                       r"^(?:speak|talk to me in) english")),
+                                       r"^(?:speak|talk to me in) english|"
+                                       r"(?:let s|lets|can you|could you|we can|just)\s+(?:\w+\s+){0,1}(?:speak|talk)\s+"
+                                       r"(?:about\s+)?(?:some\s+|in\s+)?english|^speak english|^talk english|"
+                                       r"(?:давай|говори|говорить|поговорим)\s+(?:\w+\s+)?на английском")),
          ("РЕЖИМ корейский", re.compile(r"(?:давай|хочу|можем|будем)\s+(?:\w+\s+){0,2}(?:практиковать|потренируем|"
                                         r"тренировать|учить|поговорим|говорить|болтать)\s+(?:\w+\s+)?(?:корейск\w*|по корейски)|"
                                         r"^(?:говори|поговори|давай)\s+по корейски|let s (?:practice|speak|talk in) korean|"
-                                        r"^(?:speak|talk to me in) korean|한국어로 (?:말해|얘기해|이야기해)")),
+                                        r"^(?:speak|talk to me in) korean|한국어로 (?:말해|얘기해|이야기해)|"
+                                        r"(?:한국어|한국말)로\s*(?:만\s*)?(?:말을\s*)?(?:말\s*)?(?:을\s*)?(?:하자|하라고|하려고|하죠|해|해줘|해라)|"
+                                        r"(?:давай|говори|говорить|поговорим)\s+(?:\w+\s+)?на корейском")),
          ("РЕЖИМ русский", re.compile(r"^(?:давай\s+)?(?:снова\s+|опять\s+)?(?:говори|поговорим|вернись|говорить)\s+"
                                       r"(?:\w+\s+)?(?:по русски|на русский|на русском)|^speak russian|러시아어로 말해"))]
 
@@ -144,6 +158,11 @@ def narrative(said: str) -> bool:
         return False
     if re.search(r"\bуме(?:ешь|ет|ете)\b|\bты знаешь как\b", t):
         return True                                      # «ты умеешь включать музыку?» — вопрос, а не просьба
+    if re.search(r"\b(?:can you|could you|please|let s|lets)\b", t):
+        return False
+    if re.match(r"^(?:well\s+|so\s+|yeah\s+)?(?:i|we)\s+(?:m|re|am|are|was|were)?\s*(?:gonna|going to|just|already)\b|"
+                r"^(?:well\s+|so\s+|yeah\s+)?(?:i|we)\s+(?:played|watched|opened|closed|turned|was|were)\b", t):
+        return True                                      # «We're gonna play Last of Us» — рассказ, а не «запусти игру»
     return bool(re.match(r"^(?:а\s+|ну\s+|вот\s+)?(?:я|мы)\s+(?:уже\s+|только что\s+|сам\s+|сегодня\s+|вчера\s+)?"
                          r"\w+(?:л|ла|ли|лся|лась)\b", t))
 
