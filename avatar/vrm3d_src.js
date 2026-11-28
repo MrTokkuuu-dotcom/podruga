@@ -219,7 +219,7 @@ function placeStage(force) {
   set('micBtn', '--mx', S.btnX, '--my', S.btnY);
   set('chatBtn', '--bx', S.btnX + 52, '--by', S.btnY + 5);
   set('quitBtn', '--qx', S.btnX + 94, '--qy', S.btnY + 9);
-  set('hud', '--hx', Math.round(S.x), '--hy', Math.round(S.H - S.y + drop - top - 14));
+  set('hud', '--hx', Math.round(S.x), '--hy', Math.round(S.H - S.y + drop - top - 46));   // повыше: не налезает на голову
 
 }
 function stageOn(W, H, x, y) {

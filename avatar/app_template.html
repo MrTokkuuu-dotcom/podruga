@@ -250,8 +250,12 @@
       <button class="btn" onclick="closePanels()">Закрыть</button>
     </div>
     <div class="note" id="setNote"></div>
-    <label style="flex-direction:row;align-items:center;gap:8px;margin-top:6px"><input type="checkbox" id="sPtt">
-      Слушать только пока зажата кнопка 🎙 (или правый ⌥) — не слышит видео и разговоры вокруг</label>
+    <label>Как меня слушать<select id="sListen">
+      <option value="toggle">Кнопка 🎙: нажал — слушаю, нажал ещё раз — закончил</option>
+      <option value="hold">Кнопка 🎙: слушаю, пока держишь</option>
+      <option value="always">Всё время, без кнопки (слышу и видео вокруг)</option></select></label>
+    <p style="margin-top:-4px; opacity:.7; font-size:11px">С кнопкой я не слышу видео и разговоры вокруг, а уши не занимают
+      память. Правый ⌥ (Option) на клавиатуре работает так же, как 🎙.</p>
     <p style="margin-top:8px">Слушать только мой голос: <span id="vpState">—</span></p>
     <div class="row"><button class="btn" onclick="api('enroll_voice'); closePanels()">Запомнить мой голос</button>
       <button class="btn" onclick="api('forget_voice'); closePanels()">Забыть</button></div>
@@ -295,21 +299,22 @@ const ui = {
   state(s) {
     const face = (s === 'look') ? 'think' : (s === 'pause' || s === 'setup') ? 'sleep' : s;
     ui._face = face; ui._paint();
-    $('status').textContent = (ui._ptt && s === 'listen') ? 'Зажми 🎙 и говори' : (ui._ptt && s === 'sleep') ? 'Сплю · зажми 🎙' : (STATUS[s] || s);
+    $('status').textContent = (ui._ptt && s === 'listen') ? 'Нажми 🎙 и говори' : (ui._ptt && s === 'sleep') ? 'Сплю · нажми 🎙' : (STATUS[s] || s);
     $('dot').style.background = DOT[s] || 'var(--quiet)';
     $('sleepBtn').textContent = (s === 'sleep') ? '☀︎' : '☾';
     $('pauseBtn').classList.toggle('on', s === 'pause');
     ui._s = s; ui._hud();
   },
   // ---- табличка над головой: что она сейчас делает ----
-  _s: 'sleep', _ptt: false, _held: false, _hudT: null, _sayT: null,
+  _s: 'sleep', _ptt: false, _style: 'toggle', _held: false, _hudT: null, _sayT: null,
   _hud() {
     const s = ui._s, held = ui._held, ptt = ui._ptt;
-    const M = { sleep: ['💤', ptt ? 'Сплю · зажми 🎙' : 'Сплю · «привет, подруга»'],
-                listen: held ? ['👂', 'Слушаю'] : ptt ? ['🎙', 'Зажми и говори'] : ['👂', 'Слушаю'],
+    const tg = ui._style !== 'hold', press = tg ? 'нажми' : 'зажми';
+    const M = { sleep: ['💤', ptt ? `Сплю · ${press} 🎙` : 'Сплю · «привет, подруга»'],
+                listen: ptt ? ['🎙', tg ? 'Нажми 🎙 и говори' : 'Зажми 🎙 и говори'] : ['👂', 'Слушаю'],
                 think: ['💭', 'Думаю'], talk: ['🗣', 'Говорю'], look: ['👀', 'Смотрю на экран'],
                 pause: ['⏸', 'Пауза · нажми 🎙'], setup: ['✨', 'Знакомимся'] };
-    const [ico, txt] = held ? ['👂', 'Слушаю'] : (M[s] || ['•', s]);
+    const [ico, txt] = held ? ['👂', tg ? 'Слушаю · нажми 🎙, когда закончишь' : 'Слушаю'] : (M[s] || ['•', s]);
     const h = $('hud'); if (!h) return;
     h.className = 's-' + (held ? 'listen' : s) + (held ? ' held' : '') + ((s === 'listen' || s === 'sleep') && !held ? ' idle' : '');
     $('hudIco').textContent = ico; $('hudTxt').textContent = txt;
@@ -323,7 +328,13 @@ const ui = {
     clearTimeout(ui._sayT);
     ui._sayT = setTimeout(() => d.classList.remove('show'), who === 'me' ? 2500 : 4000);
   },
-  pttMode(on) { ui._ptt = !!on; $('micBtn').title = on ? 'Зажми и говори (или правый ⌥)' : 'Зажми, чтобы сказать точно ей'; ui._hud(); },
+  pttMode(on, style) {
+    ui._ptt = !!on; ui._style = style || 'toggle';
+    const t = ui._style === 'hold' ? 'Зажми и говори (или правый ⌥)' : 'Нажми — слушаю, нажми ещё раз — закончил (или правый ⌥)';
+    $('micBtn').title = t; $('micBtn2').title = t;
+    $('micBtn').querySelector('.k').textContent = ui._style === 'hold' ? 'зажми и говори' : 'нажми и говори';
+    ui._hud();
+  },
   pttHeld(on) { ui._held = !!on; $('micBtn').classList.toggle('held', ui._held); $('micBtn2').classList.toggle('held', ui._held);
     $('status').textContent = ui._held ? 'Слушаю…' : (STATUS[ui._s] || ui._s); ui._hud(); },
   add(role, text, tag) {
@@ -436,7 +447,7 @@ async function openSettings() {
   $('keyState').textContent = s.has_key ? 'есть ✓' : 'нет';
   $('sBrain').value = s.brain || 'local'; $('brainState').textContent = s.brain_state || '';
   $('vpState').textContent = s.voiceprint ? 'включено ✓' : 'выключено (слушает всех)';
-  $('sPtt').checked = !!s.ptt; $('sPtt').dataset.was = s.ptt ? '1' : '0';
+  $('sListen').value = s.listen_mode || 'toggle'; $('sListen').dataset.was = $('sListen').value;
   $('sHands').checked = s.hands !== false; $('sHandsGoogle').checked = s.hands_google !== false;
   $('handsGoogleRow').style.display = s.has_key ? '' : 'none';
   $('permAcc').textContent = s.perm && s.perm.accessibility ? 'есть ✓' : 'нет';
@@ -472,19 +483,19 @@ async function saveSettings() {
   const r = await api('save_settings', { companion_name: $('sName').value.trim(), user_name: $('sUser').value.trim(),
     trait_bold: $('tBold').value, trait_play: $('tPlay').value, trait_talk: $('tTalk').value,
     brain: $('sBrain').value, hands: $('sHands').checked ? '1' : '0', hands_google: $('sHandsGoogle').checked ? '1' : '0' });
-  const ptt = $('sPtt').checked ? '1' : '0';
-  if (ptt !== $('sPtt').dataset.was) { api('set_ptt_mode', ptt === '1'); $('sPtt').dataset.was = ptt; }
+  const lm = $('sListen').value;
+  if (lm !== $('sListen').dataset.was) { api('set_listen_mode', lm); $('sListen').dataset.was = lm; }
   note('setNote', r && r.ok ? 'Сохранено ✓' : 'Не сохранилось', r && r.ok);
 }
 // ---- кнопка 🎙: зажал — слушает, отпустил — отвечает ----
 ['micBtn', 'micBtn2'].forEach((id) => {
   const b = $(id); let down = false;
-  const up = () => { if (!down) return; down = false; ui.pttHeld(false); api('ptt', false); };
+  const up = () => { if (!down) return; down = false; api('ptt', false); };   // «нажал/нажал» — Python решает сам
   b.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation(); down = true;
     try { b.setPointerCapture(e.pointerId); } catch (_) {}
-    ui.pttHeld(true); api('ptt', true);
+    api('ptt', true);
   });
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
   b.addEventListener('lostpointercapture', up); window.addEventListener('blur', up);

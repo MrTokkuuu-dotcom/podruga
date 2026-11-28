@@ -446,7 +446,7 @@ class Companion:
             self.interrupt()
 
     # --- «нажми и говори» ---
-    def _ptt_press(self):
+    def _ptt_start(self):
         L = getattr(self, "listener", None)
         if not L:
             return
@@ -460,13 +460,37 @@ class Companion:
         self.ui.state("listen")
         self.ui.ptt_held(True)
 
-    def _ptt_release(self):
+    def _ptt_stop(self):
         L = getattr(self, "listener", None)
         if L and L.held:
             L.release()
             self.ui.ptt_held(False)
             self.ui.state("think" if self.awake else "sleep")
             self._park_later()
+
+    def _ptt_event(self, down: bool):
+        """Кнопка 🎙 или правый ⌥. «toggle» (по умолчанию): нажал — слушает, нажал ещё раз — закончил.
+        «hold»: слушает, пока держишь."""
+        L = getattr(self, "listener", None)
+        if not L:
+            return
+        style = self.cfg.get("microphone", {}).get("ptt_style", "toggle")
+        if style == "hold":
+            (self._ptt_start if down else self._ptt_stop)()
+        elif down:
+            if L.held:
+                self._ptt_stop()
+            else:
+                self._ptt_start()
+                t0 = self._ptt_t0 = time.monotonic()
+
+                def limit():                           # забыл нажать второй раз — через минуту заканчиваем сами
+                    if L.held and getattr(self, "_ptt_t0", None) == t0:
+                        print("[уши] кнопка включена уже минуту — заканчиваю фразу")
+                        self._ptt_stop()
+                t = threading.Timer(60, limit)
+                t.daemon = True
+                t.start()
 
     def _park_later(self, secs: float = 12.0):
         """«Нажми и говори»: через ~12 с без кнопки уши уходят из памяти (~0,9 ГБ)."""
@@ -481,12 +505,28 @@ class Companion:
         t.daemon = True
         t.start()
 
+    def set_listen_mode(self, mode: str):
+        """Из настроек: toggle (нажал/нажал), hold (держать) или always (слушает всё время)."""
+        if mode not in ("toggle", "hold", "always"):
+            return
+        if mode != "always":
+            self.cfg.setdefault("microphone", {})["ptt_style"] = mode
+            from config import save_user_settings
+            try:
+                save_user_settings(self.cfg, {"ptt_style": mode})
+            except Exception as e:
+                print(f"[кнопка] настройку не сохранила: {e}")
+        L = getattr(self, "listener", None)
+        if L and L.held:
+            self._ptt_stop()
+        self.set_push_to_talk(mode != "always")
+
     def set_push_to_talk(self, on: bool):
         L = getattr(self, "listener", None)
         if L:
             L.ptt = on
             L.held = False
-        self.ui.ptt_mode(on)
+        self.ui.ptt_mode(on, self.cfg.get("microphone", {}).get("ptt_style", "toggle"))
         if on:
             self._park_later()
         elif self.stt and hasattr(self.stt, "wake"):
@@ -497,7 +537,10 @@ class Companion:
         except Exception as e:
             print(f"[кнопка] настройку не сохранила: {e}")
         print(f"[уши] режим «нажми и говори»: {'включён' if on else 'выключен'}")
-        self.ui.add("sys", "🎙 Слушаю только пока зажат правый ⌥ (Option)" if on else "🎙 Снова слушаю всё время")
+        hold = self.cfg.get("microphone", {}).get("ptt_style", "toggle") == "hold"
+        self.ui.add("sys", ("🎙 Слушаю, пока держишь 🎙 (или правый ⌥)" if hold else
+                            "🎙 Нажми 🎙 (или правый ⌥) — слушаю, нажми ещё раз — закончил") if on
+                    else "🎙 Снова слушаю всё время")
 
     def interrupt(self):
         print("✋ перебили — слушаю")
@@ -592,7 +635,10 @@ class Companion:
                 else bc.get("filler_after", 1.6)
             timer = threading.Timer(wait, filler)
             timer.daemon = True
-            timer.start()
+            # v40: «Хм, сейчас подумаю», «Дай секунду» — по просьбе Димы убраны: она путалась, а голос занимал
+            # видеочип, пока думает мозг. Что она думает — видно по табличке над головой. Вернуть: brain.filler: true
+            if bc.get("filler", False):
+                timer.start()
             try:
                 shown = False
                 extra = ("" if wav else "\nЕго слова уже расшифрованы — [[...]] не пиши. Первое предложение "
@@ -1929,8 +1975,8 @@ class Companion:
             self.listener.ptt = bool(m.get("push_to_talk", False))
             self.listener.start()
             import pushtotalk
-            pushtotalk.start(self._ptt_press, self._ptt_release)
-            self.ui.ptt_mode(self.listener.ptt)
+            pushtotalk.start(lambda: self._ptt_event(True), lambda: self._ptt_event(False))
+            self.ui.ptt_mode(self.listener.ptt, m.get("ptt_style", "toggle"))
             if self.listener.ptt:
                 print("[уши] режим «нажми и говори»: слушаю только пока зажата кнопка 🎙 или правый ⌥")
                 self._park_later(30)                 # после запуска уши поработают и уйдут из памяти

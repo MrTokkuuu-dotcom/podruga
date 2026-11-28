@@ -108,7 +108,7 @@ def _target_class():
                 bg(lambda: ui.move_to_screen("next"))
             elif tag == 11:
                 L = getattr(c, "listener", None)
-                bg(lambda: c.set_push_to_talk(not (L and L.ptt)))
+                bg(lambda: c.set_listen_mode("always" if (L and L.ptt) else c.cfg.get("microphone", {}).get("ptt_style", "toggle")))
 
         def menuWillOpen_(self, menu):
             c = _companion
@@ -147,7 +147,7 @@ def _build(companion):
     menu = NSMenu.alloc().init()
     menu.setAutoenablesItems_(False)
     for tag, title in [(1, "Спрятать"), (2, "Переписка"), (3, "Уснуть"), (4, "Пауза"),
-                       (5, "Настройки…"), (10, "Перейти на другой экран"), (0, None), (8, "Гости — отвечать только по имени"), (11, "Слушать, только пока зажат правый ⌥"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
+                       (5, "Настройки…"), (10, "Перейти на другой экран"), (0, None), (8, "Гости — отвечать только по имени"), (11, "Слушать только по кнопке 🎙"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
                        (0, None), (9, "Выйти")]:
         if title is None:
             menu.addItem_(NSMenuItem.separatorItem())

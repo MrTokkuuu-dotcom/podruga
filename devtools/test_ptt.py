@@ -60,7 +60,48 @@ for f, junk in [("[о нём] Просит найти факты о кошках
     if memory.junk_fact(f) != junk:
         bad.append(f"память: «{f}» мусор={not junk}")
 
+# v40: «нажал — слушает, нажал ещё раз — закончил» и «держать»
+import types  # noqa: E402
+bs = types.ModuleType("bootstrap")
+bs.__getattr__ = lambda n: (lambda *a, **k: None)
+sys.modules["bootstrap"] = bs
+import main  # noqa: E402
+
+
+class _UI:
+    def __getattr__(self, n):
+        return lambda *a, **k: None
+
+
+class _P:
+    paused = False
+
+
+c = main.Companion.__new__(main.Companion)
+c.listener, c.ui, c.pauser, c.stt, c.speaking, c.awake = L, _UI(), _P(), None, False, True
+c._park_later = lambda *a: None
+L.held = False
+c.cfg = {"microphone": {"ptt_style": "toggle"}}
+c._ptt_event(True); c._ptt_event(False)
+if not L.held:
+    bad.append("toggle: после первого нажатия не слушает")
+c._ptt_event(True); c._ptt_event(False)
+if L.held:
+    bad.append("toggle: второе нажатие не закончило")
+c.cfg = {"microphone": {"ptt_style": "hold"}}
+c._ptt_event(True)
+h1 = L.held
+c._ptt_event(False)
+if not h1 or L.held:
+    bad.append("hold: держать — слушает, отпустил — нет")
+if main.Companion.__dict__.get("respond") and "filler" not in open(main.__file__, encoding="utf-8").read():
+    bad.append("respond без filler?")
+import yaml  # noqa: E402
+cy = yaml.safe_load(open(Path(main.__file__).with_name("config.yaml"), encoding="utf-8"))
+if cy["brain"].get("filler") is not False:
+    bad.append("«Хм, сейчас подумаю» снова включено по умолчанию")
+
 if bad:
     print("FAIL\n" + "\n".join(bad))
     sys.exit(1)
-print("OK: нажми и говори, запрос YouTube, память")
+print("OK: кнопка (нажал/нажал и держать), запрос YouTube, память, без «думаю»")

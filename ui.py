@@ -25,7 +25,7 @@ class NullUI:
     def emotion(self, e, hold=None): pass
     def look(self, dx, dy): pass
     def mouth(self, v, shape=None): pass
-    def ptt_mode(self, on): pass
+    def ptt_mode(self, on, style="toggle"): pass
     def ptt_held(self, on): pass
     mini = True
     stage_on = False
@@ -164,7 +164,8 @@ class Api:
                 "brain": c["brain"].get("engine", "local"), "brain_state": self._companion.brain_state(),
                 "voiceprint": bool(self._companion.voiceprint and self._companion.voiceprint.active),
                 "hands": bool(c.get("hands", {}).get("enabled", True)),
-                "ptt": bool(c.get("microphone", {}).get("push_to_talk", False)),
+                "listen_mode": (c.get("microphone", {}).get("ptt_style", "toggle")
+                                if c.get("microphone", {}).get("push_to_talk", False) else "always"),
                 "hands_google": bool(c.get("hands", {}).get("google_fallback", True)),
                 "perm": __import__("eyes").permissions(),
                 "avatars": self._companion.avatars.listing(c.get("avatar_choice", "")) if getattr(self._companion, "avatars", None) else None}
@@ -179,13 +180,13 @@ class Api:
         """Кнопка 🎙 рядом с ней: зажал — слушает, отпустил — отвечает."""
         c = self._companion
         if c:
-            (c._ptt_press if on else c._ptt_release)()
+            c._ptt_event(bool(on))
         return {"ok": True}
 
-    def set_ptt_mode(self, on):
+    def set_listen_mode(self, mode):
         c = self._companion
         if c:
-            self._bg(c.set_push_to_talk, bool(on))
+            self._bg(c.set_listen_mode, str(mode))
         return {"ok": True}
 
     def save_settings(self, values):
@@ -423,7 +424,7 @@ class AppUI:
     def mouth(self, v, shape=None):
         self._fast(f"ui.mouth({v:.2f},'{shape or ''}')")
 
-    def ptt_mode(self, on): self._call("pttMode", bool(on))
+    def ptt_mode(self, on, style="toggle"): self._call("pttMode", bool(on), str(style))
     def ptt_held(self, on): self._call("pttHeld", bool(on))
     def act(self, name, ms=None): self._call("act", name, ms)
     def idle(self, name, sec=4): self._call("idle", name, sec)
