@@ -453,7 +453,7 @@ class AppUI:
         fr = winctl.stage_frame()
         winctl.set_frame(*fr)
         try:
-            winctl.make_overlay()
+            winctl.make_overlay(getattr(self, "all_spaces", True))
             winctl.watch_visibility()
         except Exception as e:
             print(f"[окно] поверх полноэкранных: {e}")
@@ -475,6 +475,36 @@ class AppUI:
             ct.btn = None
             ct._fr = None
         winctl.set_frame(x, y, w, h)
+        try:                                  # без значка в Dock окно само клавиатуру не берёт — чтобы печатать
+            from AppKit import NSApp
+            winctl.main(lambda: (NSApp.activateIgnoringOtherApps_(True), winctl.window().makeKeyWindow()),
+                        timeout=0.5)
+        except Exception as e:
+            print(f"[окно] фокус: {e}")
+
+    def move_to_screen(self, which: str = "mouse"):
+        """«Иди на этот экран» (где мышка) / «на другой». True — перешла, None — уже там,
+        False — монитор всего один."""
+        import winctl
+        n = len(winctl.screens())
+        if n < 2:
+            return False
+        cur = winctl.my_screen_index()
+        to = winctl.screen_index_at_mouse() if which == "mouse" else (cur + 1) % n
+        if to == cur:
+            return None
+        if not self.stage_on:
+            return None
+        fr, floor = winctl.stage_frame_of(to)
+        winctl.set_frame(*fr)
+        hx, hy = fr[2] / 2, max(0.0, floor - 10)
+        self.her_pos = (hx, hy)
+        self._call("stage", True, fr[2], fr[3], hx, hy)
+        ct = getattr(self, "clickthrough", None)
+        if ct:
+            ct._fr = None
+        print(f"[окно] перешла на экран {to + 1} из {n}")
+        return True
 
     def sync_stage(self, fr):
         """Сменилось разрешение экрана или подключили монитор — снова накрыть весь экран."""
@@ -525,6 +555,14 @@ class AppUI:
 
     def run(self, worker):
         """Окно живёт в главном потоке (так требует macOS), компаньон — в фоновом."""
+        if sys.platform == "darwin" and getattr(self, "all_spaces", True):
+            # Программу «в строке меню» (без значка в Dock) macOS пускает на «экран» чужой программы
+            # на весь экран (видео, игра). Переключить надо ДО создания окна: потом уже не помогает.
+            try:
+                import webview.platforms.cocoa as cocoa
+                cocoa.BrowserView.app.setActivationPolicy_(1)
+            except Exception as e:
+                print(f"[окно] строка меню: {e}")
         self.webview.start(worker)
 
     def close(self):

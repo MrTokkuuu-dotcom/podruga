@@ -98,6 +98,7 @@ class Companion:
 
         self.text_mode = text_mode
         self.ui = NullUI() if text_mode else make_ui(cfg)
+        self.ui.all_spaces = cfg.get("avatar", {}).get("all_spaces", True)
         if self.ui.enabled:
             self.ui.api._companion = self
         self.listener = None
@@ -354,7 +355,7 @@ class Companion:
             return False
         try:
             import sysaudio
-            return sysaudio.output_running()
+            return sysaudio.others_playing()        # VRoid Studio держит звук открытым молча — не считается
         except Exception:
             return False
 
@@ -626,7 +627,11 @@ class Companion:
                     label = (m.group(2) or "").strip() or "время вышло"
                     self.initiative.add_from_command(f"НАПОМНИТЬ +{m.group(1)} | Таймер: {label}")
             elif kind in ("ОТКРЫТЬ", "МУЗЫКА", "ГРОМКОСТЬ"):
-                threading.Thread(target=self._do_action, args=(kind, arg), daemon=True).start()
+                sound = None
+                if kind == "МУЗЫКА":                 # играет ли что-то — до того, как она заговорит
+                    import mac
+                    sound = mac._sound()
+                threading.Thread(target=self._do_action, args=(kind, arg, sound), daemon=True).start()
             elif kind == "СДЕЛАТЬ":
                 self.tasks.start(arg.strip())
             elif kind == "ПОИСК":
@@ -642,12 +647,16 @@ class Companion:
             else:
                 print(f"[команда] не знаю такую: {c}")
 
-    def _do_action(self, kind: str, arg: str) -> None:
+    def _do_action(self, kind: str, arg: str, sound: bool | None = None) -> None:
         import actions
+        import mac
         try:
-            done = actions.run(kind, arg)
+            done = actions.run(kind, arg, sound)
             print(f"[действие] {done}")
             self.journal.log("action", what=f"{kind} {arg}")
+        except mac.Nothing as e:
+            print(f"[действие] {kind} {arg}: {e}")
+            self.ui.add("sys", str(e))
         except Exception as e:
             print(f"[действие] не получилось: {e}")
             self.ui.add("sys", f"Не получилось: {kind.lower()} {arg} ({str(e)[:80]})")
@@ -797,13 +806,211 @@ class Companion:
             self.ui.add("me", text)
         self.history.append({"role": "user", "text": text})
         self.unsaved.append(f"{self.user}: {text}")
-        self.handle_commands([cmd])
+        if cmd.startswith("МУЗЫКА"):                   # сразу и честно: если играть нечему — так и скажет
+            import actions
+            import mac
+            try:
+                done = actions.run("МУЗЫКА", cmd.split()[1])
+                print(f"[действие] {done}")
+                if done == "уже играет":
+                    self.say("Уже играет!", "joy")
+                    self._history_add("Уже играет!")
+                    return True
+            except mac.Nothing as e:
+                self.say(str(e), "calm")
+                self._history_add(str(e))
+                return True
+            except Exception as e:
+                print(f"[действие] не получилось: {e}")
+                self.say("Ой, не получилось.", "sad")
+                return True
+        else:
+            self.handle_commands([cmd])
         key = "timer" if cmd.startswith("ТАЙМЕР") else cmd.split()[1]
         n = cmd.split()[1] if key == "timer" else ""
         line = random.choice(DEVICE_LINES.get(self._phrase_lang, DEVICE_LINES["ru"])[key]).format(n=n)
         self.say(line, "joy" if key == "play" else "calm")
         self._history_add(line)
         return True
+
+    def modes_now(self, text: str, spoken: bool = True) -> bool:
+        """«Запомни: рабочий режим — это …», «рабочий режим», «забудь …», «какие у тебя режимы». True — взялась."""
+        import modes
+        if getattr(self, "modes", None) is None:
+            self.modes = modes.Modes(self.cfg["_data_dir"] / "modes.json")
+        cmd = modes.command(text, self.modes)
+        if cmd is None:
+            return False
+        print(f"⚡ сразу: «{text}» → режим {cmd}")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        if cmd[0] == "save":
+            _, name, steps = cmd
+            self.modes.save(name, steps)
+            self.ui.add("her", f"«{name}»:\n" + "\n".join(f"• {s}" for s in steps), "📝")
+            line = f"Запомнила! Скажи «{name}» — и я сделаю: " + ", ".join(steps) + "."
+        elif cmd[0] == "forget":
+            key = self.modes.forget(cmd[1])
+            line = f"Забыла «{key}»." if key else "Такого режима у меня нет."
+        elif cmd[0] == "list":
+            names = list(self.modes.items)
+            line = ("Мои режимы: " + ", ".join(f"«{n}»" for n in names) + ".") if names else \
+                "Пока ни одного. Скажи, например: «Запомни: рабочий режим — это открыть хром и почту»."
+        else:
+            name = cmd[1]
+            if self.tasks.running:
+                self.say("Подожди, я ещё с прошлым вожусь. Скажи «стоп», если не нужно.")
+                return True
+            threading.Thread(target=self._run_mode, args=(name, list(self.modes.items[name])),
+                             name="mode", daemon=True).start()
+            line = f"Включаю «{name}»!"
+        self.say(line, "joy")
+        self._history_add(line)
+        return True
+
+    def _run_mode(self, name: str, steps: list[str]) -> None:
+        """Шаги режима по очереди, каждый — как обычная просьба (без повторного «Сейчас!»)."""
+        import actions
+        import mac
+        self.journal.log("action", what=f"режим «{name}»: {len(steps)} шагов")
+        self.tasks.stop.clear()
+        for step in steps:
+            if self.tasks.stop.is_set():
+                break
+            print(f"[режим] {name}: {step}")
+            self.ui.add("her", step, "👉")
+            try:
+                mc = intents.mac_command(step)
+                dc = intents.device_command(step)
+                if mc is not None:
+                    self._mac_do(*mc)
+                elif dc is not None:
+                    if dc.startswith("МУЗЫКА"):
+                        print(f"[действие] {actions.run('МУЗЫКА', dc.split()[1])}")
+                    else:
+                        self.handle_commands([dc])
+                elif intents.task_command(step) is None and step.split()[0] in ("открой", "запусти") \
+                        and actions.known_target(step.split(" ", 1)[1] if " " in step else ""):
+                    print(f"[действие] {actions.open_thing(step.split(' ', 1)[1])}")
+                else:
+                    self.tasks.start(step)
+                time.sleep(0.3)
+                while self.tasks.running:                    # рецепт / сама на экране / «закрыть?» — ждём
+                    time.sleep(0.2)
+                time.sleep(1.0)                               # окну дать открыться, прежде чем следующее
+            except mac.Nothing as e:
+                print(f"[режим] {step}: {e}")
+            except Exception as e:
+                print(f"[режим] {step}: не получилось: {e}")
+
+    def mac_now(self, text: str, spoken: bool = True, look: bool = False) -> bool:
+        """Сам Mac и экран, сразу: «закрой телеграм», «сделай скриншот», «открой загрузки», «найди файл …»,
+        «прочитай / переведи / перескажи, что на экране», «иди на другой экран». True — взялась."""
+        cmd = intents.mac_command(text)
+        if cmd is None and look and self.google is None:
+            cmd = ("summary", "ru")                  # «посмотри на экран» без ключа: читаю текст сама
+        if cmd is None:
+            return False
+        print(f"⚡ сразу: «{text}» → {cmd}")
+        if spoken:
+            self.ui.add("me", text)
+        self.history.append({"role": "user", "text": text})
+        self.unsaved.append(f"{self.user}: {text}")
+        kind, arg = cmd
+        if kind == "screen":
+            ok = self.ui.move_to_screen(arg) if hasattr(self.ui, "move_to_screen") else False
+            line = {True: "Иду!", False: "Тут только один экран — я уже здесь.", None: "Я уже тут."}[ok]
+            self.say(line, "joy" if ok else "calm")
+            self._history_add(line)
+            return True
+        threading.Thread(target=self._mac_do, args=(kind, arg), name="mac", daemon=True).start()
+        return True
+
+    def _mac_do(self, kind: str, arg: str) -> None:
+        import mac
+        import eyes
+        try:
+            if kind == "shot":
+                import subprocess
+                try:
+                    p = mac.screenshot()
+                except subprocess.TimeoutExpired:
+                    self.say("macOS спрашивает, можно ли мне на Рабочий стол. Нажми «Разрешить» и скажи ещё раз.")
+                    return
+                self.say("Щёлк! Сохранила на рабочий стол.", "joy")
+                self.ui.add("sys", f"📸 {p.name}")
+            elif kind == "folder":
+                from pathlib import Path
+                done = mac.open_folder(Path(arg))
+                print(f"[действие] {done}")
+                self.say("Открыла.", "calm")
+            elif kind == "find":
+                found = mac.find_files(arg)
+                if not found:
+                    self.say(f"Не нашла файл «{arg}». Скажи по-другому, как он называется?", "sad")
+                    return
+                mac.reveal(found[0])
+                more = f" Ещё похожих: {len(found) - 1}." if len(found) > 1 else ""
+                self.ui.add("her", "\n".join(f"📄 {p.name}" for p in found), "📝")
+                self.say(f"Нашла: {found[0].stem}. Показала в Finder.{more}", "joy")
+            elif kind == "quit":
+                def job():
+                    if self.tasks.ask_yes(f"Закрыть {arg}? Если там что-то не сохранено — оно спросит."):
+                        print(f"[действие] {mac.quit_app(arg)}")
+                        self.say("Закрыла.", "calm")
+                    else:
+                        self.say("Хорошо, не закрываю.", "calm")
+                self.tasks.start(f"закрыть {arg}", fn=job)
+            elif kind in ("read", "translate", "summary"):
+                if not eyes.permissions().get("accessibility"):
+                    import tasks
+                    self.say(tasks.NO_ACCESS.replace("нажимать за тебя", "читать с экрана"))
+                    eyes.ask_permissions("accessibility")
+                    return
+                self._screen_text(kind, arg)
+        except mac.Nothing as e:
+            self.say(str(e), "calm")
+        except Exception as e:
+            print(f"[действие] не получилось: {e}")
+            self.say("Ой, не получилось.", "sad")
+
+    def _screen_text(self, kind: str, lang: str) -> None:
+        import screentext
+        from agent import norm as _n
+        recent = [_n(h.get("text", "")) for h in list(self.history)[-16:]]
+        own = lambda s: len(_n(s)) >= 6 and any(_n(s) in r for r in recent)     # её же реплики в чате
+        self.ui.state("think")
+        app, text = screentext.gather(own)
+        print(f"[глаза] текст с экрана ({app}): {len(text)} букв")
+        if len(text) < 8:
+            self.ui.state(self._idle_state())
+            self.say("Не вижу тут текста. Если это картинка — включи мне «Запись экрана» в настройках.", "sad")
+            return
+        if kind == "read":
+            part, more = screentext.aloud(text)
+            self.ui.state(self._idle_state())
+            self.say(part + (" Там ещё много — пересказать?" if more else ""), "calm")
+            self._history_add(part)
+            return
+        b = self.brain
+        if b is None:
+            self.ui.state(self._idle_state())
+            self.say("Мне пока нечем думать — мозг ещё загружается.", "sad")
+            return
+        if len(text) > 400:
+            self.say("Сейчас, читаю…", "think")         # свой мозг читает длинное 5–15 с — чтобы не молчала
+        out = screentext.answer(b, kind, text, lang, self.user)
+        self.ui.state(self._idle_state())
+        if not out:
+            self.say("Не получилось разобрать.", "sad")
+            return
+        if kind == "translate":
+            self.ui.add("her", out, "📝")
+        self.say(out, "calm")
+        self._history_add(out)
+        self.last_talk = time.monotonic()
 
     def on_text(self, text: str):
         if not self.ready.is_set():
@@ -817,6 +1024,10 @@ class Companion:
         from wake import LOOK_PHRASES, _norm
         look = any(p in _norm(text) for p in LOOK_PHRASES)
         if self.tasks.intercept(text):                    # «стоп» / «да» / «нет» посреди задачи на экране
+            return
+        if self.modes_now(text, spoken=False):
+            return
+        if self.mac_now(text, spoken=False, look=look):
             return
         if not look and self.task_now(text, spoken=False):
             return
@@ -1153,6 +1364,12 @@ class Companion:
                 self.say(line, "joy" if body in ("pace", "stand") else "calm")
                 self._history_add(line)
                 return
+            if self.modes_now(text):                     # «запомни: рабочий режим — это …», «рабочий режим»
+                tm["path"] = "сразу"
+                return
+            if self.mac_now(text, look=h.look):          # «закрой телеграм», «переведи, что на экране»
+                tm["path"] = "сразу"
+                return
             if not h.look and self.task_now(text):       # «включи … в ютуб музыке» — сама на экране
                 tm["path"] = "сразу"
                 return
@@ -1443,8 +1660,18 @@ class Companion:
         она сама сохраняет память и перезапускается с новым кодом."""
         flag = HOME / "restart.flag"
         quit_flag = HOME / "quit.flag"                  # закрыть «снаружи» (например, по просьбе из чата с Claude)
+        ask = HOME / "ask.txt"                          # проверка «снаружи»: текст как будто написан в переписке
         while True:
             time.sleep(2)
+            if ask.exists():
+                try:
+                    said = ask.read_text("utf-8").strip()
+                    ask.unlink()
+                except OSError:
+                    said = ""
+                if said:
+                    print(f"[система] ask.txt: «{said}»")
+                    threading.Thread(target=self.on_text, args=(said[:500],), daemon=True).start()
             if quit_flag.exists():
                 try:
                     quit_flag.unlink()

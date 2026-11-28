@@ -181,3 +181,63 @@ def task_command(text: str) -> str | None:
     if recipes.find(text) is None:
         return None
     return "СДЕЛАТЬ " + text.strip()
+
+
+# --- сам Mac (mac.py) и экран: сразу, без мозга ---
+_MAC_FILLER = r"\b(пожалуйста|please|подруга|ань|аня|алиса|таня|давай|можешь|мне|ка|ну|а|быстро|сейчас|plz)\b"
+_QUIT = re.compile(r"^(?:закрой|закрыть|выключи|выруби|заверши|выйди из|закрой программу|выключи программу|"
+                   r"quit|close)\s+(.+)$")
+_SHOT = ["сделай скриншот", "сделай скрин", "скриншот экрана", "сделай снимок экрана", "сфоткай экран",
+         "заскринь", "скринь", "take a screenshot", "screenshot", "스크린샷", "화면 캡처", "캡처해"]
+_SHOW_FOLDER = re.compile(r"^(?:открой|покажи|открыть|зайди в|open|show)\s+(?:папку\s+|мне\s+)?(.+)$")
+_FIND_FILE = re.compile(r"^(?:найди|поищи|где|где лежит|найти|find|where is)\s+(?:мой\s+|мою\s+|мне\s+)?"
+                        r"(?:файл|документ|папку|фотку|фото|картинку|презентацию|таблицу|file|document)\w*\s+"
+                        r"(?:с названием\s+|под названием\s+|называется\s+|про\s+)?(.+)$")
+_SCREEN = re.compile(r"(прочитай|прочти|зачитай|переведи|перескажи|о ч[её]м|что\s+(?:тут|здесь|на экране)"
+                     r"\s+написано|read|translate|summari[sz]e|번역|읽어)")
+_SCREEN_WHERE = re.compile(r"(экран|тут|здесь|страниц|стать|текст|письм|сообщени|сайт|screen|page|text|화면)")
+_SCREEN_THIS = re.compile(r"^(прочитай|прочти|зачитай|переведи|перескажи|read|translate)\s+(это|эту|этот|this)"
+                          r"(\s+на\s+\w+)?$")
+_MOVE = re.compile(r"(?:(?:перейди|переходи|иди|пойди|перебирайся|переместись|приходи|come|go|move)\w*\s+|^)"
+                   r"(?:ко\s+)?(?:на|в|to)\s+(?:этот|тот|другой|второй|мой|соседний|главный|this|other|my)?\s*"
+                   r"(экран|монитор|рабочий стол|screen|monitor|display)\b")
+
+
+def mac_command(text: str):
+    """('quit', программа) | ('shot', '') | ('folder', путь) | ('find', что) | ('read'|'translate'|'summary', язык)
+    | ('screen', 'mouse'|'next') | None."""
+    import mac
+    t = norm(text)
+    if not t or len(t.split()) > 12 or t.startswith("не "):
+        return None
+    t = " ".join(re.sub(_MAC_FILLER, " ", t).split())
+    m = _MOVE.search(t)
+    if m:
+        return ("screen", "next" if re.search(r"другой|второй|соседний|other|\bтот\b", t) else "mouse")
+    if any(p == t or (len(p) > 6 and p in t) for p in _SHOT) and len(t.split()) <= 5:
+        return ("shot", "")
+    if _SCREEN.search(t) and (_SCREEN_WHERE.search(t) or _SCREEN_THIS.search(t)) and "ютуб" not in t:
+        if re.search(r"переведи|translate|번역", t):
+            to = "en" if re.search(r"на английск|in english|to english", t) else \
+                 "ko" if re.search(r"на корейск|in korean|to korean|한국어로", t) else "ru"
+            return ("translate", to)
+        if re.search(r"перескажи|о ч[её]м|summari", t):
+            return ("summary", "ru")
+        return ("read", "ru")
+    m = _FIND_FILE.search(t)
+    if m and len(m.group(1).split()) <= 5:
+        return ("find", m.group(1).strip())
+    m = _SHOW_FOLDER.search(t)
+    if m and len(m.group(1).split()) <= 3:
+        p = mac.folder_for(m.group(1))
+        if p is not None:
+            return ("folder", str(p))
+    m = _QUIT.search(t)
+    if m and len(m.group(1).split()) <= 3:
+        what = m.group(1)
+        if any(w in what for w in ("музык", "песн", "звук", "видео", "трек", "свет", "music", "sound")):
+            return None                                  # «выключи музыку» — это device_command
+        app = mac.find_running(what)
+        if app:
+            return ("quit", app)
+    return None

@@ -60,13 +60,21 @@ def screen_frames():
     return main(f)
 
 
-def make_overlay():
+def make_overlay(all_spaces: bool = True):
     """Видна на всех рабочих столах и поверх полноэкранных программ (видео, браузер на весь экран)."""
     def f():
         win = window()
-        # canJoinAllSpaces | stationary | fullScreenAuxiliary
-        win.setCollectionBehavior_((1 << 0) | (1 << 4) | (1 << 8))
+        # canJoinAllSpaces | stationary | fullScreenAuxiliary | ignoresCycle (⌘` её не выбирает)
+        win.setCollectionBehavior_((1 << 0) | (1 << 4) | (1 << 8) | (1 << 6))
         win.setLevel_(25)                        # NSStatusWindowLevel: выше Dock и полноэкранных окон
+        # Обычную программу (со значком в Dock) macOS не пускает на «экран» чужой программы на весь экран:
+        # там её окно просто не показывается. Программа «в строке меню» (как значок 🌸) — пускает.
+        # Поэтому значок в Dock убран ещё при запуске (ui.AppUI.run): она живёт в строке меню.
+        if all_spaces:
+            from AppKit import NSApp
+            if NSApp.activationPolicy() == 1:
+                print("[окно] живу в строке меню: видна на всех рабочих столах и поверх видео на весь экран")
+            win.orderFrontRegardless()
         # WebKit перестаёт рисовать, когда macOS считает окно закрытым (например, рядом программа на весь экран),
         # хотя она поверх и видна — анимация «замирала» на секунды. Просим WebKit не следить за этим.
         wv = _webview()
@@ -83,6 +91,50 @@ def make_overlay():
         else:
             print("[окно] не получилось отключить «засыпание» WebKit — анимация может замирать за полноэкранными")
     main(f)
+
+
+def screens() -> list:
+    """Все мониторы: [(x, y, w, h)] в координатах macOS (снизу-слева от главного)."""
+    def f():
+        from AppKit import NSScreen
+        return [(s.frame().origin.x, s.frame().origin.y, s.frame().size.width, s.frame().size.height)
+                for s in NSScreen.screens()]
+    return main(f) or []
+
+
+def screen_index_at_mouse() -> int:
+    def f():
+        from AppKit import NSEvent, NSScreen
+        m = NSEvent.mouseLocation()
+        for i, s in enumerate(NSScreen.screens()):
+            fr = s.frame()
+            if fr.origin.x <= m.x < fr.origin.x + fr.size.width and fr.origin.y <= m.y < fr.origin.y + fr.size.height:
+                return i
+        return 0
+    return main(f) or 0
+
+
+def my_screen_index() -> int:
+    def f():
+        from AppKit import NSScreen
+        win = window()
+        sc = win.screen() if win else None
+        for i, s in enumerate(NSScreen.screens()):
+            if sc is not None and s.frame() == sc.frame():
+                return i
+        return 0
+    return main(f) or 0
+
+
+def stage_frame_of(i: int):
+    """(рамка «сцены» — весь экран до строки меню — на мониторе номер i, высота Dock снизу)."""
+    def f():
+        from AppKit import NSScreen
+        ss = NSScreen.screens()
+        s = ss[i % len(ss)]
+        a, b = s.frame(), s.visibleFrame()
+        return (a.origin.x, a.origin.y, a.size.width, b.origin.y + b.size.height - a.origin.y), b.origin.y - a.origin.y
+    return main(f)
 
 
 def stage_frame():

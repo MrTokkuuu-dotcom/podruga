@@ -83,26 +83,11 @@ def open_thing(what: str) -> str:
     return f"поискала «{w}» в браузере"
 
 
-def _player() -> str:
-    for app in ("Spotify", "Music"):
-        try:
-            if _osa(f'application "{app}" is running') == "true":
-                return app
-        except Exception:
-            pass
-    return "Music"
-
-
-def music(cmd: str) -> str:
-    c = cmd.strip().lower()
-    app = _player()
-    verbs = {"play": "play", "играй": "play", "включи": "play", "пауза": "pause", "pause": "pause",
-             "стоп": "pause", "next": "next track", "дальше": "next track", "следующ": "next track",
-             "prev": "previous track", "назад": "previous track", "предыдущ": "previous track",
-             "toggle": "playpause"}
-    verb = next((v for k, v in verbs.items() if k in c), "playpause")
-    _osa(f'tell application "{app}" to {verb}')
-    return f"{app}: {verb}"
+def music(cmd: str, sound: bool | None = None) -> str:
+    """Пауза / дальше / назад / включи — тому, что сейчас играет (mac.py): Spotify, «Музыка»
+    или браузер (YouTube Music, YouTube) через кнопки ⏯ ⏭ ⏮."""
+    import mac
+    return mac.music(cmd, sound)
 
 
 def volume(arg: str) -> str:
@@ -123,7 +108,7 @@ def volume(arg: str) -> str:
     return f"громкость {n}%"
 
 
-def run(kind: str, arg: str) -> str:
+def run(kind: str, arg: str, sound: bool | None = None) -> str:
     """Выполнить команду. Возвращает короткое описание для журнала."""
     if sys.platform != "darwin":
         return "команды на компьютере пока только для Mac"
@@ -131,7 +116,7 @@ def run(kind: str, arg: str) -> str:
     if kind == "ОТКРЫТЬ":
         return open_thing(arg)
     if kind == "МУЗЫКА":
-        return music(arg)
+        return music(arg, sound)
     if kind == "ГРОМКОСТЬ":
         return volume(arg)
     raise ValueError(f"не знаю команду {kind}")

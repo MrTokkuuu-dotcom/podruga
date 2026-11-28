@@ -23,6 +23,7 @@ FIELDS = {"AXTextField", "AXSearchField", "AXTextArea", "AXComboBox"}
 CHROMIUM = {"com.google.Chrome", "com.google.Chrome.canary", "com.microsoft.edgemac", "com.brave.Browser",
             "company.thebrowser.Browser", "com.naver.Whale", "com.operasoftware.Opera", "com.vivaldi.Vivaldi"}
 PAUSE_WORDS = ("пауза", "pause", "приостановить", "поставить на паузу", "일시정지", "일시 중지")
+OWN_BUNDLES = {"app.podruga.companion"}     # сама Подруга (ярлык запускает python отдельным процессом)
 MAX_DEPTH = 25
 MAX_NODES = 4000
 
@@ -162,6 +163,75 @@ def _collect(root, attr, win) -> tuple:
     return els, texts[:40]
 
 
+def _find_role(root, attr, role: str, limit: int = 1500):
+    """Первый элемент с такой ролью (обход в ширину) — например, сама страница в браузере (AXWebArea)."""
+    queue, seen = [(root, 0)], 0
+    while queue and seen < limit:
+        el, depth = queue.pop(0)
+        seen += 1
+        if attr(el, "AXRole") == role:
+            return el
+        if depth < 12:
+            queue.extend((k, depth + 1) for k in (attr(el, "AXChildren") or []))
+    return None
+
+
+def _full(v) -> str:
+    if v is None or isinstance(v, (bool, int, float)):
+        return ""
+    return " ".join(str(v).split())
+
+
+def collect_text(root, attr, win, max_chars: int = 6000) -> str:
+    """Видимый текст окна целиком, строками: куски на одной высоте — в одну строку (в браузере абзац
+    разбит ссылками на много кусочков). В браузере — только сама страница, без вкладок и меню."""
+    web = _find_role(root, attr, "AXWebArea")
+    start = web if web is not None else root
+    parts, stack, seen, total = [], [(start, 0)], 0, 0
+    while stack and seen < MAX_NODES * 2 and total < max_chars:
+        el, depth = stack.pop()
+        seen += 1
+        role = attr(el, "AXRole") or ""
+        if role in ("AXMenuBar", "AXToolbar", "AXTabGroup") and web is None:
+            continue
+        if role in TEXT_ROLES or (role == "AXTextArea" and attr(el, "AXSubrole") != "AXSecureTextField"):
+            pos, size = attr(el, "AXPosition"), attr(el, "AXSize")
+            if pos and size and _visible((pos[0], pos[1], size[0], size[1]), win):
+                t = _full(attr(el, "AXValue")) or _full(attr(el, "AXTitle"))
+                if t:
+                    parts.append((pos[1], pos[1] + size[1], t))
+                    total += len(t)
+            if role != "AXTextArea":
+                continue
+        if depth < MAX_DEPTH + 10:
+            stack.extend((k, depth + 1) for k in reversed(attr(el, "AXChildren") or []))
+    lines, last = [], None
+    for y0, y1, t in parts:
+        if last is not None and lines and abs(y0 - last[0]) < max(4.0, (last[1] - last[0]) * 0.5):
+            lines[-1] += ("" if t[:1] in ",.;:!?)»" else " ") + t
+        else:
+            lines.append(t)
+        last = (y0, y1)
+    return "\n".join(lines)[:max_chars]
+
+
+def window_text(max_chars: int = 6000) -> tuple[str, str]:
+    """(программа, видимый текст активного окна) — для «прочитай / переведи, что на экране»."""
+    from ApplicationServices import AXUIElementCreateApplication, AXUIElementSetMessagingTimeout
+    name, bid, pid = _front_app()
+    if not pid:
+        return name, ""
+    app_el = AXUIElementCreateApplication(pid)
+    AXUIElementSetMessagingTimeout(app_el, 1.0)
+    _prepare_app(app_el, bid, pid)
+    win = _attr(app_el, "AXFocusedWindow") or _attr(app_el, "AXMainWindow")
+    if win is None:
+        return name, ""
+    pos, size = _attr(win, "AXPosition"), _attr(win, "AXSize")
+    wframe = (pos[0], pos[1], size[0], size[1]) if pos and size else (0, 0, 10000, 10000)
+    return name, collect_text(win, _attr, wframe, max_chars)
+
+
 def is_playing(snap: Snapshot) -> bool:
     """Играет ли что-то: в плеере есть кнопка «Пауза»."""
     from intents import norm
@@ -190,7 +260,8 @@ def _front_app():
     from AppKit import NSWorkspace
     me = os.getpid()
     app = NSWorkspace.sharedWorkspace().frontmostApplication()
-    if app is not None and app.processIdentifier() != me:
+    mine = app is not None and (app.processIdentifier() == me or str(app.bundleIdentifier() or "") in OWN_BUNDLES)
+    if app is not None and not mine:
         return str(app.localizedName()), str(app.bundleIdentifier() or ""), int(app.processIdentifier())
     from Quartz import (CGWindowListCopyWindowInfo, kCGNullWindowID, kCGWindowListExcludeDesktopElements,
                         kCGWindowListOptionOnScreenOnly)
@@ -202,6 +273,8 @@ def _front_app():
             from AppKit import NSRunningApplication
             ra = NSRunningApplication.runningApplicationWithProcessIdentifier_(pid)
             bid = str(ra.bundleIdentifier() or "") if ra else ""
+            if bid in OWN_BUNDLES:
+                continue
             return str(w.get("kCGWindowOwnerName", "")), bid, pid
     return "", "", 0
 

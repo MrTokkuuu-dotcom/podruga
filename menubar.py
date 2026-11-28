@@ -45,6 +45,19 @@ def start(companion) -> None:
 
 
 _keep = []      # чтобы сборщик мусора не убрал значок
+
+
+def _activate() -> None:
+    """Без значка в Dock её окно само не получает клавиатуру — отдаём явно (чтобы печатать в переписке)."""
+    try:
+        from AppKit import NSApp
+        import winctl
+        NSApp.activateIgnoringOtherApps_(True)
+        w = winctl.window()
+        if w is not None:
+            w.makeKeyWindow()
+    except Exception as e:
+        print(f"[меню] фокус: {e}")
 _companion = None
 _Target = None
 
@@ -66,6 +79,7 @@ def _target_class():
                 ui.toggle_visible()
             elif tag == 2:
                 ui.ensure_visible()
+                _activate()
                 ui.show_chat()
             elif tag == 3:
                 bg(c.toggle_sleep)
@@ -73,6 +87,7 @@ def _target_class():
                 bg(c.pauser.toggle)
             elif tag == 5:
                 ui.ensure_visible()
+                _activate()
                 ui.open_settings()
             elif tag == 6:
                 set_autostart(not autostart_enabled())
@@ -89,6 +104,8 @@ def _target_class():
                     pass
             elif tag == 9:
                 bg(c.quit_now)
+            elif tag == 10:
+                bg(lambda: ui.move_to_screen("next"))
 
         def menuWillOpen_(self, menu):
             c = _companion
@@ -99,6 +116,11 @@ def _target_class():
             menu.itemWithTag_(8).setState_(1 if c.guests_on() else 0)
             w = getattr(c, "walker", None)
             menu.itemWithTag_(7).setState_(1 if (w and w.enabled) else 0)
+            try:
+                from AppKit import NSScreen
+                menu.itemWithTag_(10).setHidden_(len(NSScreen.screens()) < 2)
+            except Exception:
+                pass
 
     _Target = PodrugaMenuTarget
     return _Target
@@ -120,7 +142,7 @@ def _build(companion):
     menu = NSMenu.alloc().init()
     menu.setAutoenablesItems_(False)
     for tag, title in [(1, "Спрятать"), (2, "Переписка"), (3, "Уснуть"), (4, "Пауза"),
-                       (5, "Настройки…"), (0, None), (8, "Гости — отвечать только по имени"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
+                       (5, "Настройки…"), (10, "Перейти на другой экран"), (0, None), (8, "Гости — отвечать только по имени"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
                        (0, None), (9, "Выйти")]:
         if title is None:
             menu.addItem_(NSMenuItem.separatorItem())

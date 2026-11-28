@@ -72,22 +72,23 @@ class TaskRunner:
         return ok
 
     # --- запуск ---
-    def start(self, goal: str) -> None:
+    def start(self, goal: str, fn=None) -> None:
+        """fn — своё дело вместо рецепта/агента (например, «закрой телеграм» со своим вопросом «да?»)."""
         if self.running:
             self.c.say("Подожди, я ещё с прошлым вожусь. Скажи «стоп», если не нужно.")
             return
         self.running = True
         self.stop.clear()
-        self._thread = threading.Thread(target=self._run_safe, args=(goal,), name="task", daemon=True)
+        self._thread = threading.Thread(target=self._run_safe, args=(goal, fn), name="task", daemon=True)
         self._thread.start()
 
     def join(self, timeout=None) -> None:
         if self._thread:
             self._thread.join(timeout)
 
-    def _run_safe(self, goal: str) -> None:
+    def _run_safe(self, goal: str, fn=None) -> None:
         try:
-            self.run(goal)
+            fn() if fn is not None else self.run(goal)
         except Exception as e:
             print(f"[руки] ошибка: {e}")
             self.c.say("Ой, не получилось. Что-то пошло не так.", "sad")
@@ -149,6 +150,9 @@ class TaskRunner:
                 return
             if ok:
                 c.journal.log("action", what=f"рецепт {r.name}: {goal}")
+                if r.name in ("ytmusic", "youtube"):
+                    import mac
+                    mac.note_media()                 # теперь «пауза» / «дальше» знают, чем управлять
                 c.say(DONE_LINES.get(r.name, "Готово!"), "joy")
                 return
             print("[руки] рецепт не справился — дальше сама")
