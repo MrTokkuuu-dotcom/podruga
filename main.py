@@ -445,6 +445,34 @@ class Companion:
         if self.barge and self.speaking and self.awake and not self.pauser.paused:
             self.interrupt()
 
+    # --- «нажми и говори» ---
+    def _ptt_press(self):
+        L = getattr(self, "listener", None)
+        if not L or not L.ptt or self.pauser.paused:
+            return
+        L.press()
+        if self.speaking:
+            self.interrupt()                         # зажал, пока она говорит, — замолкает и слушает
+        self.ui.state("listen")
+
+    def _ptt_release(self):
+        L = getattr(self, "listener", None)
+        if L and L.held:
+            L.release()
+
+    def set_push_to_talk(self, on: bool):
+        L = getattr(self, "listener", None)
+        if L:
+            L.ptt = on
+            L.held = False
+        from config import save_user_settings
+        try:
+            save_user_settings(self.cfg, {"ptt": "1" if on else "0"})
+        except Exception as e:
+            print(f"[кнопка] настройку не сохранила: {e}")
+        print(f"[уши] режим «нажми и говори»: {'включён' if on else 'выключен'}")
+        self.ui.add("sys", "🎙 Слушаю только пока зажат правый ⌥ (Option)" if on else "🎙 Снова слушаю всё время")
+
     def interrupt(self):
         print("✋ перебили — слушаю")
         self._cancel = True
@@ -706,20 +734,44 @@ class Companion:
         from websearch import is_weather
         ctx = f"Пользователь живёт в городе {city}. Сейчас {t.strftime('%d.%m.%Y %H:%M')}."
         b = self.brain
-        if b is not None and b is self.local and self.google is not None and not is_weather(query):
+        local = self.local if self.local is not None and getattr(self.local, "ever", False) \
+            and not getattr(self.local, "failed", False) else None
+        g_off = time.monotonic() < getattr(self, "_g_search_off", 0)
+        if b is not None and b is self.local and self.google is not None and not is_weather(query) and not g_off:
             b = self.google                              # свежие данные и справки — лучше через Google, если есть ключ
+        limit = False
         try:
             if b is None:
                 raise RuntimeError("мозг ещё не готов")
-            facts = b.search(query, ctx)
+            try:
+                facts = b.search(query, ctx)
+            except NeedGoogle:
+                raise
+            except Exception as e:
+                if b is local or local is None:
+                    raise
+                # Google отказал (лимит ключа 429, нет ответа) — ищем сами: Википедия и погода, без Google
+                limit = "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e)
+                if limit:
+                    self._g_search_off = time.monotonic() + 3600     # час не дёргаем: каждый раз ждать отказа — зря
+                print(f"[поиск] Google не смог ({str(e)[:80]}) — ищу сама, без Google")
+                facts = local.search(query, ctx)
             print(f"[поиск] {query} → {facts[:200]}")
         except NeedGoogle:
             print(f"[поиск] {query} → нужен Google (свежие данные)")
-            self.say("Курсы, новости и цены я без Google пока не нахожу. Добавь ключ в настройках — и буду.", "sad")
+            if limit or g_off:
+                self.say("Курсы, новости и цены я ищу через Google, а у ключа на сегодня закончился лимит.", "sad")
+            else:
+                self.say("Курсы, новости и цены я без Google пока не нахожу. Добавь ключ в настройках — и буду.", "sad")
             return
         except Exception as e:
             print(f"[поиск] не получилось: {e}")
-            self.say("Не получилось найти, интернет капризничает.", "sad")
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                self.say("У ключа Google на сегодня закончился лимит поиска, поэтому найти не вышло.", "sad")
+            elif isinstance(e, (ConnectionError, TimeoutError, OSError)):
+                self.say("Не получилось найти: не достучалась до интернета.", "sad")
+            else:
+                self.say("Не получилось найти, что-то пошло не так.", "sad")
             return
         self.say_generated(self.system(),
                            f"Ты посмотрела в интернете по вопросу «{query}». Вот что нашлось: {facts}\n"
@@ -1565,8 +1617,13 @@ class Companion:
         if self.awake and self.wake and self.stt and self.stt.active:
             lang = "en" if getattr(self.speaker.voice, "lang", "ru") == "en" else "ru"
             whisper = _Bg(lambda: self.stt.transcribe(wav, lang))
+        ptt = bool(getattr(self.listener, "ptt", False))   # сказал с зажатой клавишей — точно ей и точно он
+        if ptt and not self.awake:
+            print("   (с кнопки — просыпаюсь)")
+            self.wake_up(True, wav, False)
+            return
         # чужой голос (видео, друзья, Discord) — пропускаем; пока Mac сам играет звук — строже
-        if self.voiceprint and self.voiceprint.active:
+        if self.voiceprint and self.voiceprint.active and not ptt:
             ok, sc = self.voiceprint.is_owner(wav)
             if ok and other_audio and sc < self.voiceprint.threshold + 0.1:
                 ok = False
@@ -1606,7 +1663,7 @@ class Companion:
             if self.habit_answer(text):                  # «да» на «ты обычно в это время …, сделать?» — до проверки «мне ли»
                 tm["path"] = "сразу"
                 return
-            if not self.addressed_to_me(text):
+            if not ptt and not self.addressed_to_me(text):
                 return
             if intents.is_sleep(text):                   # «спокойной ночи» — сразу, без Google
                 print(f"⚡ сразу: «{text}» → сон")
@@ -1843,7 +1900,12 @@ class Companion:
             self.barge = output_is_headphones() if mode == "auto" else bool(mode)
             print(f"[уши] вывод звука: «{output_device_name()}» → перебивание "
                   f"{'включено' if self.barge else 'выключено (колонки)'}")
+            self.listener.ptt = bool(m.get("push_to_talk", False))
             self.listener.start()
+            import pushtotalk
+            pushtotalk.start(self._ptt_press, self._ptt_release)
+            if self.listener.ptt:
+                print("[уши] режим «нажми и говори»: слушаю только пока зажат правый ⌥")
             if self.wake:
                 self.ui.state("sleep")
                 print(f"💤 Сплю. Разбудить: «{self.cfg['wake']['phrases'][0]}». "

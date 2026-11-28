@@ -195,4 +195,16 @@ def parse_facts(text: str) -> list[str]:
 def extract_facts(brain, transcript: str, user: str, known: str = "") -> list[str]:
     prompt = SUMMARY_PROMPT.format(user=user, transcript=transcript, known=known or "(пусто)")
     reply = brain.chat([{"role": "user", "content": prompt}], options={"temperature": 0.2})
-    return parse_facts(reply)
+    return [f for f in parse_facts(reply) if not junk_fact(f)]
+
+
+# Свой мозг не всегда слушается подсказки: «Просит найти факты о кошках», «Считает, что у него всё нормально
+# с интернетом» (журнал 29.11.2026). Просьбы к ней и пересказ разговора — не память о нём.
+_JUNK_FACT = re.compile(
+    r"^(?:\[[^\]]*\]\s*)?(?:он\s+|пользователь\s+|\w+\s+)?(?:просит|попросил\w*|просил\w*|спрашивает|спросил\w*|"
+    r"хочет,?\s+чтобы\s+(?:она|ты|я|ей)|говорит\s+ей|сказал\w*\s+ей|требует|ругается|недоволен\s+(?:ей|ею|её|тем,\s+что\s+она)|"
+    r"считает,?\s+что\s+у\s+него\s+вс[её]\s+нормально)", re.I)
+
+
+def junk_fact(fact: str) -> bool:
+    return bool(_JUNK_FACT.search(fact.strip()))

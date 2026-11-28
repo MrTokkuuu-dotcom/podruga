@@ -106,6 +106,9 @@ def _target_class():
                 bg(c.quit_now)
             elif tag == 10:
                 bg(lambda: ui.move_to_screen("next"))
+            elif tag == 11:
+                L = getattr(c, "listener", None)
+                bg(lambda: c.set_push_to_talk(not (L and L.ptt)))
 
         def menuWillOpen_(self, menu):
             c = _companion
@@ -116,6 +119,8 @@ def _target_class():
             menu.itemWithTag_(8).setState_(1 if c.guests_on() else 0)
             w = getattr(c, "walker", None)
             menu.itemWithTag_(7).setState_(1 if (w and w.enabled) else 0)
+            L = getattr(c, "listener", None)
+            menu.itemWithTag_(11).setState_(1 if (L and L.ptt) else 0)
             try:
                 from AppKit import NSScreen
                 menu.itemWithTag_(10).setHidden_(len(NSScreen.screens()) < 2)
@@ -142,7 +147,7 @@ def _build(companion):
     menu = NSMenu.alloc().init()
     menu.setAutoenablesItems_(False)
     for tag, title in [(1, "Спрятать"), (2, "Переписка"), (3, "Уснуть"), (4, "Пауза"),
-                       (5, "Настройки…"), (10, "Перейти на другой экран"), (0, None), (8, "Гости — отвечать только по имени"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
+                       (5, "Настройки…"), (10, "Перейти на другой экран"), (0, None), (8, "Гости — отвечать только по имени"), (11, "Слушать, только пока зажат правый ⌥"), (7, "Гулять по экрану"), (6, "Запускать вместе с Mac"),
                        (0, None), (9, "Выйти")]:
         if title is None:
             menu.addItem_(NSMenuItem.separatorItem())

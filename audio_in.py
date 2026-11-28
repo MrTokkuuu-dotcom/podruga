@@ -110,10 +110,19 @@ class Listener:
         self.stream = None
         self.strict = strict or (lambda: False)   # Mac сам играет звук — начинать фразу строже
         self.phrase_end = None                    # когда закончилась последняя фраза (для замера скорости)
+        self.ptt = False                          # «нажми и говори»: слушает только пока зажата клавиша
+        self.held = False
 
     def _callback(self, indata, frames, time_info, status):
-        if not self.muted:
+        if not self.muted or (self.ptt and self.held):     # зажал клавишу — слышит даже пока она говорит
             self.q.put(bytes(indata))
+
+    def press(self) -> None:
+        """Клавиша зажата: всё, что скажешь, — одна фраза (без проверки «речь ли это»)."""
+        self.held = True
+
+    def release(self) -> None:
+        self.held = False
 
     def start(self) -> None:
         self.stream = sd.RawInputStream(samplerate=RATE, blocksize=self.frame, dtype="int16",
@@ -168,9 +177,33 @@ class Listener:
         # в шуме — до energy_threshold из настроек. Отличать речь от шума всё равно будет нейросеть.
         floor_hist = collections.deque(maxlen=320)          # ~10 с уровней фона
         thr, n = self.energy_threshold, 0
+        ptt_buf: list[bytes] | None = None
+        ptt_ring = collections.deque(maxlen=max(1, 300 // self.frame_ms))   # 0,3 с до нажатия — первый слог
         while True:
-            frame = self.q.get()
-            if len(frame) != self.frame * 2:
+            try:
+                frame = self.q.get(timeout=0.1)
+            except queue.Empty:
+                frame = None
+            if self.ptt:
+                if self.held:
+                    if ptt_buf is None:
+                        ptt_buf = list(ptt_ring)
+                        ptt_ring.clear()
+                    if frame is not None and len(frame) == self.frame * 2:
+                        ptt_buf.append(frame)
+                        self.on_level(level(frame))
+                        if len(ptt_buf) * self.frame_ms >= self.max_ms * 3:    # держит минуту — хватит
+                            yield to_wav(ptt_buf)
+                            ptt_buf = []
+                elif ptt_buf is not None:                 # отпустил — фраза готова
+                    if len(ptt_buf) * self.frame_ms >= 400:
+                        yield to_wav(ptt_buf)
+                    ptt_buf = None
+                elif frame is not None and len(frame) == self.frame * 2:
+                    ptt_ring.append(frame)
+                triggered, voiced, speech_frames = False, [], 0
+                continue
+            if frame is None or len(frame) != self.frame * 2:
                 continue
             n += 1
             if not triggered:

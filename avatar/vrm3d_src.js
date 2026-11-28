@@ -1035,7 +1035,8 @@ function wantFps() {
                 (S.posture === 'lie' && S.lieRaw < 1) || S.seqAct;
   if (going) return 60;
   if (S.seq === 'closing') return 30;
-  const active = S.touch || nowMs - S.lipT < 1500;         // говорит или её трогают — плавно
+  // говорит или её трогают — плавно. S.touch после касания не стирается — смотрим на срок (было: 60 к/с навсегда)
+  const active = (S.touch && performance.now() < S.touchUntil) || nowMs - S.lipT < 1500;
   const looking = nowMs - S.lookT < 1500;                  // поворачивает голову за мышкой — 30 хватает
   if (isAsleep()) return active ? 30 : 8;                  // спит — только дыхание
   return active ? 60 : looking ? 30 : 20;                  // просто стоит — 20 кадров хватает
